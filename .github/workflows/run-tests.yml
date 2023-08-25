@@ -1,0 +1,21 @@
+name: run-tests
+on:
+  workflow_call:
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check out the code'
+        uses: actions/checkout@v3
+      - name: 'Set up NodeJS'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*' # Node LTS should always be fine.
+      - name: 'Install node module dependencies'
+        run: yarn
+      - name: 'Run Unit Tests'
+        run: yarn test
+      - name: 'Lint'
+        run: yarn lint
+
