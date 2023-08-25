@@ -17,9 +17,11 @@ jobs:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node module dependencies'
         run: yarn
-      - name: 'Run Unit Tests'
+      - name: 'Run Unit Tests (Linux)'
         run: xvfb-run -a yarn test
         if: runner.os == 'Linux'
+      - name: 'Run Unit Tests (non-Linux)'
+        run: yarn tests
+        if: runner.os != 'Linux'
       - name: 'Lint'
         run: yarn lint
-        if: runner.os != 'Linux'
