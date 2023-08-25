@@ -4,7 +4,10 @@ on:
 
 jobs:
   build-and-run:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [macos-lateset, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: 'Check out the code'
         uses: actions/checkout@v3
@@ -15,7 +18,8 @@ jobs:
       - name: 'Install node module dependencies'
         run: yarn
       - name: 'Run Unit Tests'
-        run: yarn test
+        run: xvfb-run -a yarn test
+        if: runner.os == 'Linux'
       - name: 'Lint'
         run: yarn lint
-
+        if: runner.os != 'Linux'
