@@ -18,14 +18,26 @@ export type GenericSymbol = vscode.DocumentSymbol | vscode.SymbolInformation;
  * Class that handles interactions with the Apex Language Server.
  */
 export class ApexLsp {
-    
+
     /**
      * Get an array of {@link GenericSymbol}s indicating the classes, methods, etc defined
      * in the provided file.
-     * @param documentUri 
+     * @param documentUri
      * @returns An array of symbols if the server is available, otherwise undefined
      */
     public static async getSymbols(documentUri: vscode.Uri): Promise<GenericSymbol[]> {
-        return vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', documentUri);
+
+
+
+
+
+
+
+
+
+
+
+
+		return vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', documentUri);
     }
 }
