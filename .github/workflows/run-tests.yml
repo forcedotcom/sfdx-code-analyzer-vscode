@@ -21,7 +21,7 @@ jobs:
         run: xvfb-run -a yarn test
         if: runner.os == 'Linux'
       - name: 'Run Unit Tests (non-Linux)'
-        run: yarn tests
+        run: yarn test
         if: runner.os != 'Linux'
       - name: 'Lint'
         run: yarn lint
