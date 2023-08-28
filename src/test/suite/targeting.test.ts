@@ -12,8 +12,8 @@ import {getSelectedMethod, getTargets} from '../../lib/targeting';
 import {ApexLsp, GenericSymbol} from '../../lib/apex-lsp';
 
 suite('targeting.ts', () => {
-    // Note: This path is relative to the project's root directory.
-    const codeFixturesPath: string = path.resolve('.', 'code-fixtures');
+    // Note: __dirname is used here because it's consistent across file systems.
+    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
 
     function moveCursor(line: number, column: number): void {
         const position = new vscode.Position(line, column);
@@ -25,7 +25,7 @@ suite('targeting.ts', () => {
             // ===== SETUP =====
             // Get a URI for one file.
             const singlePath: string = path.join(codeFixturesPath, "folder-a", "MyClassA1.cls");
-            const singleUri: vscode.Uri = vscode.Uri.parse(singlePath);
+            const singleUri: vscode.Uri = vscode.Uri.file(singlePath);
 
             // ===== TEST =====
             // Feed that URI into the target finder.
@@ -46,7 +46,7 @@ suite('targeting.ts', () => {
                 path.join(codeFixturesPath, "folder-a", "subfolder-a1", "MyClassA1i.cls"),
                 path.join(codeFixturesPath, "folder-b", "MyClassB1.cls")
             ];
-            const multipleUris: vscode.Uri[] = multiplePaths.map(p => vscode.Uri.parse(p));
+            const multipleUris: vscode.Uri[] = multiplePaths.map(p => vscode.Uri.file(p));
 
             // ===== TEST =====
             // Feed those URIs into the target finder.
@@ -65,7 +65,7 @@ suite('targeting.ts', () => {
             // ===== SETUP =====
             // Get a URI for a folder without subfolders.
             const folderPath: string = path.join(codeFixturesPath, "folder-a", "subfolder-a1");
-            const folderUri: vscode.Uri = vscode.Uri.parse(folderPath);
+            const folderUri: vscode.Uri = vscode.Uri.file(folderPath);
 
             // ===== TEST =====
             // Feed the URI into the target finder.
@@ -82,7 +82,7 @@ suite('targeting.ts', () => {
             // ===== SETUP =====
             // Get a URI for a folder with subfolders.
             const folderPath: string = path.join(codeFixturesPath, "folder-a");
-            const folderUri: vscode.Uri = vscode.Uri.parse(folderPath);
+            const folderUri: vscode.Uri = vscode.Uri.file(folderPath);
 
             // ===== TEST =====
             // Feed the URI into the target finder.
@@ -102,8 +102,8 @@ suite('targeting.ts', () => {
             // ===== SETUP =====
             // Get a URI for a non-existent file.
             const fakeFilePath: string = path.join(codeFixturesPath, "folder-a", "DefinitelyFakeClass.cls");
-            const fakeFileUri: vscode.Uri = vscode.Uri.parse(fakeFilePath);
-            
+            const fakeFileUri: vscode.Uri = vscode.Uri.file(fakeFilePath);
+
             // ===== TEST =====
             // Feed the URI into the target finder, expecting an error.
             let err: Error = null;
@@ -122,7 +122,7 @@ suite('targeting.ts', () => {
             // ===== SETUP =====
             // Open a file in the editor.
             const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-            const openFileUri: vscode.Uri = vscode.Uri.parse(openFilePath);
+            const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
             const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
             await vscode.window.showTextDocument(doc);
 
@@ -162,7 +162,7 @@ suite('targeting.ts', () => {
     suite('#getSelectedMethod()', () => {
         suite('When Apex LSP is available...', () => {
             const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-            const openFileUri: vscode.Uri = vscode.Uri.parse(openFilePath);
+            const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
 
             setup(async () => {
                 // Open and display the document.
@@ -208,7 +208,7 @@ suite('targeting.ts', () => {
                 // ===== TEST =====
                 // Get the method currently selected.
                 const selectedMethod: string = await getSelectedMethod();
-                
+
                 // ===== ASSERTIONS =====
                 expect(selectedMethod).to.equal(`${openFilePath}#boop`, 'Wrong method identified');
             });
@@ -244,7 +244,7 @@ suite('targeting.ts', () => {
                 warningSpy = Sinon.spy(vscode.window, 'showWarningMessage')
             });
 
-            teardown(() => { 
+            teardown(() => {
                 // Revert any stubbing/spying we did with Sinon.
                 Sinon.restore();
             });
@@ -253,7 +253,7 @@ suite('targeting.ts', () => {
                 // ===== SETUP =====
                 // Open a file in the editor.
                 const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-                const openFileUri: vscode.Uri = vscode.Uri.parse(openFilePath);
+                const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
                 const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
                 await vscode.window.showTextDocument(doc);
                 // Move the cursor to the declaration of a method.

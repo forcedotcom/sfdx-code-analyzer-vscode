@@ -11,8 +11,8 @@ import {messages} from '../../lib/messages';
 import {_NoOpFixGenerator, _PmdFixGenerator} from '../../lib/fixer';
 
 suite('fixer.ts', () => {
-    // NOTE: This path is relative to the project's root directory.
-    const codeFixturesPath: string = path.resolve('.', 'code-fixtures', 'fixer-tests');
+    // Note: __dirname is used here because it's consistent across file systems.
+    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures', 'fixer-tests');
 
     suite('_NoOpFixGenerator', () => {
         suite('#generateFixes()', () => {
@@ -33,7 +33,7 @@ suite('fixer.ts', () => {
         suite('#generateFixes()', () => {
             suite('XML doc', () => {
                 // Get the URI for the XML doc.
-                const xmlDocUri: vscode.Uri = vscode.Uri.parse(path.join(codeFixturesPath, 'MyDoc1.xml'));
+                const xmlDocUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'MyDoc1.xml'));
 
                 // At this time, we don't support injecting suppression for XML.
                 test('No fixes are offered', async () => {
@@ -62,7 +62,7 @@ suite('fixer.ts', () => {
 
             suite('Apex doc', () => {
                 let originalFileContents: string;
-                const fileUri = vscode.Uri.parse(path.join(codeFixturesPath, 'MyClass1.cls'));
+                const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
 
                 let doc: vscode.TextDocument;
                 // Load the document and store its starting contents.
@@ -118,7 +118,7 @@ suite('fixer.ts', () => {
 
                         // Attempt to generate fixes for the file.
                         const fixes: vscode.CodeAction[] = fixGenerator.generateFixes();
-                        
+
                         // We expect to get one fix, to inject the suppression at the s tart of the comment that ends the line.
                         expect(fixes).to.have.lengthOf(1, 'Wrong action count');
                         const fix = fixes[0].edit.get(fileUri)[0];

@@ -27,8 +27,13 @@ export async function getTargets(selections: vscode.Uri[]): Promise<string[]> {
                 // This should never happen, but we should handle it gracefully regardless.
                 throw new Error(messages.targeting.error.nonexistentSelectedFileGenerator(selection.fsPath));
             } else if (await isDir(selection.fsPath)) {
-                const globOut: string[] = await globby(`${selection.fsPath}/**/*`);
-                globOut.forEach(o => targets.add(o));
+				// Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
+				// latter into the former.
+				const globbablePath = selection.fsPath.replace(/\\/g, '/');
+                const globOut: string[] = await globby(`${globbablePath}/**/*`);
+				// Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
+				// to its expected form.
+                globOut.forEach(o => targets.add(vscode.Uri.file(o).fsPath));
             } else {
                 targets.add(selection.fsPath);
             }
@@ -67,6 +72,10 @@ export async function getSelectedMethod(): Promise<string> {
     const textDocument: vscode.TextDocument = activeEditor.document;
     const cursorPosition: vscode.Position = activeEditor.selection.active;
 
+	// The filename-portion of the target string needs to be Unix-formatted,
+	// otherwise it will parse as a glob and kill the process.
+	const fileName: string = textDocument.fileName.replace(/\\/g, '/');
+
     // If the Apex Language Server is available, we can use it to derive much more robust
     // targeting information than we can independently.
     const symbols: GenericSymbol[] = await ApexLsp.getSymbols(textDocument.uri);
@@ -79,14 +88,14 @@ export async function getSelectedMethod(): Promise<string> {
         // The symbol's name property is the method signature, so we want to lop off everything
         // after the first open-paren.
         const methodSignature: string = nearestMethodSymbol.name;
-        return `${textDocument.fileName}#${methodSignature.substring(0, methodSignature.indexOf('('))}`;
+        return `${fileName}#${methodSignature.substring(0, methodSignature.indexOf('('))}`;
     } else {
         // Without the Apex Language Server, we'll take the quick-and-dirty route
         // of just identifying the exact word the user selected, and assuming that's the name of a method.
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         vscode.window.showWarningMessage(messages.targeting.warnings.apexLspUnavailable);
         const wordRange: vscode.Range = textDocument.getWordRangeAtPosition(cursorPosition);
-        return `${textDocument.fileName}#${textDocument.getText(wordRange)}`;
+        return `${fileName}#${textDocument.getText(wordRange)}`;
     }
 }
 
@@ -94,7 +103,7 @@ export async function getSelectedMethod(): Promise<string> {
  * Identifies the method definition symbol that most closely precedes the cursor's current position.
  * @param symbols Symbols returned via the Apex Language Server
  * @param cursorPosition The current location of the cursor
- * @returns 
+ * @returns
  */
 function getNearestMethodSymbol(symbols: GenericSymbol[], cursorPosition: vscode.Position): GenericSymbol {
     let nearestMethodSymbol: GenericSymbol = null;
@@ -116,7 +125,7 @@ function getNearestMethodSymbol(symbols: GenericSymbol[], cursorPosition: vscode
         if (symbolStartPosition.line > cursorPosition.line) {
             continue;
         }
-        
+
         // Compare this method to the current nearest, and keep the later one.
         if (!nearestMethodPosition || nearestMethodPosition.isBefore(symbolStartPosition)) {
             nearestMethodSymbol = symbol;
@@ -130,7 +139,7 @@ function getNearestMethodSymbol(symbols: GenericSymbol[], cursorPosition: vscode
  * Get the project containing the specified file.
  */
 export function getProjectDir(targetFile: string): string {
-    const uri = vscode.Uri.parse(targetFile);
+    const uri = vscode.Uri.file(targetFile);
     return vscode.workspace.getWorkspaceFolder(uri).uri.fsPath;
 }
 

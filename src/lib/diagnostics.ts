@@ -12,9 +12,9 @@ import * as vscode from 'vscode';
  * Class that handles the creation, display, and removal of {@link vscode.Diagnostic}s.
  */
 export class DiagnosticManager {
-    
+
     /**
-     * 
+     *
      * @param {string[]} targets The names of ALL files targeted by a particular scan.
      * @param {RuleResult[]} results The results of the scan.
      * @param {vscode.DiagnosticCollection} diagnosticCollection The diagnostic collection to which new diagnostics should be added.
@@ -81,7 +81,7 @@ export class DiagnosticManager {
         );
         diagnostic.source = messages.diagnostics.source.generator(engine);
         diagnostic.code = violation.url ? {
-            target: vscode.Uri.parse(violation.url),
+            target: vscode.Uri.file(violation.url),
             value: violation.ruleName
         } : violation.ruleName;
         return diagnostic;
@@ -90,7 +90,7 @@ export class DiagnosticManager {
     /**
      * Type-guard for {@link PathlessRuleViolation}s.
      * @param violation A violation that may or may not be a {@link PathlessRuleViolation}.
-     * @returns 
+     * @returns
      */
     private isPathlessViolation(violation: RuleViolation): violation is PathlessRuleViolation {
         return 'line' in violation;

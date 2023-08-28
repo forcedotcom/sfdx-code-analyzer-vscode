@@ -12,8 +12,8 @@ import {DfaRuleViolation, PathlessRuleViolation, RuleResult} from '../../types';
 
 suite('diagnostics.ts', () => {
     suite('#displayDiagnostics()', () => {
-        // Note: This path is relative to the project's root directory.
-        const codeFixturesPath: string = path.resolve('.', 'code-fixtures');
+        // Note: __dirname is used here because it's consistent across file systems.
+        const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
         const pathToFirstFile: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
         const firstFileResults: RuleResult = {
             engine: "pmd",
@@ -60,14 +60,14 @@ suite('diagnostics.ts', () => {
 
             // ===== ASSERTIONS =====
             // Validate that the file now has one violation.
-            expect(diagnosticCollection.get(vscode.Uri.parse(pathToFirstFile))).to.have.lengthOf(1, 'Wrong number of diagnostics');
+            expect(diagnosticCollection.get(vscode.Uri.file(pathToFirstFile))).to.have.lengthOf(1, 'Wrong number of diagnostics');
         });
 
         test('Refreshes stale violations on second-time target', () => {
             // ===== SETUP =====
             // Create a diagnostic collection and seed it with a diagnostic in file 2.
             const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
-            const secondFileUri = vscode.Uri.parse(pathToSecondFile);
+            const secondFileUri = vscode.Uri.file(pathToSecondFile);
             diagnosticCollection.set(secondFileUri, [
                 new vscode.Diagnostic(
                     new vscode.Range(new vscode.Position(1, 2), new vscode.Position(2, 3)),
@@ -91,7 +91,7 @@ suite('diagnostics.ts', () => {
             // ===== SETUP =====
             // Create a diagnostic collection and seed it with a diagnostic in file 2.
             const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
-            const secondFileUri = vscode.Uri.parse(pathToSecondFile);
+            const secondFileUri = vscode.Uri.file(pathToSecondFile);
             diagnosticCollection.set(secondFileUri, [
                 new vscode.Diagnostic(
                     new vscode.Range(new vscode.Position(1, 2), new vscode.Position(2, 3)),
@@ -115,7 +115,7 @@ suite('diagnostics.ts', () => {
             // ===== SETUP =====
             // Create a diagnostic collection and seed it with a diagnostic in file 2.
             const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
-            const secondFileUri = vscode.Uri.parse(pathToSecondFile);
+            const secondFileUri = vscode.Uri.file(pathToSecondFile);
             diagnosticCollection.set(secondFileUri, [
                 new vscode.Diagnostic(
                     new vscode.Range(new vscode.Position(1, 2), new vscode.Position(2, 3)),
@@ -145,14 +145,14 @@ suite('diagnostics.ts', () => {
                 line: 15,
                 column: 7
             };
-    
+
             // TODO: Perhaps wait on this test until the messages/source/code specifics are sorted out.
             test('Generates correct rule data', () => {
                 // ===== SETUP =====
                 // ===== TEST =====
                 // ===== ASSERTIONS =====
             });
-    
+
             test('Generates positioning from violation WITH endLine and endColumn', () => {
                 // ===== SETUP =====
                 // Create our diagnostic manager and a copy of the violation.
@@ -161,11 +161,11 @@ suite('diagnostics.ts', () => {
                 // Give the violation some end positioning.
                 spoofedViolation.endLine = 30;
                 spoofedViolation.endColumn = 23;
-    
+
                 // ===== TEST =====
                 // Create a diagnostic using our fake violation.
                 const diagnostic: vscode.Diagnostic = (diagnosticManager as any).createDiagnostic("pmd", spoofedViolation);
-    
+
                 // ===== ASSERTIONS =====
                 // Verify that the starting and ending position both use the explicit values.
                 // Bear in mind that start line, end line, and start column are all zero-indexed,
@@ -177,17 +177,17 @@ suite('diagnostics.ts', () => {
                 expect(endingPosition.line).to.equal(spoofedViolation.endLine - 1, 'Wrong end line');
                 expect(endingPosition.character).to.equal(spoofedViolation.endColumn, 'Wrong end column');
             });
-    
+
             test('Generates positioning from violation WITHOUT endLine or endColumn', () => {
                 // ===== SETUP =====
                 // Create our diagnostic manager and a copy of the violation.
                 const spoofedViolation: PathlessRuleViolation = JSON.parse(JSON.stringify(baseSpoofedViolation)) as PathlessRuleViolation;
                 const diagnosticManager: DiagnosticManager = new DiagnosticManager();
-    
+
                 // ===== TEST =====
                 // Create a diagnostic using our fake violation.
                 const diagnostic: vscode.Diagnostic = (diagnosticManager as any).createDiagnostic("pmd", spoofedViolation);
-    
+
                 // ===== ASSERTIONS =====
                 // Verify that the starting position uses the explicit value, and the end
                 // position uses the end of the start line.
