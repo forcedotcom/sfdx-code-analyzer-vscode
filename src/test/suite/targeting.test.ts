@@ -160,9 +160,12 @@ suite('targeting.ts', () => {
     });
 
     suite('#getSelectedMethod()', () => {
+		const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
+		const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
+		// We expect our path to be unix-ified, or else it'll parse as a glob and flunk
+		// the transaction.
+		const expectedFilePath = openFilePath.replace(/\\/g, '/');
         suite('When Apex LSP is available...', () => {
-            const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-            const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
 
             setup(async () => {
                 // Open and display the document.
@@ -210,7 +213,7 @@ suite('targeting.ts', () => {
                 const selectedMethod: string = await getSelectedMethod();
 
                 // ===== ASSERTIONS =====
-                expect(selectedMethod).to.equal(`${openFilePath}#boop`, 'Wrong method identified');
+                expect(selectedMethod).to.equal(`${expectedFilePath}#boop`, 'Wrong method identified');
             });
 
             test('Throws error if no method can be found', async () => {
@@ -252,8 +255,6 @@ suite('targeting.ts', () => {
             test('Displays warning and returns current word', async () => {
                 // ===== SETUP =====
                 // Open a file in the editor.
-                const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-                const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
                 const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
                 await vscode.window.showTextDocument(doc);
                 // Move the cursor to the declaration of a method.
@@ -267,7 +268,7 @@ suite('targeting.ts', () => {
                 // Verify that a warning was displayed.
                 Sinon.assert.callCount(warningSpy, 1);
                 // Verify that the first word of the file was returned.
-                expect(selectedMethod).to.equal(`${openFilePath}#beep`, 'Wrong word returned');
+                expect(selectedMethod).to.equal(`${expectedFilePath}#beep`, 'Wrong word returned');
             });
         });
     });
