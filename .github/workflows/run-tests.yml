@@ -1,0 +1,28 @@
+name: run-tests
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-and-run:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 'Check out the code'
+        uses: actions/checkout@v3
+      - name: 'Set up NodeJS'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*' # Node LTS should always be fine.
+      - name: 'Install node module dependencies'
+        run: yarn install --frozen-lockfile
+      - name: 'Run Unit Tests (Linux)'
+        run: xvfb-run -a yarn test
+        if: runner.os == 'Linux'
+      - name: 'Run Unit Tests (non-Linux)'
+        run: yarn test
+        if: runner.os != 'Linux'
+      - name: 'Lint'
+        run: yarn lint

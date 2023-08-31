@@ -1,0 +1,110 @@
+name: Publish in Microsoft Marketplace
+on:
+  release:
+    # This limits the workflow to releases that are not pre-releases.
+    # From the docs: A release was published, or a pre-release was changed to a release.
+    types: [released]
+  # Button for publishing main branch in case there's a failure on the release.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to be published
+        type: string
+        required: true
+
+jobs:
+  validate-release-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      RELEASE_VERSION: ${{ steps.get-package-version.outputs.PACKAGE_VERSION }}
+      GUS_BUILD: ${{ steps.get-gus-build.outputs.GUS_BUILD }}
+      SF_CHANGE_CASE_SCHEDULE_BUILD: ${{ steps.get-scheduled-build.outputs.SF_CHANGE_CASE_SCHEDULE_BUILD }}
+    steps:
+      # Check out the release branch and get its head commit as output for later.
+      - uses: actions/checkout@v3
+        with:
+          ref: 'main'
+      - id: get-branch-commit
+        run: echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      # Check out the tag to be released and get its head commit as output for later.
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - id: get-tag-commit
+        run: echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+      # If the two commits aren't identical, the tag isn't eligible for release.
+      - name: Fail non-matching commits
+        if: ${{ steps.get-branch-commit.outputs.COMMIT_ID != steps.get-tag-commit.outputs.COMMIT_ID }}
+        run: |
+          echo "Tag commit must match latest commit in main. Branch is ${{ steps.get-branch-commit.outputs.COMMIT_ID }}. Tag is ${{ steps.get-tag-commit.outputs.COMMIT_ID }}."
+          exit 1
+      # Get the `version` property from `package.json` as output for later.
+      - name: Get package.json version property
+        id: get-package-version
+        run: |
+          echo "PACKAGE_VERSION=$(cat package.json | jq '.version' | xargs)" >> $GITHUB_OUTPUT
+      - run: echo "Package Version is ${{ steps.get-package-version.outputs.PACKAGE_VERSION }}"
+      # Verify that the tag is of the format "vX.Y.Z", exactly matching the corresponding values in the `package.json` version property.
+      - name: Compare tag to package.json
+        run: |
+          TAG=${{ github.event.release.tag_name || inputs.tag }}
+          PACKAGE_VERSION=v${{ steps.get-package-version.outputs.PACKAGE_VERSION }}
+          [[ ${TAG} == ${PACKAGE_VERSION} ]] || (echo "Tag name must match package.json version, prefixed by lowercase v" && exit 1)
+      # Set other miscellaneous environment variables as outputs for later.
+      - id: get-gus-build
+        run: echo "GUS_BUILD=${{ steps.get-package-version.outputs.PACKAGE_VERSION }}" >> $GITHUB_OUTPUT
+      - run: echo "GUS BUILD IS ${{ steps.get-gus-build.outputs.GUS_BUILD }}"
+      - id: get-scheduled-build
+        run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD=offcore.tooling.${{ steps.get-package-version.outputs.PACKAGE_VERSION }}" > $GITHUB_OUTPUT
+      - run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD is ${{ steps.get-scheduled-build.outputs.SF_CHANGE_CASE_SCHEDULE_BUILD }}"
+
+  ctc-open:
+    needs: [ validate-release-environment ]
+    uses: salesforcecli/github-workflows/.github/workflows/ctcOpen.yml@main
+    secrets: inherit
+
+  publish:
+    needs: [ 'ctc-open', 'validate-release-environment' ]
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PERSONAL_ACCESS_TOKEN: ${{ secrets.VSCE_PERSONAL_ACCESS_TOKEN }}
+      PUBLISH_VERSION: ${{ needs.validate-release-environment.outputs.RELEASE_VERSION }}
+      GITHUB_TOKEN: ${{ secrets.IDEE_GH_TOKEN }}
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          token: ${{ secrets.IDEE_GH_TOKEN }}
+      # Set up node and install dependencies.
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
+      - run: yarn install --frozen-lockfile && yarn global add @vscode/vsce
+      # Download the .vsix attached to the release.
+      - name: Download Extension From Release
+        run: |
+          mkdir ./extensions
+          gh release download v${{ env.PUBLISH_VERSION }} -D ./extensions
+      - name: Display downloaded VSIX
+        run: ls -R ./extensions
+      - name: Publish the VSIX
+        run: find ./extensions -type f -name "*.vsix" -exec npx vsce publish --pat ${{ env.VSCE_PERSONAL_ACCESS_TOKEN }} --packagePath {} \;
+      - run: echo "SUCCESSFULLY PUBLISHED"
+
+  ctc-close-success:
+    needs: [ ctc-open, publish ]
+    if: needs.ctc-open.result == 'success' && needs.publish.result == 'success' && needs.ctc-open.outputs.changeCaseId
+    uses: salesforcecli/github-workflows/.github/workflows/ctcClose.yml@main
+    secrets: inherit
+    with:
+      changeCaseId: ${{ needs.ctc-open.outputs.changeCaseId }}
+
+  ctc-close-fail:
+    needs: [ ctc-open, publish ]
+    if: always() && inputs.ctc && needs.ctc-open.outputs.changeCaseId && (needs.ctc-open.result != 'success' || needs.publish.result != 'success')
+    uses: salesforcecli/github-workflows/.github/workflows/ctcClose.yml@main
+    secrets: inherit
+    with:
+      changeCaseId: ${{ needs.ctc-open.outputs.changeCaseId }}
+      status: Not Implemented

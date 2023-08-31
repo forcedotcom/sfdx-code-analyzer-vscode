@@ -1,0 +1,155 @@
+{
+    "name": "sfdx-code-analyzer-vscode",
+    "displayName": "Salesforce Code Analyzer VS Code Extension",
+    "description": "Salesforce Code Analyzer is a unified tool for source code analysis. Run Code Analyzer to scan multiple languages in your code and add diagnostic info to your code that describes the violations.",
+    "bugs": {
+        "url": "https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
+    },
+    "repository": {
+        "url": "https://github.com/forcedotcom/sfdx-code-analyzer-vscode"
+    },
+	"icon": "images/CodeAnalyzer-small.png",
+    "galleryBanner": {
+        "color": "#ECECEC",
+        "theme": "light"
+    },
+    "version": "0.1.0",
+    "publisher": "salesforce",
+    "license": "BSD-3-Clause",
+    "engines": {
+        "vscode": "^1.74.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Linters",
+        "Testing"
+    ],
+    "keywords": [
+        "Salesforce Code Analyzer",
+        "Salesforce Graph Engine",
+        "Code Analyzer",
+        "Graph Engine",
+        "SFGE",
+        "SFCA"
+    ],
+    "dependencies": {
+        "cross-spawn": "^7.0.3",
+        "glob": "^8.0.3",
+        "globby": "^11.0.0"
+    },
+    "devDependencies": {
+        "@types/chai": "^4.3.5",
+        "@types/cross-spawn": "^6.0.2",
+        "@types/glob": "^8.0.0",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "16.x",
+        "@types/sinon": "^10.0.15",
+        "@types/vscode": "^1.74.0",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "@vscode/test-electron": "^2.2.0",
+        "chai": "^4.3.7",
+        "eslint": "^8.28.0",
+        "mocha": "^10.1.0",
+        "sinon": "^15.1.0",
+        "typescript": "^4.9.3"
+    },
+    "scripts": {
+        "vscode:prepublish": "yarn run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "yarn run compile && yarn run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "sfca.runOnActiveFile",
+                "title": "SFDX: Scan current file with Code Analyzer"
+            },
+            {
+                "command": "sfca.runOnSelected",
+                "title": "SFDX: Scan selected files or folders with Code Analyzer"
+            },
+            {
+                "command": "sfca.runDfaOnSelectedMethod",
+                "title": "SFDX: Scan selected method with Graph Engine path-based analysis"
+            }
+        ],
+        "configuration": {
+            "title": "Salesforce Code Analyzer",
+            "properties": {
+                "codeAnalyzer.pMD.customConfigFile": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Replace Code Analyzer's default PMD config file, choose a custom file."
+                },
+                "codeAnalyzer.graphEngine.disableWarningViolations": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Suppress warning violations, such as those related to StripInaccessible READ access."
+                },
+                "codeAnalyzer.graphEngine.threadTimeout": {
+                    "type": "number",
+                    "default": 900000,
+                    "description": "After the thread timeout elapses, the path evaluation aborts. The default timeout is 900,000 milliseconds."
+                },
+                "codeAnalyzer.graphEngine.pathExpansionLimit": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "An upper boundary to limit the complexity of code analyzed by Graph Engine. The default of 0 is a dynamically determined limit that's based on heap space. To learn more about heap space, see OutOfMemory errors in the Graph Engine documentation."
+                },
+                "codeAnalyzer.graphEngine.jvmArgs": {
+                    "type": "string",
+                    "description": "The Java Virtual Machine (JVM) arguments used to optimize Salesforce Graph Engine execution for your system."
+                }
+            }
+        },
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "sfca.runOnActiveFile",
+                    "when": "true"
+                },
+                {
+                    "command": "sfca.runOnSelected",
+                    "when": "false"
+                },
+                {
+                    "command": "sfca.runDfaOnSelectedMethod",
+                    "when": "false"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "sfca.runOnActiveFile"
+                },
+                {
+                    "command": "sfca.runDfaOnSelectedMethod"
+                }
+            ],
+            "explorer/context": [
+                {
+                    "command": "sfca.runOnSelected"
+                }
+            ]
+        },
+        "languages": [
+            {
+                "id": "apex",
+                "aliases": [
+                    "Apex",
+                    "apex"
+                ],
+                "extensions": [
+                    ".cls",
+                    ".trigger",
+                    ".soql",
+                    ".apex"
+                ]
+            }
+        ]
+    }
+}

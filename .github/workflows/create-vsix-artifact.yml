@@ -1,0 +1,28 @@
+name: create-vsix-artifact
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Check out the code'
+        uses: actions/checkout@v3
+      - name: 'Set up NodeJS'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*' # Node LTS should always be fine.
+      - name: 'Install node dependencies'
+        run: yarn install --frozen-lockfile && yarn global add @vscode/vsce
+      - name: 'Create VSIX'
+        run: vsce package
+      - name: 'Upload artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: vsix
+          path: ./sfdx-code-analyzer-vscode-*.vsix
+      - run: echo
+
+
+
