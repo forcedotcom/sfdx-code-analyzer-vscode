@@ -18,7 +18,7 @@ To report issues with the Salesforce Code Analyzer VS Code Extension, create a [
 
 ---
 
-Currently, Visual Studio Code extensions aren't signed or verified on the Microsoft Visual Studio Code Marketplace. Salesforce provides the Secure Hash Algorithm (SHA) of each extension that we publish. To learn how to verify the extensions, consult [Manually Verify the salesforcedx-vscode Extensions' Authenticity](https://developer.salesforce.com/media/vscode/SHA256.md).
+Currently, Visual Studio Code extensions aren't signed or verified on the Microsoft Visual Studio Code Marketplace. Salesforce provides the Secure Hash Algorithm (SHA) of each extension that we publish. To learn how to verify the extensions, consult [Manually Verify the salesforcedx-vscode Extensions' Authenticity](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/blob/main/SHA256.md).
 
 ---
 
