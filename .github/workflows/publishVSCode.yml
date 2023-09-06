@@ -59,24 +59,19 @@ jobs:
         run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD=offcore.tooling.${{ steps.get-package-version.outputs.PACKAGE_VERSION }}" > $GITHUB_OUTPUT
       - run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD is ${{ steps.get-scheduled-build.outputs.SF_CHANGE_CASE_SCHEDULE_BUILD }}"
 
-  ctc-open:
-    needs: [ validate-release-environment ]
-    uses: salesforcecli/github-workflows/.github/workflows/ctcOpen.yml@main
-    secrets: inherit
-
   publish:
-    needs: [ 'ctc-open', 'validate-release-environment' ]
+    needs: [ 'validate-release-environment' ]
     runs-on: ubuntu-latest
     env:
       VSCE_PERSONAL_ACCESS_TOKEN: ${{ secrets.VSCE_PERSONAL_ACCESS_TOKEN }}
       PUBLISH_VERSION: ${{ needs.validate-release-environment.outputs.RELEASE_VERSION }}
-      GITHUB_TOKEN: ${{ secrets.IDEE_GH_TOKEN }}
+      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-          token: ${{ secrets.IDEE_GH_TOKEN }}
+          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
       # Set up node and install dependencies.
       - uses: actions/setup-node@v3
         with:
@@ -93,19 +88,3 @@ jobs:
         run: find ./extensions -type f -name "*.vsix" -exec npx vsce publish --pat ${{ env.VSCE_PERSONAL_ACCESS_TOKEN }} --packagePath {} \;
       - run: echo "SUCCESSFULLY PUBLISHED"
 
-  ctc-close-success:
-    needs: [ ctc-open, publish ]
-    if: needs.ctc-open.result == 'success' && needs.publish.result == 'success' && needs.ctc-open.outputs.changeCaseId
-    uses: salesforcecli/github-workflows/.github/workflows/ctcClose.yml@main
-    secrets: inherit
-    with:
-      changeCaseId: ${{ needs.ctc-open.outputs.changeCaseId }}
-
-  ctc-close-fail:
-    needs: [ ctc-open, publish ]
-    if: always() && inputs.ctc && needs.ctc-open.outputs.changeCaseId && (needs.ctc-open.result != 'success' || needs.publish.result != 'success')
-    uses: salesforcecli/github-workflows/.github/workflows/ctcClose.yml@main
-    secrets: inherit
-    with:
-      changeCaseId: ${{ needs.ctc-open.outputs.changeCaseId }}
-      status: Not Implemented
