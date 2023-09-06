@@ -15,6 +15,7 @@ on:
 jobs:
   validate-release-environment:
     runs-on: ubuntu-latest
+    environment: publish
     outputs:
       RELEASE_VERSION: ${{ steps.get-package-version.outputs.PACKAGE_VERSION }}
       GUS_BUILD: ${{ steps.get-gus-build.outputs.GUS_BUILD }}
