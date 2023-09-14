@@ -17,17 +17,23 @@ import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 
 /**
+ * Declare a {@link vscode.DiagnosticCollection} at the global scope, to make it accessible
+ * throughout the file.
+ */
+let diagnosticCollection: vscode.DiagnosticCollection = null;
+
+/**
  * This method is invoked when the extension is first activated (i.e., the very first time the command is executed).
  * Registers the necessary diagnostic collections and commands.
  */
-export function activate(context: vscode.ExtensionContext): Promise<void> {
+export function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log(`Extension sfdx-scanner-vscode activated.`);
+	console.log(`Extension sfdx-code-analyzer-vscode activated.`);
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
-	const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
+	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
 	context.subscriptions.push(diagnosticCollection);
 
 	// Define a code action provider for quickfixes.
@@ -57,7 +63,7 @@ export function activate(context: vscode.ExtensionContext): Promise<void> {
 		return _runAndDisplayDfa(graphEngineStatus, outputChannel);
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
-	return Promise.resolve();
+	return Promise.resolve(context);
 }
 
 /**
@@ -76,7 +82,7 @@ async function verifyPluginInstallation(): Promise<void> {
  * @param selections The files/directories manually selected by the user.
  * @param diagnosticCollection The collection to which diagnostics representing violations should be added.
  * @param outputChannel The output channel where information should be logged as needed.
- * @returns 
+ * @returns
  */
 export async function _runAndDisplayPathless(selections: vscode.Uri[], diagnosticCollection: vscode.DiagnosticCollection, outputChannel: vscode.LogOutputChannel): Promise<void> {
 	try {
@@ -153,6 +159,13 @@ export async function _runAndDisplayDfa(statusBarItem: vscode.StatusBarItem, out
 		outputChannel.show();
 		statusBarItem.hide();
 	}
+}
+
+/**
+ * Convenience method for clearing diagnostics.
+ */
+export function _clearDiagnostics(): void {
+	diagnosticCollection.clear();
 }
 
 /**

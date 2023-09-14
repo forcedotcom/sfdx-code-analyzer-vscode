@@ -18,6 +18,10 @@ jobs:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node module dependencies'
         run: yarn install --frozen-lockfile
+      - name: Install SFDX
+        run: npm install --global @salesforce/cli
+      - name: Install Code Analyzer
+        run: sfdx plugins:install @salesforce/sfdx-scanner
       - name: 'Run Unit Tests (Linux)'
         run: xvfb-run -a yarn test
         if: runner.os == 'Linux'
@@ -26,3 +30,10 @@ jobs:
         if: runner.os != 'Linux'
       - name: 'Lint'
         run: yarn lint
+      - name: Upload coverage artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-coverage-${{ runner.os }}
+          path: ./coverage
+

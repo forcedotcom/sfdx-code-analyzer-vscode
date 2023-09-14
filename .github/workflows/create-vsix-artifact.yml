@@ -14,9 +14,9 @@ jobs:
         with:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node dependencies'
-        run: yarn install --frozen-lockfile && yarn global add @vscode/vsce
+        run: yarn install --frozen-lockfile
       - name: 'Create VSIX'
-        run: vsce package
+        run: npx vsce package
       - name: 'Upload artifact'
         uses: actions/upload-artifact@v3
         with:

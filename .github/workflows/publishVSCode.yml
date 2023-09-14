@@ -76,7 +76,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 'lts/*'
-      - run: yarn install --frozen-lockfile && yarn global add @vscode/vsce
+      - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
         run: |
