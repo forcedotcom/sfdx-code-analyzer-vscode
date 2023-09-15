@@ -5,3 +5,5 @@ node_modules
 *.vsix
 .sfdx
 **/.DS_Store
+coverage
+typescript-test-results

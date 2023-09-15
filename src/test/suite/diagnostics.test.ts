@@ -48,10 +48,22 @@ suite('diagnostics.ts', () => {
             }]
         };
 
+		// Note: We want to share the same diagnostic collection across tests.
+		let diagnosticCollection: vscode.DiagnosticCollection = null;
+
+		setup(() => {
+			// Re-initialize the collection before each test.
+			diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca.diagnosticTest');
+		});
+
+		teardown(() => {
+			// Clear the collection after each test.
+			diagnosticCollection.clear();
+		});
+
         test('Adds violations to first-time target', () => {
             // ===== SETUP =====
-            // Create an empty diagnostic collection, and a manager.
-            const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
+            // Create a diagnostic manager.
             const diagnosticManager = new DiagnosticManager();
 
             // ===== TEST =====
@@ -65,8 +77,7 @@ suite('diagnostics.ts', () => {
 
         test('Refreshes stale violations on second-time target', () => {
             // ===== SETUP =====
-            // Create a diagnostic collection and seed it with a diagnostic in file 2.
-            const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
+            // Seed the diagnostic collection with a diagnostic in file 2.
             const secondFileUri = vscode.Uri.file(pathToSecondFile);
             diagnosticCollection.set(secondFileUri, [
                 new vscode.Diagnostic(
@@ -89,8 +100,7 @@ suite('diagnostics.ts', () => {
 
         test('Clears resolved violations on second-time target', () => {
             // ===== SETUP =====
-            // Create a diagnostic collection and seed it with a diagnostic in file 2.
-            const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
+            // Seed the diagnostic collection with a diagnostic in file 2.
             const secondFileUri = vscode.Uri.file(pathToSecondFile);
             diagnosticCollection.set(secondFileUri, [
                 new vscode.Diagnostic(
@@ -113,8 +123,7 @@ suite('diagnostics.ts', () => {
 
         test('Ignores existing violations on non-targeted file', () => {
             // ===== SETUP =====
-            // Create a diagnostic collection and seed it with a diagnostic in file 2.
-            const diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
+            // Seed the diagnostic collection with a diagnostic in file 2.
             const secondFileUri = vscode.Uri.file(pathToSecondFile);
             diagnosticCollection.set(secondFileUri, [
                 new vscode.Diagnostic(

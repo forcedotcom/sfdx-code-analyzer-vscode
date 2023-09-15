@@ -14,6 +14,11 @@ suite('fixer.ts', () => {
     // Note: __dirname is used here because it's consistent across file systems.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures', 'fixer-tests');
 
+	teardown(async () => {
+		// Close any open tabs and close the active editor.
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+	});
+
     suite('_NoOpFixGenerator', () => {
         suite('#generateFixes()', () => {
             test('Returns empty array', () => {
@@ -39,6 +44,7 @@ suite('fixer.ts', () => {
                 test('No fixes are offered', async () => {
                     // Open the document.
                     const doc = await vscode.workspace.openTextDocument(xmlDocUri);
+					await vscode.window.showTextDocument(doc);
                     // Create a fake diagnostic.
                     const diag = new vscode.Diagnostic(
                         new vscode.Range(
@@ -68,11 +74,8 @@ suite('fixer.ts', () => {
                 // Load the document and store its starting contents.
                 setup(async () => {
                     doc = await vscode.workspace.openTextDocument(fileUri);
+					await vscode.window.showTextDocument(doc);
                     originalFileContents = doc.getText();
-                });
-
-                // Revert the file to its original contents.
-                teardown(async () => {
                 });
 
                 suite('Line-level suppression', () => {

@@ -20,6 +20,12 @@ suite('targeting.ts', () => {
         vscode.window.activeTextEditor.selection = new vscode.Selection(position, position);
     }
 
+	teardown(async () => {
+		// Close all open editors after each test.
+		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+		Sinon.restore();
+	});
+
     suite('#getTargets()', () => {
         test('Given a real file, returns that file', async () => {
             // ===== SETUP =====
@@ -136,12 +142,13 @@ suite('targeting.ts', () => {
         });
 
         test('Without selection or active file, throws error', async () => {
-            // ===== SETUP =====
-            // Make sure there's no file open in the editor.
-            const tabs: vscode.Tab[] = vscode.window.tabGroups.all.map(tg => tg.tabs).flat();
-            for (let i = 0; i < tabs.length; i++) {
-                await vscode.window.tabGroups.close(tabs[i]);
-            }
+			// ===== SETUP =====
+			// Simulate no window being open in the editor.
+			// NOTE: We need to use a stub here instead of/in addition to directly closing
+			//       windows, because sometimes the test context can have a weird "phantom window"
+			//       even if you close anything. This seems to happen when the test instance loses
+			//       focus.
+			const windowStub = Sinon.stub(vscode.window, 'activeTextEditor').value(undefined);
 
             // ===== TEST =====
             // Feed an empty array into target finder, expecting an error.
@@ -198,11 +205,6 @@ suite('targeting.ts', () => {
                 Sinon.stub(ApexLsp, 'getSymbols').resolves(symbols);
             });
 
-            teardown(() => {
-                // Revert any stubbing/spying we did with Sinon.
-                Sinon.restore();
-            });
-
             test('Returns nearest preceding method if locateable', async () => {
                 // ===== SETUP =====
                 // Move the cursor to a line with a preceding method.
@@ -238,18 +240,13 @@ suite('targeting.ts', () => {
         });
 
         suite('When Apex LSP is unavailable...', () => {
-            let warningSpy;
+            let warningSpy: Sinon.SinonSpy;
             setup(() => {
                 // Simulate the Apex LSP being unavailable by stubbing the appropriate
                 // method to return `undefined`.
                 Sinon.stub(ApexLsp, 'getSymbols').resolves(undefined);
                 // Create a Spy so we can see what's going on with the warnings.
                 warningSpy = Sinon.spy(vscode.window, 'showWarningMessage')
-            });
-
-            teardown(() => {
-                // Revert any stubbing/spying we did with Sinon.
-                Sinon.restore();
             });
 
             test('Displays warning and returns current word', async () => {
