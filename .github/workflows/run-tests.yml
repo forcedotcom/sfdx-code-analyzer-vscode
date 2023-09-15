@@ -18,18 +18,24 @@ jobs:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node module dependencies'
         run: yarn install --frozen-lockfile
-      - name: Install SFDX
+      # Install the CLI tool and SFCA, since there are integration tests
+      # that depend on these things being present.
+      - name: Install SF CLI
         run: npm install --global @salesforce/cli
       - name: Install Code Analyzer
         run: sfdx plugins:install @salesforce/sfdx-scanner
-      - name: 'Run Unit Tests (Linux)'
+      # Run the tests. (Linux and non-Linux need slightly different commands.)
+      - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
         if: runner.os == 'Linux'
-      - name: 'Run Unit Tests (non-Linux)'
+      - name: 'Run Tests (non-Linux)'
         run: yarn test
         if: runner.os != 'Linux'
+      # Lint, to make sure we're following best practices.
       - name: 'Lint'
         run: yarn lint
+      # Upload the code coverage from the test as an artifact with
+      # the name 'code-coverage-[whatever the OS is]'.
       - name: Upload coverage artifact
         if: ${{ always() }}
         uses: actions/upload-artifact@v3
