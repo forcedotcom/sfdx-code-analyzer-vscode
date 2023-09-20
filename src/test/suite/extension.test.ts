@@ -74,10 +74,66 @@ suite('Extension Test Suite', () => {
 			}
 		});
 
-		test('sfca.runOnSelected', async function() {
-			// TODO: Add actual tests for `runOnSelected`.
+		suite('sfca.runOnSelected', () => {
+			test('One file selected', async function() {
+				// ===== SETUP =====
+				// Set the timeout to a frankly absurd value, just to make sure Github Actions
+				// can finish it in time.
+				this.timeout(60000);
+				// Get the URI for a single file.
+				const targetUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 
+				// ===== TEST =====
+				// Run the "scan selected files" command.
+				// Pass the URI in as the first parameter, since that's what happens on a single-file selection.
+				await vscode.commands.executeCommand('sfca.runOnSelected', targetUri, []);
 
+				// ===== ASSERTIONS =====
+				// Verify that we added diagnostics.
+				const diagnosticArrays = vscode.languages.getDiagnostics();
+				const [resultsUri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri.toString());
+				expect(resultsUri, `Expected diagnostics for ${targetUri.toString()}`).to.exist;
+				expect(diagnostics, `Expected non-empty diagnostics for ${targetUri.toString()}`).to.not.be.empty;
+				// At present, we expect only violations for PMD's `ApexDoc` rule.
+				for (const diagnostic of diagnostics) {
+					expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
+					expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+				}
+			});
+
+			test('One folder selected', () => {
+				// TODO: IMPLEMENT THIS TEST
+			});
+
+			test('Multiple files selected', async function() {
+				// ===== SETUP =====
+				// Set the timeout to a frankly absurd value, just to make sure Github Actions
+				// can finish it in time.
+				this.timeout(60000);
+				// Get the URIs for two separate files.
+				const targetUri1: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
+				const targetUri2: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA2.cls'));
+
+				// ===== TEST =====
+				// Run the "scan selected files" command.
+				// Pass the URIs in as the second parameter, since that's what happens on a multi-select pick.
+				await vscode.commands.executeCommand('sfca.runOnSelected', null, [targetUri1, targetUri2]);
+
+				// ===== ASSERTIONS =====
+				// Verify that we added diagnostics.
+				const diagnosticArrays = vscode.languages.getDiagnostics();
+				const [resultsUri1, diagnostics1] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri1.toString());
+				const [resultsUri2, diagnostics2] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri2.toString());
+				expect(resultsUri1, `Expected diagnostics for ${targetUri1.toString()}`).to.exist;
+				expect(resultsUri2, `Expected diagnostics for ${targetUri2.toString()}`).to.exist;
+				expect(diagnostics1, `Expected non-empty diagnostics for ${targetUri1.toString()}`).to.not.be.empty;
+				expect(diagnostics2, `Expected non-empty diagnostics for ${targetUri2.toString()}`).to.not.be.empty;
+				// At present, we expect only violations for PMD's `ApexDoc` rule.
+				for (const diagnostic of [...diagnostics1, ...diagnostics2]) {
+					expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
+					expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+				}
+			});
 		});
 
 		test('sfca.runDfaOnSelected', async () => {

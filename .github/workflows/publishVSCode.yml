@@ -59,8 +59,17 @@ jobs:
         run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD=offcore.tooling.${{ steps.get-package-version.outputs.PACKAGE_VERSION }}" > $GITHUB_OUTPUT
       - run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD is ${{ steps.get-scheduled-build.outputs.SF_CHANGE_CASE_SCHEDULE_BUILD }}"
 
-  publish:
+  run-tests:
+    name: 'Test against production scanner'
     needs: [ 'validate-release-environment' ]
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      # Before publishing, we want to test the extension against whatever
+      # version of the scanner is currently live.
+      use-scanner-tarball: false
+
+  publish:
+    needs: [ 'run-tests' ]
     runs-on: ubuntu-latest
     env:
       VSCE_PERSONAL_ACCESS_TOKEN: ${{ secrets.VSCE_PERSONAL_ACCESS_TOKEN }}
