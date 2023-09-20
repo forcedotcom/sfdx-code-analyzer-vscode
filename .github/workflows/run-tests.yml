@@ -1,7 +1,12 @@
 name: run-tests
 on:
   workflow_call:
-  workflow_dispatch:
+    inputs:
+      use-scanner-tarball:
+        description: 'If true, install scanner via tarball'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build-and-run:
@@ -18,11 +23,41 @@ jobs:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node module dependencies'
         run: yarn install --frozen-lockfile
-      # Install the CLI tool and SFCA, since there are integration tests
-      # that depend on these things being present.
+      # We'll need to install the CLI tool, since some of the tests
+      # are integration tests.
       - name: Install SF CLI
         run: npm install --global @salesforce/cli
-      - name: Install Code Analyzer
+      # We'll need to install Salesforce Code Analyzer, since some
+      # of the tests are integration tests.
+      # NOTE: SFCA can come from a tarball built in a previous step,
+      #       or be installed as the currently-latest version.
+      - name: Download Scanner Tarball
+        if: ${{ inputs.use-scanner-tarball == true }}
+        id: download
+        uses: actions/download-artifact@v3
+        with:
+          name: scanner-tarball
+          # Download the tarball to a subdirectory of HOME, so it's guaranteed
+          # to be somewhere the installation command can see.
+          path: ~/downloads/tarball
+      - name: Install Scanner Tarball
+        if: ${{ inputs.use-scanner-tarball == true }}
+        shell: bash
+        run: |
+          # Determine the tarball's name.
+          TARBALL_NAME=$(ls ~/downloads/tarball/sfdx-scanner | grep salesforce-sfdx-scanner-[0-9]*\\.[0-9]*\\.[0-9]*\\.tgz)
+          echo $TARBALL_NAME
+          # Figure out where the tarball was downloaded to.
+          # To allow compatibility with Windows, replace backslashes with forward slashes
+          # and rip off a leading `C:` if present.
+          DOWNLOAD_PATH=`echo '${{ steps.download.outputs.download-path }}' | tr '\\' '/'`
+          echo $DOWNLOAD_PATH
+          DOWNLOAD_PATH=`[[ $DOWNLOAD_PATH = C* ]] && echo $DOWNLOAD_PATH | cut -d':' -f 2 || echo $DOWNLOAD_PATH`
+          echo $DOWNLOAD_PATH
+          # Pipe in a `y` to simulate agreeing to install an unsigned package. Use a URI of the file's full path.
+          echo y | sfdx plugins:install "file://${DOWNLOAD_PATH}/sfdx-scanner/${TARBALL_NAME}"
+      - name: Install Production scanner
+        if: ${{ inputs.use-scanner-tarball == false }}
         run: sfdx plugins:install @salesforce/sfdx-scanner
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'

@@ -4,7 +4,7 @@ on:
     types: [edited, opened, reopened, synchronize]
 
 jobs:
-  # We need to verify that the Pull Request's title matches the desired format.
+  # VALIDATE PR TITLE FORMAT
   verify_pr_title:
     runs-on: ubuntu-latest
     name: Verify that PR title contains well-formed GUS work item tag.
@@ -15,10 +15,23 @@ jobs:
       # TODO: Implement this action
       - name: Verify PR Title
         run: echo 'Nope not yet'
-  # Separately, we also need to run our tests
+  # RUN TESTS
+  # Step 1: Build the scanner tarball so it can be installed locally.
+  build_scanner_tarball:
+    name: 'Build scanner tarball'
+    uses: ./.github/workflows/build-scanner-tarball.yml
+    with:
+      target-branch: 'dev'
+  # Step 2: Actually run the tests.
   run_tests:
     name: 'Run unit tests'
+    needs: build_scanner_tarball
     uses: ./.github/workflows/run-tests.yml
+    with:
+      # We want to validate the extension against whatever version of the scanner we
+      # *plan* to publish, not what's *already* published.
+      use-scanner-tarball: true
+  # BUILD A VSIX ARTIFACT
   # Additionally, build a VSIX that can be downloaded by the user if needed.
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'

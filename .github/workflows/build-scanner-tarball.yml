@@ -1,0 +1,40 @@
+name: build-scanner-tarball
+on:
+  workflow_call:
+    inputs:
+      target-branch:
+        description: "Which branch of the scanner should be built?"
+        required: false
+        type: string
+        default: "dev"
+
+jobs:
+  build-tarball:
+    runs-on: ubuntu-latest
+    steps:
+      # Install Node and Java.
+      - name: 'Install Node LTS'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*' # Always use Node LTS for building the tarball.
+      - name: 'Install Java 1.8'
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8' # Always use Java v1.8 for building the tarball.
+      - name: 'Check out, build, pack'
+        run: |
+          # Check out the target branch.
+          git clone https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
+          cd sfdx-scanner
+          git checkout ${{ inputs.target-branch }}
+          # Install and build dependencies.
+          yarn
+          yarn build
+          # Create the tarball.
+          npm pack
+      # Upload the tarball as an artifact so it's usable elsewhere.
+      - uses: actions/upload-artifact@v3
+        with:
+          name: scanner-tarball
+          path: ./**/salesforce-sfdx-scanner-*.tgz
