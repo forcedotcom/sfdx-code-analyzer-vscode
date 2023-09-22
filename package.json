@@ -1,6 +1,6 @@
 {
     "name": "sfdx-code-analyzer-vscode",
-    "displayName": "Salesforce Code Analyzer VS Code Extension",
+    "displayName": "Salesforce Code Analyzer",
     "description": "Salesforce Code Analyzer is a unified tool for source code analysis. Run Code Analyzer to scan multiple languages in your code and add diagnostic info to your code that describes the violations.",
     "bugs": {
         "url": "https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
