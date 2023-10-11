@@ -1,4 +1,4 @@
-name: Publish in Microsoft Marketplace
+name: Publish Extension
 on:
   release:
     # This limits the workflow to releases that are not pre-releases.
@@ -15,29 +15,27 @@ on:
 jobs:
   validate-release-environment:
     runs-on: ubuntu-latest
+    # The `publish` environment is inherited from the org level, and means the job
+    # can't proceed until someone with appropriate permissions approves it.
     environment: publish
-    outputs:
-      RELEASE_VERSION: ${{ steps.get-package-version.outputs.PACKAGE_VERSION }}
-      GUS_BUILD: ${{ steps.get-gus-build.outputs.GUS_BUILD }}
-      SF_CHANGE_CASE_SCHEDULE_BUILD: ${{ steps.get-scheduled-build.outputs.SF_CHANGE_CASE_SCHEDULE_BUILD }}
     steps:
-      # Check out the release branch and get its head commit as output for later.
+      # Check out the main branch and get its head commit as output for later.
       - uses: actions/checkout@v3
         with:
           ref: 'main'
-      - id: get-branch-commit
+      - id: get-main-head
         run: echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
       # Check out the tag to be released and get its head commit as output for later.
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-      - id: get-tag-commit
+      - id: get-tag-head
         run: echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
       # If the two commits aren't identical, the tag isn't eligible for release.
       - name: Fail non-matching commits
-        if: ${{ steps.get-branch-commit.outputs.COMMIT_ID != steps.get-tag-commit.outputs.COMMIT_ID }}
+        if: ${{ steps.get-main-head.outputs.COMMIT_ID != steps.get-tag-head.outputs.COMMIT_ID }}
         run: |
-          echo "Tag commit must match latest commit in main. Branch is ${{ steps.get-branch-commit.outputs.COMMIT_ID }}. Tag is ${{ steps.get-tag-commit.outputs.COMMIT_ID }}."
+          echo "Tag commit must match latest commit in main branch. Branch head is ${{ steps.get-main-head.outputs.COMMIT_ID }}. Tag head is ${{ steps.get-tag-head.outputs.COMMIT_ID }}."
           exit 1
       # Get the `version` property from `package.json` as output for later.
       - name: Get package.json version property
@@ -52,12 +50,6 @@ jobs:
           PACKAGE_VERSION=v${{ steps.get-package-version.outputs.PACKAGE_VERSION }}
           [[ ${TAG} == ${PACKAGE_VERSION} ]] || (echo "Tag name must match package.json version, prefixed by lowercase v" && exit 1)
       # Set other miscellaneous environment variables as outputs for later.
-      - id: get-gus-build
-        run: echo "GUS_BUILD=${{ steps.get-package-version.outputs.PACKAGE_VERSION }}" >> $GITHUB_OUTPUT
-      - run: echo "GUS BUILD IS ${{ steps.get-gus-build.outputs.GUS_BUILD }}"
-      - id: get-scheduled-build
-        run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD=offcore.tooling.${{ steps.get-package-version.outputs.PACKAGE_VERSION }}" > $GITHUB_OUTPUT
-      - run: echo "SF_CHANGE_CASE_SCHEDULE_BUILD is ${{ steps.get-scheduled-build.outputs.SF_CHANGE_CASE_SCHEDULE_BUILD }}"
 
   run-tests:
     name: 'Test against production scanner'
@@ -68,7 +60,8 @@ jobs:
       # version of the scanner is currently live.
       use-scanner-tarball: false
 
-  publish:
+  publish-vscode:
+    name: 'Publish to VSCode Marketplace'
     needs: [ 'run-tests' ]
     runs-on: ubuntu-latest
     env:
@@ -95,4 +88,34 @@ jobs:
       - name: Publish the VSIX
         run: find ./extensions -type f -name "*.vsix" -exec npx vsce publish --pat ${{ env.VSCE_PERSONAL_ACCESS_TOKEN }} --packagePath {} \;
       - run: echo "SUCCESSFULLY PUBLISHED"
+
+  publish-openvsx:
+    name: 'Publish to OpenVSX marketplace'
+    needs: [ 'run-tests' ]
+    runs-on: ubuntu-latest
+    env:
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+    steps:
+      - name: Checkout the release tag
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          token: ${{ env.GITHUB_TOKEN }}
+      # Set up node and install dependencies.
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 'lts/*'
+      - run: yarn install --frozen-lockfile
+      # Download the .vsix attached to the release.
+      - name: Download Extension From Release
+        run: |
+          mkdir ./extensions
+          gh release download ${{ github.event.release.tag_name || inputs.tag }} -D ./extensions
+      - name: Display downloaded VSIX
+        run: ls -R ./extensions
+      - name: Publish the VSIX
+        run: find ./extensions -type f -name "*.vsix" -exec osvx publish {} -p ${{ env.OSVX_PAT }} \;
+      - run: echo "SUCCESSFULLY PUBLISHED"
+
 
