@@ -115,7 +115,7 @@ jobs:
       - name: Display downloaded VSIX
         run: ls -R ./extensions
       - name: Publish the VSIX
-        run: find ./extensions -type f -name "*.vsix" -exec osvx publish {} -p ${{ env.OSVX_PAT }} \;
+        run: find ./extensions -type f -name "*.vsix" -exec npx osvx publish {} -p ${{ env.OSVX_PAT }} \;
       - run: echo "SUCCESSFULLY PUBLISHED"
 
 
