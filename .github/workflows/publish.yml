@@ -94,7 +94,7 @@ jobs:
     needs: [ 'run-tests' ]
     runs-on: ubuntu-latest
     env:
-      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      IDEE_OVSX_PAT: ${{ secrets.IDEE_OVSX_PAT }}
       GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
@@ -115,7 +115,7 @@ jobs:
       - name: Display downloaded VSIX
         run: ls -R ./extensions
       - name: Publish the VSIX
-        run: find ./extensions -type f -name "*.vsix" -exec npx osvx publish {} -p ${{ env.OSVX_PAT }} \;
+        run: find ./extensions -type f -name "*.vsix" -exec npx osvx publish {} -p ${{ env.IDEE_OVSX_PAT }} \;
       - run: echo "SUCCESSFULLY PUBLISHED"
 
 
