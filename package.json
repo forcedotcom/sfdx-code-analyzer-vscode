@@ -35,7 +35,8 @@
     "dependencies": {
         "cross-spawn": "^7.0.3",
         "glob": "^8.0.3",
-        "globby": "^11.0.0"
+        "globby": "^11.0.0",
+        "semver": "^7.5.4"
     },
     "devDependencies": {
         "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -68,6 +69,9 @@
         "test": "node ./out/test/runTest.js"
     },
     "main": "./out/extension.js",
+	"extensionDependencies": [
+		"salesforce.salesforcedx-vscode-core"
+	],
     "contributes": {
         "commands": [
             {

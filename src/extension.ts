@@ -15,6 +15,7 @@ import {RuleResult} from './types';
 import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
+import { CoreExtensionService } from './lib/core-extension-service';
 
 /**
  * Declare a {@link vscode.DiagnosticCollection} at the global scope, to make it accessible
@@ -26,10 +27,11 @@ let diagnosticCollection: vscode.DiagnosticCollection = null;
  * This method is invoked when the extension is first activated (i.e., the very first time the command is executed).
  * Registers the necessary diagnostic collections and commands.
  */
-export function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
+export async function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
+	// We need to do this first in case any other services need access to those provided by the core extension.
+	await CoreExtensionService.loadDependencies(context);
+
 	console.log(`Extension sfdx-code-analyzer-vscode activated.`);
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
