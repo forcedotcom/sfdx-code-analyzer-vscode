@@ -70,7 +70,7 @@ interface Measurements {
 	[key: string]: number;
 }
 
-interface Properties {
+export interface Properties {
 	[key: string]: string;
 }
 

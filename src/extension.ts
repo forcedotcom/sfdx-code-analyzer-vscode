@@ -16,6 +16,14 @@ import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import { CoreExtensionService } from './lib/core-extension-service';
+import { TelemetryService } from './lib/telemetry';
+import * as Constants from './lib/constants';
+
+type RunInfo = {
+	diagnosticCollection?: vscode.DiagnosticCollection;
+	outputChannel: vscode.LogOutputChannel;
+	commandName: string;
+}
 
 /**
  * Declare a {@link vscode.DiagnosticCollection} at the global scope, to make it accessible
@@ -28,6 +36,7 @@ let diagnosticCollection: vscode.DiagnosticCollection = null;
  * Registers the necessary diagnostic collections and commands.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
+	const extensionHrStart = process.hrtime();
 
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context);
@@ -51,20 +60,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	outputChannel.clear();
 	outputChannel.show();
 
-	// Declare our commands. Their names must exactly match their declarations in `package.json`.
-	const runOnActiveFile = vscode.commands.registerCommand('sfca.runOnActiveFile', async () => {
-		return _runAndDisplayPathless([], diagnosticCollection, outputChannel);
+	// Declare our commands.
+	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
+		return _runAndDisplayPathless([], {
+			commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
+			diagnosticCollection,
+			outputChannel
+		});
 	});
-	const runOnSelected = vscode.commands.registerCommand('sfca.runOnSelected', async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
-		return _runAndDisplayPathless(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], diagnosticCollection, outputChannel);
+	const runOnSelected = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
+		return _runAndDisplayPathless(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], {
+			commandName: Constants.COMMAND_RUN_ON_SELECTED,
+			diagnosticCollection,
+			outputChannel
+		});
 	});
 	const graphEngineStatus: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	graphEngineStatus.name = messages.graphEngine.statusBarName;
 	context.subscriptions.push(graphEngineStatus);
-	const runDfaOnSelectedMethod = vscode.commands.registerCommand('sfca.runDfaOnSelectedMethod', async () => {
-		return _runAndDisplayDfa(graphEngineStatus, outputChannel);
+	const runDfaOnSelectedMethod = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
+		return _runAndDisplayDfa(graphEngineStatus, {
+			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
+			outputChannel
+		});
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
+	const telemetryService = CoreExtensionService.getTelemetryService();
+	telemetryService.sendExtensionActivationEvent(extensionHrStart);
 	return Promise.resolve(context);
 }
 
@@ -82,11 +104,19 @@ async function verifyPluginInstallation(): Promise<void> {
 /**
  * Runs non-Path-based rules against the selected files/directories, or the active file if nothing was selected.
  * @param selections The files/directories manually selected by the user.
- * @param diagnosticCollection The collection to which diagnostics representing violations should be added.
- * @param outputChannel The output channel where information should be logged as needed.
+ * @param runInfo A collection of services and information used to properly run the command.
+ * @param runInfo.diagnosticCollection The collection to which diagnostics representing violations should be added.
+ * @param runInfo.outputChannel The output channel where information should be logged as needed.
+ * @param runinfo.commandName The specific command being executed
  * @returns
  */
-export async function _runAndDisplayPathless(selections: vscode.Uri[], diagnosticCollection: vscode.DiagnosticCollection, outputChannel: vscode.LogOutputChannel): Promise<void> {
+export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: RunInfo): Promise<void> {
+	const {
+		diagnosticCollection,
+		outputChannel,
+		commandName
+	} = runInfo;
+	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
 		return await vscode.window.withProgress({
@@ -102,6 +132,10 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], diagnosti
 
 			progress.report(messages.scanProgressReport.processingResults);
 			new DiagnosticManager().displayDiagnostics(targets, results, diagnosticCollection);
+			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
+				executedCommand: commandName,
+				duration: (Date.now() - startTime).toString()
+			});
 			// This has to be a floating promise or else the progress bar won't disappear.
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			summarizeResultsAsToast(targets, results);
@@ -109,6 +143,10 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], diagnosti
 	} catch (e) {
 		const errMsg = e instanceof Error ? e.message : e as string;
 		console.log(errMsg);
+		TelemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS, errMsg, {
+			executedCommand: commandName,
+			duration: (Date.now() - startTime).toString()
+		});
 		// This has to be a floating promise, since the command won't complete until
 		// the error is dismissed.
 		// eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -122,9 +160,16 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], diagnosti
 /**
  * Run Path-based rules against the method the user has clicked on.
  * @param statusBarItem The item to use in the status bar for displaying progress
- * @param outputChannel The output channel where information should be logged as needed
+ * @param runInfo A collection of services and information used to properly run the command
+ * @param runInfo.outputChannel The output channel where information should be logged as needed
+ * @param runInfo.commandName The specific command being run
  */
-export async function _runAndDisplayDfa(statusBarItem: vscode.StatusBarItem, outputChannel: vscode.LogOutputChannel): Promise<void> {
+export async function _runAndDisplayDfa(statusBarItem: vscode.StatusBarItem, runInfo: RunInfo): Promise<void> {
+	const {
+		outputChannel,
+		commandName
+	} = runInfo;
+	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
 		// Set the Status Bar Item's text and un-hide it.
@@ -150,9 +195,17 @@ export async function _runAndDisplayDfa(statusBarItem: vscode.StatusBarItem, out
 		} else {
 			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
 		}
+		TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_DFA_ANALYSIS, {
+			executedCommand: commandName,
+			duration: (Date.now() - startTime).toString()
+		})
 	} catch (e) {
 		const errMsg = e instanceof Error ? e.message : e as string;
 		console.log(errMsg);
+		TelemetryService.sendException(Constants.TELEM_FAILED_DFA_ANALYSIS, errMsg, {
+			executedCommand: commandName,
+			duration: (Date.now() - startTime).toString()
+		});
 		// This has to be a floating promise, since the command won't complete until
 		// the error is dismissed.
 		// eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -187,5 +240,6 @@ async function summarizeResultsAsToast(targets: string[], results: RuleResult[])
 
 // This method is called when your extension is deactivated
 export function deactivate() {
-	// Intentionally left empty (for now?)
+	const telemetryService = CoreExtensionService.getTelemetryService();
+	telemetryService.dispose();
 }

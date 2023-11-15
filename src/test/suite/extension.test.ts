@@ -11,6 +11,8 @@ import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
 import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics } from '../../extension';
 import {messages} from '../../lib/messages';
+import {TelemetryService} from '../../lib/telemetry';
+import * as Constants from '../../lib/constants';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
@@ -145,6 +147,13 @@ suite('Extension Test Suite', () => {
 		suite('Error handling', () => {
 			const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 			outputChannel.clear();
+			let commandTelemStub: Sinon.SinonStub;
+			let exceptionTelemStub: Sinon.SinonStub;
+			setup(() => {
+				commandTelemStub = Sinon.stub(TelemetryService, 'sendCommandEvent').callsFake(() => {});
+				exceptionTelemStub = Sinon.stub(TelemetryService, 'sendException').callsFake(() => {});
+			});
+
 			teardown(() => {
 				Sinon.restore();
 			});
@@ -154,15 +163,23 @@ suite('Extension Test Suite', () => {
 				// Simulate SFDX being unavailable.
 				const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 				Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+				const fakeTelemetryName = 'FakeName';
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
 				// The arguments do not matter.
-				await _runAndDisplayPathless(null, null, outputChannel);
+				await _runAndDisplayPathless(null, {
+					commandName: fakeTelemetryName,
+					outputChannel
+				});
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
 				expect(errorSpy.firstCall.args[0]).to.include(messages.error.sfMissing);
+				Sinon.assert.callCount(exceptionTelemStub, 1);
+				expect(exceptionTelemStub.firstCall.args[0]).to.equal(Constants.TELEM_FAILED_STATIC_ANALYSIS, 'Wrong telemetry key');
+				expect(exceptionTelemStub.firstCall.args[1]).to.include(messages.error.sfMissing);
+				expect(exceptionTelemStub.firstCall.args[2]).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
 			});
 
 			test('Throws error if `sfdx-scanner` is missing', async () => {
@@ -171,15 +188,23 @@ suite('Extension Test Suite', () => {
 				const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 				Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
 				Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
+				const fakeTelemetryName = 'FakeName';
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
 				// The arguments do not matter.
-				await _runAndDisplayPathless(null, null, outputChannel);
+				await _runAndDisplayPathless(null, {
+					commandName: fakeTelemetryName,
+					outputChannel
+				});
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
 				expect(errorSpy.firstCall.args[0]).to.include(messages.error.sfdxScannerMissing);
+				Sinon.assert.callCount(exceptionTelemStub, 1);
+				expect(exceptionTelemStub.firstCall.args[0]).to.equal(Constants.TELEM_FAILED_STATIC_ANALYSIS, 'Wrong telemetry key');
+				expect(exceptionTelemStub.firstCall.args[1]).to.include(messages.error.sfdxScannerMissing);
+				expect(exceptionTelemStub.firstCall.args[2]).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
 			});
 		});
 	});
@@ -189,6 +214,14 @@ suite('Extension Test Suite', () => {
 			const statusBar: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 			const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 			outputChannel.clear();
+			let commandTelemStub: Sinon.SinonStub;
+			let exceptionTelemStub: Sinon.SinonStub;
+
+			setup(() => {
+				commandTelemStub = Sinon.stub(TelemetryService, 'sendCommandEvent').callsFake(() => {});
+				exceptionTelemStub = Sinon.stub(TelemetryService, 'sendException').callsFake(() => {});
+			});
+
 			teardown(() => {
 				Sinon.restore();
 			});
@@ -198,14 +231,22 @@ suite('Extension Test Suite', () => {
 				// Simulate SFDX being unavailable.
 				const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 				Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+				const fakeTelemetryName = 'FakeName';
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
-				await _runAndDisplayDfa(statusBar, outputChannel);
+				await _runAndDisplayDfa(statusBar, {
+					commandName: fakeTelemetryName,
+					outputChannel
+				});
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
 				expect(errorSpy.firstCall.args[0]).to.include(messages.error.sfMissing);
+				Sinon.assert.callCount(exceptionTelemStub, 1);
+				expect(exceptionTelemStub.firstCall.args[0]).to.equal(Constants.TELEM_FAILED_DFA_ANALYSIS, 'Wrong telemetry key');
+				expect(exceptionTelemStub.firstCall.args[1]).to.include(messages.error.sfMissing);
+				expect(exceptionTelemStub.firstCall.args[2]).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
 			});
 
 			test('Throws error if `sfdx-scanner` is missing', async () => {
@@ -214,12 +255,16 @@ suite('Extension Test Suite', () => {
 				const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 				Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
 				Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
+				const fakeTelemetryName = 'FakeName';
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command, expecting an error.
 				let err: Error = null;
 				try {
-					await _runAndDisplayDfa(statusBar, outputChannel);
+					await _runAndDisplayDfa(statusBar, {
+						commandName: fakeTelemetryName,
+						outputChannel
+					});
 				} catch (e) {
 					err = e;
 				}
@@ -227,6 +272,10 @@ suite('Extension Test Suite', () => {
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
 				expect(errorSpy.firstCall.args[0]).to.include(messages.error.sfdxScannerMissing);
+				Sinon.assert.callCount(exceptionTelemStub, 1);
+				expect(exceptionTelemStub.firstCall.args[0]).to.equal(Constants.TELEM_FAILED_DFA_ANALYSIS, 'Wrong telemetry key');
+				expect(exceptionTelemStub.firstCall.args[1]).to.include(messages.error.sfdxScannerMissing);
+				expect(exceptionTelemStub.firstCall.args[2]).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
 			});
 		});
 	});
