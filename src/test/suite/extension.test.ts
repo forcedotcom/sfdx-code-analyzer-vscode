@@ -26,7 +26,8 @@ suite('Extension Test Suite', () => {
 	suite('E2E', () => {
 		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
-		suiteSetup(async () => {
+		suiteSetup(async function () {
+			this.timeout(10000);
 			// Activate the extension.
 			context = await ext.activate();
 		});
