@@ -31,7 +31,8 @@ suite('Extension Test Suite', () => {
 			context = await ext.activate();
 		});
 
-		setup(() => {
+		setup(function () {
+			this.timeout(10000);
 			// Verify that there are no existing diagnostics floating around.
 			const diagnosticsArrays = vscode.languages.getDiagnostics();
 			for (const [uri, diagnostics] of diagnosticsArrays) {
