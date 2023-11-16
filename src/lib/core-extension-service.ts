@@ -6,13 +6,9 @@
  */
 import * as vscode from 'vscode';
 import { satisfies } from 'semver';
+import {messages} from './messages';
 
 import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
-
-const NOT_INITIALIZED_ERROR = 'CoreExtensionService not initialized';
-const TELEMETRY_SERVICE_NOT_FOUND = 'TelemetryService not found';
-const CORE_EXTENSION_NOT_FOUND = 'Core extension not found';
-const OUTDATED_CORE_VERSION = "It looks like you're running an older version of the Salesforce CLI Integration VSCode Extension. Update the Salesforce Extension pack and try again.";
 
 
 export class CoreExtensionService {
@@ -23,13 +19,13 @@ export class CoreExtensionService {
 		if (!CoreExtensionService.initialized) {
 			const coreExtension = vscode.extensions.getExtension(CORE_EXTENSION_ID);
 			if (!coreExtension) {
-				throw new Error(CORE_EXTENSION_NOT_FOUND); // TODO: MESSAGE-IFY AND APPROVE THIS MESSAGE.
+				throw new Error(messages.error.coreExtensionMissing);
 			}
 			// We konw that there has to be a version property on the package.json.
 			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			const coreExtensionVersion = (coreExtension.packageJSON.version) as string;
 			if (!this.isAboveMinimumRequiredVersion(MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, coreExtensionVersion)) {
-				throw new Error(OUTDATED_CORE_VERSION); // TODO: MESSAGE-IFY AND APPROVE THIS MESSAGE.
+				throw new Error(messages.error.coreExtensionOutdated);
 			}
 
 			const coreExtensionApi = coreExtension.exports as CoreExtensionApi;
@@ -50,7 +46,7 @@ export class CoreExtensionService {
 
 	private static async initializeTelemetryService(telemetryService: TelemetryService | undefined, context: vscode.ExtensionContext): Promise<void> {
 		if (!telemetryService) {
-			throw new Error(TELEMETRY_SERVICE_NOT_FOUND); // TODO: MESSAGE-IFY AND APPROVE THIS MESSAGE.
+			throw new Error(messages.error.telemetryServiceMissing);
 		}
 
 		CoreExtensionService.telemetryService = telemetryService.getInstance();
@@ -61,7 +57,7 @@ export class CoreExtensionService {
 		if (CoreExtensionService.initialized) {
 			return CoreExtensionService.telemetryService;
 		}
-		throw new Error(NOT_INITIALIZED_ERROR)
+		throw new Error(messages.error.coreExtensionServiceUninitialized);
 	}
 }
 

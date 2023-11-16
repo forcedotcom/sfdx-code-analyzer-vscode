@@ -53,6 +53,10 @@ export const messages = {
         analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use this extension, first install Salesforce CLI `sf` or `sfdx` commands.",
-        sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`."
+        sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`.",
+		coreExtensionMissing: "To use telemetry services, install the Salesforce Extension Pack. Then install the Salesforce Code Analyzer VS Code extension.",
+		coreExtensionOutdated: "Your Salesforce CLI Integration VS Code extension version doesn’t support telemetry services.\nUpdate the Salesforce Extension Pack to the latest version and try again.",
+		coreExtensionServiceUninitialized: "CoreExtensionService.ts didn’t initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues",
+		telemetryServiceMissing: "We couldn’t find telemetry services. Update the Salesforce Extension Pack to the latest version and try again."
     }
 };
