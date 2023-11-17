@@ -6,6 +6,9 @@
  */
 import { CoreExtensionService, Properties } from './core-extension-service';
 
+/**
+ * Helper class for managing access to the core telemetry service.
+ */
 export class TelemetryService {
 	public static sendCommandEvent(key: string, data: Properties): void {
 		const coreTelemetryService = CoreExtensionService.getTelemetryService();
@@ -15,7 +18,7 @@ export class TelemetryService {
 	public static sendException(name: string, message: string, data?: Record<string, string>): void {
 		const coreTelemetryService = CoreExtensionService.getTelemetryService();
 		message += data ? JSON.stringify(data) : '';
-		coreTelemetryService.sendException(name, message);
+		coreTelemetryService?.sendException(name, message);
 	}
 }
 

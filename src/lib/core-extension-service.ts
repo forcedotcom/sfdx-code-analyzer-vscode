@@ -10,29 +10,45 @@ import {messages} from './messages';
 
 import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
 
-
+/**
+ * Manages access to the services exported by the Salesforce VSCode Extension Pack's core extension.
+ * If the extension pack isn't installed, only performs no-ops.
+ */
 export class CoreExtensionService {
 	private static initialized = false;
 	private static telemetryService: TelemetryService;
 
 	public static async loadDependencies(context: vscode.ExtensionContext): Promise<void> {
 		if (!CoreExtensionService.initialized) {
-			const coreExtension = vscode.extensions.getExtension(CORE_EXTENSION_ID);
-			if (!coreExtension) {
-				throw new Error(messages.error.coreExtensionMissing);
-			}
-			// We konw that there has to be a version property on the package.json.
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-			const coreExtensionVersion = (coreExtension.packageJSON.version) as string;
-			if (!this.isAboveMinimumRequiredVersion(MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, coreExtensionVersion)) {
-				throw new Error(messages.error.coreExtensionOutdated);
-			}
-
-			const coreExtensionApi = coreExtension.exports as CoreExtensionApi;
+			const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
 			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context);
 			CoreExtensionService.initialized = true;
 		}
+	}
+
+	private static async getCoreExtensionApiOrUndefined(): Promise<CoreExtensionApi|undefined> {
+		const coreExtension = vscode.extensions.getExtension(CORE_EXTENSION_ID);
+		if (!coreExtension) {
+			console.log(`${CORE_EXTENSION_ID} not found; cannot load core dependencies. Returning undefined instead.`);
+			return undefined;
+		}
+
+		// We know that there has to be a `version` property on the package.json object.
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+		const coreExtensionVersion = (coreExtension.packageJSON.version) as string;
+		if (!this.isAboveMinimumRequiredVersion(MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, coreExtensionVersion)) {
+			console.log(`${CORE_EXTENSION_ID} below minimum viable version; cannot load core dependencies. Returning undefined instead.`);
+			return undefined;
+		}
+
+		if (!coreExtension.isActive) {
+			console.log(`${CORE_EXTENSION_ID} present but inactive. Activating now.`);
+			await coreExtension.activate();
+		}
+
+		console.log(`${CORE_EXTENSION_ID} present and active. Returning its exported API.`);
+		return coreExtension.exports as CoreExtensionApi;
 	}
 
 	/**
@@ -44,16 +60,26 @@ export class CoreExtensionService {
 		return satisfies(actualVersion, ">=" + minRequiredVersion);
 	}
 
+	/**
+	 * Initializes a {@link TelemetryService} instance of the provided class, or a {@link NoOpTelemetryService} if none was provided
+	 * @param telemetryService
+	 * @param context
+	 */
 	private static async initializeTelemetryService(telemetryService: TelemetryService | undefined, context: vscode.ExtensionContext): Promise<void> {
 		if (!telemetryService) {
-			throw new Error(messages.error.telemetryServiceMissing);
+			console.log(`Telemetry service not present in core dependency API. Using null instead.`);
+			CoreExtensionService.telemetryService = null;
+		} else {
+			CoreExtensionService.telemetryService = telemetryService.getInstance();
+			await CoreExtensionService.telemetryService.initializeService(context);
 		}
-
-		CoreExtensionService.telemetryService = telemetryService.getInstance();
-		await CoreExtensionService.telemetryService.initializeService(context);
 	}
 
-	public static getTelemetryService(): TelemetryService {
+	/**
+	 *
+	 * @returns The {@link TelemetryService} object exported by the Core Extension if available, else null.
+	 */
+	public static getTelemetryService(): TelemetryService|null {
 		if (CoreExtensionService.initialized) {
 			return CoreExtensionService.telemetryService;
 		}

@@ -69,9 +69,6 @@
         "test": "node ./out/test/runTest.js"
     },
     "main": "./out/extension.js",
-	"extensionDependencies": [
-		"salesforce.salesforcedx-vscode-core"
-	],
     "contributes": {
         "commands": [
             {
