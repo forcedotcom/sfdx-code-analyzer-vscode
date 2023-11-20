@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2023, Salesforce, Inc.
+ * All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
+ */
+
+// extension names
+export const CORE_EXTENSION_ID = 'salesforce.salesforcedx-vscode-core';
+export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
+
+// command names. These must exactly match the declarations in `package.json`.
+export const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
+export const COMMAND_RUN_ON_SELECTED = 'sfca.runOnSelected';
+export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
+
+// telemetry event keys
+export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
+export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
+export const TELEM_SUCCESSFUL_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_complete';
+export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
+
+
+// versioning
+export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';

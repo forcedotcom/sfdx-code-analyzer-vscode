@@ -5,8 +5,14 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as path from 'path';
+import * as cp from 'child_process';
+import {
+	downloadAndUnzipVSCode,
+	resolveCliArgsFromVSCodeExecutablePath,
+	runTests
+} from '@vscode/test-electron';
 
-import { runTests } from '@vscode/test-electron';
+import { EXTENSION_PACK_ID } from '../lib/constants';
 
 async function main() {
 	try {
@@ -18,8 +24,22 @@ async function main() {
 		// Passed to --extensionTestsPath
 		const extensionTestsPath = path.resolve(__dirname, './suite/index');
 
+		const vscodeExecutablePath = await downloadAndUnzipVSCode('stable');
+		console.log(`path: ${vscodeExecutablePath}`);
+		const [cliPath, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
+
+		// Install the Salesforce Core extension pack
+		cp.spawnSync(
+			cliPath,
+			[...args, '--install-extension', EXTENSION_PACK_ID],
+			{
+				encoding: 'utf-8',
+				stdio: 'inherit'
+			}
+		);
+
 		// Download VS Code, unzip it and run the integration test
-		await runTests({ extensionDevelopmentPath, extensionTestsPath });
+		await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath });
 	} catch (err) {
 		console.error('Failed to run tests');
 		process.exit(1);
