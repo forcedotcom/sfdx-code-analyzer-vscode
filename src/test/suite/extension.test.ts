@@ -11,7 +11,7 @@ import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
 import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics } from '../../extension';
 import {messages} from '../../lib/messages';
-import {TelemetryService} from '../../lib/telemetry';
+import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
 
 // You can import and use all API from the 'vscode' module

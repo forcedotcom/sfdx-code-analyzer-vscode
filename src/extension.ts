@@ -15,8 +15,7 @@ import {RuleResult} from './types';
 import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
-import { CoreExtensionService } from './lib/core-extension-service';
-import { TelemetryService } from './lib/telemetry';
+import { CoreExtensionService, TelemetryService } from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 
 type RunInfo = {
@@ -85,8 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		});
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
-	const telemetryService = CoreExtensionService.getTelemetryService();
-	telemetryService.sendExtensionActivationEvent(extensionHrStart);
+	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	return Promise.resolve(context);
 }
 
@@ -240,6 +238,5 @@ async function summarizeResultsAsToast(targets: string[], results: RuleResult[])
 
 // This method is called when your extension is deactivated
 export function deactivate() {
-	const telemetryService = CoreExtensionService.getTelemetryService();
-	telemetryService.dispose();
+	TelemetryService.dispose();
 }
