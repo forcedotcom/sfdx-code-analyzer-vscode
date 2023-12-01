@@ -16,7 +16,7 @@ import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './co
  */
 export class CoreExtensionService {
 	private static initialized = false;
-	private static telemetryService: TelemetryService;
+	private static telemetryService: CoreTelemetryService;
 
 	public static async loadDependencies(context: vscode.ExtensionContext): Promise<void> {
 		if (!CoreExtensionService.initialized) {
@@ -61,11 +61,11 @@ export class CoreExtensionService {
 	}
 
 	/**
-	 * Initializes a {@link TelemetryService} instance of the provided class, or a {@link NoOpTelemetryService} if none was provided
+	 * Initializes a {@link CoreTelemetryService} instance of the provided class, or uses null if none was provided.
 	 * @param telemetryService
 	 * @param context
 	 */
-	private static async initializeTelemetryService(telemetryService: TelemetryService | undefined, context: vscode.ExtensionContext): Promise<void> {
+	private static async initializeTelemetryService(telemetryService: CoreTelemetryService | undefined, context: vscode.ExtensionContext): Promise<void> {
 		if (!telemetryService) {
 			console.log(`Telemetry service not present in core dependency API. Using null instead.`);
 			CoreExtensionService.telemetryService = null;
@@ -79,11 +79,31 @@ export class CoreExtensionService {
 	 *
 	 * @returns The {@link TelemetryService} object exported by the Core Extension if available, else null.
 	 */
-	public static getTelemetryService(): TelemetryService|null {
+	public static _getTelemetryService(): CoreTelemetryService|null {
 		if (CoreExtensionService.initialized) {
 			return CoreExtensionService.telemetryService;
 		}
 		throw new Error(messages.error.coreExtensionServiceUninitialized);
+	}
+}
+
+export class TelemetryService {
+
+	public static sendExtensionActivationEvent(hrStart: [number, number]): void {
+		CoreExtensionService._getTelemetryService()?.sendExtensionActivationEvent(hrStart);
+	}
+
+	public static sendCommandEvent(key: string, data: Properties): void {
+		CoreExtensionService._getTelemetryService()?.sendCommandEvent(key, undefined, data);
+	}
+
+	public static sendException(name: string, message: string, data?: Record<string, string>): void {
+		const fullMessage = data ? message + JSON.stringify(data) : message;
+		CoreExtensionService._getTelemetryService()?.sendException(name, fullMessage);
+	}
+
+	public static dispose(): void {
+		CoreExtensionService._getTelemetryService()?.dispose();
 	}
 }
 
@@ -99,10 +119,10 @@ export interface Properties {
 /**
  * This interface is a subset of the TelemetryService interface from the salesforcedx-utils-vscode package.
  */
-interface TelemetryService {
+interface CoreTelemetryService {
 	extensionName: string;
 	isTelemetryEnabled(): boolean;
-	getInstance(): TelemetryService;
+	getInstance(): CoreTelemetryService;
 	initializeService(extensionContext: vscode.ExtensionContext): Promise<void>;
 	sendExtensionActivationEvent(hrstart: [number, number]): void;
 	sendExtensionDeactivationEvent(): void;
@@ -118,6 +138,6 @@ interface TelemetryService {
 
 interface CoreExtensionApi {
 	services: {
-		TelemetryService: TelemetryService;
+		TelemetryService: CoreTelemetryService;
 	}
 }
