@@ -1,4 +1,4 @@
-name: Publish v0.2.0 to OpenVSX marketplace
+name: Publish v0.3.0 to OpenVSX marketplace
 on:
   # Should only be possible to run this action manually.
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
       - name: Check out the release tag
         uses: actions/checkout@v3
         with:
-          ref: 'v0.2.0'
+          ref: 'v0.3.0'
           token: ${{ env.GITHUB_TOKEN }}
       - uses: actions/setup-node@v3
         with:
@@ -26,7 +26,7 @@ jobs:
       - name: Download Extension from Release
         run: |
           mkdir ./extensions
-          gh release download v0.2.0 -D ./extensions
+          gh release download v0.3.0 -D ./extensions
       - name: Display downloaded VSIX
         run: ls -R ./extensions
       - name: Publish the VSIX
