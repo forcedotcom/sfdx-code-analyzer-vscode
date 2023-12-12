@@ -230,7 +230,7 @@ suite('Extension Test Suite', () => {
 
 			test('Throws error if `sf`/`sfdx` is missing', async () => {
 				// ===== SETUP =====
-				// Simulate SFDX being unavailable.
+				// Simulate SF being unavailable.
 				const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 				Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
 				const fakeTelemetryName = 'FakeName';
@@ -253,7 +253,7 @@ suite('Extension Test Suite', () => {
 
 			test('Throws error if `sfdx-scanner` is missing', async () => {
 				// ===== SETUP =====
-				// Simulate SFDX being available but SFDX Scanner being absent.
+				// Simulate SF being available but SFDX Scanner being absent.
 				const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 				Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
 				Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);

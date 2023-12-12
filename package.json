@@ -73,15 +73,15 @@
         "commands": [
             {
                 "command": "sfca.runOnActiveFile",
-                "title": "SFDX: Scan current file with Code Analyzer"
+                "title": "SF: Scan current file with Code Analyzer"
             },
             {
                 "command": "sfca.runOnSelected",
-                "title": "SFDX: Scan selected files or folders with Code Analyzer"
+                "title": "SF: Scan selected files or folders with Code Analyzer"
             },
             {
                 "command": "sfca.runDfaOnSelectedMethod",
-                "title": "SFDX: Scan selected method with Graph Engine path-based analysis"
+                "title": "SF: Scan selected method with Graph Engine path-based analysis"
             }
         ],
         "configuration": {
