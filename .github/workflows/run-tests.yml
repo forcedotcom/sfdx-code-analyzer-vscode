@@ -55,10 +55,10 @@ jobs:
           DOWNLOAD_PATH=`[[ $DOWNLOAD_PATH = C* ]] && echo $DOWNLOAD_PATH | cut -d':' -f 2 || echo $DOWNLOAD_PATH`
           echo $DOWNLOAD_PATH
           # Pipe in a `y` to simulate agreeing to install an unsigned package. Use a URI of the file's full path.
-          echo y | sfdx plugins:install "file://${DOWNLOAD_PATH}/sfdx-scanner/${TARBALL_NAME}"
+          echo y | sf plugins install "file://${DOWNLOAD_PATH}/sfdx-scanner/${TARBALL_NAME}"
       - name: Install Production scanner
         if: ${{ inputs.use-scanner-tarball == false }}
-        run: sfdx plugins:install @salesforce/sfdx-scanner
+        run: sf  plugins install @salesforce/sfdx-scanner
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test

@@ -12,12 +12,12 @@ import cspawn = require('cross-spawn');
 export class SfCli {
 
     /**
-     * 
+     *
      * @returns True if {@code sf} or {@code sfdx} is installed.
      */
     public static async isSfCliInstalled(): Promise<boolean> {
         return new Promise((res) => {
-            const cp = cspawn.spawn('sfdx', ['-v']);
+            const cp = cspawn.spawn('sf', ['-v']);
 
             cp.on('exit', code => {
                 // If the exit code is 0, then SF or SFDX is present.
@@ -28,12 +28,12 @@ export class SfCli {
     }
 
     /**
-     * 
+     *
      * @returns True if {@code @salesforce/sfdx-scanner} is installed.
      */
     public static async isCodeAnalyzerInstalled(): Promise<boolean> {
         return new Promise((res) => {
-            const cp = cspawn.spawn('sfdx', ['plugins']);
+            const cp = cspawn.spawn('sf', ['plugins']);
 
             let stdout = '';
 

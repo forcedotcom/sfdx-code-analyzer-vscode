@@ -49,13 +49,13 @@ export class ScanRunner {
     }
 
     /**
-     * Creates the arguments for an execution of {@code sfdx scanner:run:dfa}, for use in a child process.
+     * Creates the arguments for an execution of {@code sf scanner run dfa}, for use in a child process.
      * @param targets The files/methods to be targeted.
      * @param projectDir The root of the project to be scanned.
      */
     private createDfaArgArray(targets: string[], projectDir: string): string[] {
         const args: string[] = [
-            'scanner:run:dfa',
+            'scanner', 'run', 'dfa',
             '--target', `${targets.join(',')}`,
             `--projectdir`, projectDir,
             // NOTE: For now, we're using HTML output since it's the easiest to display to the user.
@@ -95,12 +95,12 @@ export class ScanRunner {
     }
 
     /**
-     * Creates the arguments for an execution of {@code sfdx scanner:run}.
+     * Creates the arguments for an execution of {@code sf scanner run}.
      * @param targets The files to be scanned.
      */
     private async createPathlessArgArray(targets: string[]): Promise<string[]> {
         const args: string[] = [
-            'scanner:run',
+            'scanner', 'run',
             '--target', `${targets.join(',')}`,
             '--engine', 'pmd,retire-js',
             '--json'
@@ -122,7 +122,7 @@ export class ScanRunner {
      */
     private async invokeAnalyzer(args: string[]): Promise<ExecutionResult> {
         return new Promise((res) => {
-            const cp = cspawn.spawn('sfdx', args);
+            const cp = cspawn.spawn('sf', args);
 
             let stdout = '';
 
@@ -138,7 +138,7 @@ export class ScanRunner {
     }
 
     /**
-     * 
+     *
      * @param executionResult The results from a scan
      * @returns The HTML-formatted scan results, or an empty string.
      * @throws If {@code executionResult.result} is not a string.
@@ -189,7 +189,7 @@ export class ScanRunner {
     }
 
     /**
-     * 
+     *
      * @param executionResult The results from a scan.
      * @returns The Rule Results pulled out of the execution results, or an empty array.
      * @throws if {@coder executionResult.status} is non-zero

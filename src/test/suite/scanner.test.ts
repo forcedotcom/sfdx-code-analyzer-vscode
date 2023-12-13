@@ -42,13 +42,14 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(6, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner:run', 'Wrong arg');
-                expect(args[1]).to.equal('--target', 'Wrong arg');
-                expect(args[2]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[3]).to.equal('--engine', 'Wrong arg');
-                expect(args[4]).to.equal('pmd,retire-js', 'Wrong arg');
-                expect(args[5]).to.equal('--json', 'Wrong arg');
+                expect(args).to.have.lengthOf(7, 'Wrong number of args');
+                expect(args[0]).to.equal('scanner', 'Wrong arg');
+				expect(args[1]).to.equal('run', 'Wrong arg');
+                expect(args[2]).to.equal('--target', 'Wrong arg');
+                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
+                expect(args[4]).to.equal('--engine', 'Wrong arg');
+                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args[6]).to.equal('--json', 'Wrong arg');
             });
         });
 
@@ -72,15 +73,16 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(8, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner:run', 'Wrong arg');
-                expect(args[1]).to.equal('--target', 'Wrong arg');
-                expect(args[2]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[3]).to.equal('--engine', 'Wrong arg');
-                expect(args[4]).to.equal('pmd,retire-js', 'Wrong arg');
-                expect(args[5]).to.equal('--json', 'Wrong arg');
-                expect(args[6]).to.equal('--pmdconfig', 'Wrong arg');
-                expect(args[7]).to.equal(dummyConfigPath, 'Wrong arg');
+                expect(args).to.have.lengthOf(9, 'Wrong number of args');
+                expect(args[0]).to.equal('scanner', 'Wrong arg');
+				expect(args[1]).to.equal('run', 'Wrong arg');
+                expect(args[2]).to.equal('--target', 'Wrong arg');
+                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
+                expect(args[4]).to.equal('--engine', 'Wrong arg');
+                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args[6]).to.equal('--json', 'Wrong arg');
+                expect(args[7]).to.equal('--pmdconfig', 'Wrong arg');
+                expect(args[8]).to.equal(dummyConfigPath, 'Wrong arg');
             });
 
             test('When custom PMD config is non-existent, an error is thrown', async () => {
@@ -117,13 +119,14 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(6, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner:run', 'Wrong arg');
-                expect(args[1]).to.equal('--target', 'Wrong arg');
-                expect(args[2]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[3]).to.equal('--engine', 'Wrong arg');
-                expect(args[4]).to.equal('pmd,retire-js', 'Wrong arg');
-                expect(args[5]).to.equal('--json', 'Wrong arg');
+                expect(args).to.have.lengthOf(7, 'Wrong number of args');
+                expect(args[0]).to.equal('scanner', 'Wrong arg');
+				expect(args[1]).to.equal('run', 'Wrong arg');
+                expect(args[2]).to.equal('--target', 'Wrong arg');
+                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
+                expect(args[4]).to.equal('--engine', 'Wrong arg');
+                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args[6]).to.equal('--json', 'Wrong arg');
             });
         });
     });
@@ -150,15 +153,17 @@ suite('ScanRunner', () => {
 
             // ===== ASSERTIONS =====
             // Perform the validations common to all cases.
-            expect(args).to.have.length.of.at.least(8, 'Wrong number of args');
-            expect(args[0]).to.equal('scanner:run:dfa', 'Wrong arg');
-            expect(args[1]).to.equal('--target', 'Wrong arg');
-            expect(args[2]).to.equal(targets.join(','), 'Wrong arg');
-            expect(args[3]).to.equal('--projectdir', 'Wrong arg');
-            expect(args[4]).to.equal(projectDir, 'Wrong arg');
-            expect(args[5]).to.equal('--format', 'Wrong arg');
-            expect(args[6]).to.equal('html', 'Wrong arg');
-            expect(args[7]).to.equal('--json', 'Wrong arg');
+            expect(args).to.have.length.of.at.least(10, 'Wrong number of args');
+            expect(args[0]).to.equal('scanner', 'Wrong arg');
+			expect(args[1]).to.equal('run', 'Wrong arg');
+			expect(args[2]).to.equal('dfa', 'Wrong arg');
+            expect(args[3]).to.equal('--target', 'Wrong arg');
+            expect(args[4]).to.equal(targets.join(','), 'Wrong arg');
+            expect(args[5]).to.equal('--projectdir', 'Wrong arg');
+            expect(args[6]).to.equal(projectDir, 'Wrong arg');
+            expect(args[7]).to.equal('--format', 'Wrong arg');
+            expect(args[8]).to.equal('html', 'Wrong arg');
+            expect(args[9]).to.equal('--json', 'Wrong arg');
 
             return args;
         }
@@ -183,7 +188,7 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Assert we got the right number of args. Everything else has been checked already.
-                expect(args).to.have.lengthOf(8, 'Wrong number of args');
+                expect(args).to.have.lengthOf(10, 'Wrong number of args');
             });
         });
 
@@ -208,8 +213,8 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(9, 'Wrong number of args');
-                expect(args[8]).to.equal('--rule-disable-warning-violation', 'Wrong arg');
+                expect(args).to.have.lengthOf(11, 'Wrong number of args');
+                expect(args[10]).to.equal('--rule-disable-warning-violation', 'Wrong arg');
             });
 
             test('Thread Timeout', () => {
@@ -228,9 +233,9 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(10, 'Wrong number of args');
-                expect(args[8]).to.equal('--rule-thread-timeout', 'Wrong arg');
-                expect(args[9]).to.equal(`${timeout}`, 'Wrong arg');
+                expect(args).to.have.lengthOf(12, 'Wrong number of args');
+                expect(args[10]).to.equal('--rule-thread-timeout', 'Wrong arg');
+                expect(args[11]).to.equal(`${timeout}`, 'Wrong arg');
             });
 
             test('Path Expansion Limit', () => {
@@ -249,9 +254,9 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(10, 'Wrong number of args');
-                expect(args[8]).to.equal('--pathexplimit', 'Wrong arg');
-                expect(args[9]).to.equal(`${limit}`, 'Wrong arg');
+                expect(args).to.have.lengthOf(12, 'Wrong number of args');
+                expect(args[10]).to.equal('--pathexplimit', 'Wrong arg');
+                expect(args[11]).to.equal(`${limit}`, 'Wrong arg');
             });
 
             test('JVM Args', () => {
@@ -270,9 +275,9 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(10, 'Wrong number of args');
-                expect(args[8]).to.equal('--sfgejvmargs', 'Wrong arg');
-                expect(args[9]).to.equal(jvmArgs, 'Wrong arg');
+                expect(args).to.have.lengthOf(12, 'Wrong number of args');
+                expect(args[10]).to.equal('--sfgejvmargs', 'Wrong arg');
+                expect(args[11]).to.equal(jvmArgs, 'Wrong arg');
             });
         });
     });
@@ -402,7 +407,7 @@ suite('ScanRunner', () => {
             // Feed the results into the processor.
             const scanner = new ScanRunner();
             const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
-            
+
             // ===== ASSERTIONS =====
             // Verify that an empty string was returned.
             expect(processedResults).to.equal("", "Expected empty string");
