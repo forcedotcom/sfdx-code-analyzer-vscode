@@ -114,7 +114,7 @@
                 "codeAnalyzer.analyze-on-save.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Automatically scans the current file on save"
+                    "description": "Automatically scans the current file on save."
                 }
             }
         },
