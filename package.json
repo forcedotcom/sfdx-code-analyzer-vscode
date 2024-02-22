@@ -110,6 +110,11 @@
                 "codeAnalyzer.graphEngine.jvmArgs": {
                     "type": "string",
                     "description": "The Java Virtual Machine (JVM) arguments used to optimize Salesforce Graph Engine execution for your system."
+                },
+                "codeAnalyzer.analyze-on-save.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Automatically scans the current file on save"
                 }
             }
         },
