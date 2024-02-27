@@ -58,7 +58,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 	outputChannel.clear();
 	outputChannel.show();
-	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 
 	// Declare our commands.
 	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
@@ -89,6 +88,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
+	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
 }
 
