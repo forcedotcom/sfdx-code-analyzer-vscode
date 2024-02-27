@@ -68,6 +68,9 @@
         "lint": "eslint src --ext ts",
         "test": "node ./out/test/runTest.js"
     },
+    "activationEvents": [
+        "workspaceContains:sfdx-project.json"
+        ],
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
