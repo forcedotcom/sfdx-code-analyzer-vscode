@@ -29,4 +29,8 @@ export class SettingsManager {
     public static getGraphEngineJvmArgs(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('jvmArgs');
     }
+
+    public static getAnalyzeOnSave(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnSave').get('enabled');
+    }
 }

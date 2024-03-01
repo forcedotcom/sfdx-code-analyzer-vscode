@@ -9,6 +9,7 @@
 import * as vscode from 'vscode';
 import * as targeting from './lib/targeting';
 import {ScanRunner} from './lib/scanner';
+import {SettingsManager} from './lib/settings';
 import {SfCli} from './lib/sf-cli';
 
 import {RuleResult} from './types';
@@ -31,7 +32,8 @@ type RunInfo = {
 let diagnosticCollection: vscode.DiagnosticCollection = null;
 
 /**
- * This method is invoked when the extension is first activated (i.e., the very first time the command is executed).
+ * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
+ * The activation trigger can be changed by changing activationEvents in package.json
  * Registers the necessary diagnostic collections and commands.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
@@ -39,8 +41,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context);
-
-	console.log(`Extension sfdx-code-analyzer-vscode activated.`);
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
@@ -74,6 +74,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			outputChannel
 		});
 	});
+	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
+	registerScanOnSave(outputChannel);
+	outputChannel.appendLine('Registered scanOnSave as part of sfdx-code-analyzer-vscode activation.');
 	const graphEngineStatus: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	graphEngineStatus.name = messages.graphEngine.statusBarName;
 	context.subscriptions.push(graphEngineStatus);
@@ -85,6 +88,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
+	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
 }
 
@@ -97,6 +101,23 @@ async function verifyPluginInstallation(): Promise<void> {
 	} else if (!await SfCli.isCodeAnalyzerInstalled()) {
 		throw new Error(messages.error.sfdxScannerMissing);
 	}
+}
+
+export function registerScanOnSave(outputChannel: vscode.LogOutputChannel) {
+	vscode.workspace.onDidSaveTextDocument(
+		async (textDocument: vscode.TextDocument) => {
+			const documentUri = textDocument.uri;
+			if (
+				SettingsManager.getAnalyzeOnSave()
+			) {
+				await _runAndDisplayPathless([documentUri], {
+					commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
+					diagnosticCollection,
+					outputChannel
+				});
+			}
+		}
+	);
 }
 
 /**
