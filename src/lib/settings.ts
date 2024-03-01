@@ -31,6 +31,6 @@ export class SettingsManager {
     }
 
     public static getAnalyzeOnSave(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.analyze-on-save').get('enabled');
+        return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnSave').get('enabled');
     }
 }
