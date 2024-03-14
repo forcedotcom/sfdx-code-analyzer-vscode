@@ -118,6 +118,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Scan the current file on save automatically."
+                },
+                "codeAnalyzer.analyzeOnOpen.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Scan the current file on open automatically."
                 }
             }
         },
