@@ -76,6 +76,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
 	registerScanOnSave(outputChannel);
+	registerScanOnOpen(outputChannel);
 	outputChannel.appendLine('Registered scanOnSave as part of sfdx-code-analyzer-vscode activation.');
 	const graphEngineStatus: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
 	graphEngineStatus.name = messages.graphEngine.statusBarName;
@@ -109,6 +110,23 @@ export function registerScanOnSave(outputChannel: vscode.LogOutputChannel) {
 			const documentUri = textDocument.uri;
 			if (
 				SettingsManager.getAnalyzeOnSave()
+			) {
+				await _runAndDisplayPathless([documentUri], {
+					commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
+					diagnosticCollection,
+					outputChannel
+				});
+			}
+		}
+	);
+}
+
+export function registerScanOnOpen(outputChannel: vscode.LogOutputChannel) {
+	vscode.workspace.onDidOpenTextDocument(
+		async (textDocument: vscode.TextDocument) => {
+			const documentUri = textDocument.uri;
+			if (
+				SettingsManager.getAnalyzeOnOpen()
 			) {
 				await _runAndDisplayPathless([documentUri], {
 					commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
