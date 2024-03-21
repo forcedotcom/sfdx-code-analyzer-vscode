@@ -18,6 +18,7 @@ import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import { CoreExtensionService, TelemetryService } from './lib/core-extension-service';
 import * as Constants from './lib/constants';
+import {registerAll} from '@salesforce/sfdx-scanner/lib/ioc.config'
 
 type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -75,6 +76,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		});
 	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
+	registerAll();
 	registerScanOnSave(outputChannel);
 	outputChannel.appendLine('Registered scanOnSave as part of sfdx-code-analyzer-vscode activation.');
 	const graphEngineStatus: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
