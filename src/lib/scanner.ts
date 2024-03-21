@@ -65,14 +65,6 @@ export class ScanRunner {
      * @param projectDir The root of the project to be scanned.
      */
     private createDfaArgArray(targets: string[], projectDir: string): Inputs {
-        // const args: Inputs = {
-        //     'targets': `${targets.join(',')}`,
-        //     'engine': 'pmd,retire-js',
-        //     'format': 'json'
-        // }
-        // return args;
-
-
         const args: Inputs = {
             'targets': `${targets.join(',')}`,
             'projectdir': [projectDir],
@@ -160,79 +152,5 @@ export class ScanRunner {
     private async validateAndRun(runAction:RunAction, args: Inputs): Promise<AnyJson> {
         await runAction.validateInputs(args);
         return runAction.run(args);
-    }
-
-    /**
-     *
-     * @param executionResult The results from a scan
-     * @returns The HTML-formatted scan results, or an empty string.
-     * @throws If {@code executionResult.result} is not a string.
-     * @throws If {@code executionResult.warnings} contains any warnings about methods not being found.
-     * @throws if {@code executionResult.status} is non-zero.
-     */
-    private processDfaResults(executionResult: ExecutionResult): string {
-        // 0 is the status code indicating a successful analysis.
-        if (executionResult.status === 0) {
-            // Since we're using HTML format, the results should always be a string.
-            // Enforce this assumption.
-            if (typeof executionResult.result !== 'string') {
-                // Hardcoding this message should be fine, because it should only ever
-                // appear in response to developer error, not user error.
-                throw new Error('Output should always be a string.');
-            }
-
-            // Before we do anything else, check our warnings, since we're escalating
-            // some of them to errors.
-            // NOTE: This section should be considered tentative. In addition to being
-            //       generally inelegant, it's not great practice to key off specific
-            //       messages in this fashion.
-            if (executionResult.warnings?.length > 0) {
-                for (const warning of executionResult.warnings) {
-                    // Since (for now) DFA only runs on a single method,
-                    // if we couldn't find that method, then that's a critical
-                    // error even though DFA itself just considered it a warning.
-                    if (warning.toLowerCase().startsWith('no methods in file ')) {
-                        throw new Error(warning);
-                    }
-                }
-            }
-
-            const result: string = executionResult.result;
-
-            if (result.startsWith("<!DOCTYPE")) {
-                // If the results are an HTML body, then violations were found. Return that.
-                return result;
-            } else {
-
-                // Otherwise, violations weren't found. Return an empty string.
-                return "";
-            }
-        } else {
-            // Any other status code indicates an error of some kind.
-            throw new Error(executionResult.message);
-        }
-    }
-
-    /**
-     *
-     * @param executionResult The results from a scan.
-     * @returns The Rule Results pulled out of the execution results, or an empty array.
-     * @throws if {@coder executionResult.status} is non-zero
-     */
-    private processPathlessResults(executionResult: ExecutionResult): RuleResult[] {
-        // 0 is the status code indicating a successful analysis.
-        if (executionResult.status === 0) {
-            // If the results were a string, that indicates that no results were found.
-            // TODO: Maybe change the plugin to return an empty array instead?
-            //       If that happens, this needs to change.
-            if (typeof executionResult.result === 'string') {
-                return [];
-            } else {
-                return executionResult.result;
-            }
-        } else {
-            // Any other status code indicates an error of some kind.
-            throw new Error(executionResult.message);
-        }
     }
 }
