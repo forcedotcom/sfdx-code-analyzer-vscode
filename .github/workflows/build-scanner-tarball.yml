@@ -17,11 +17,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*' # Always use Node LTS for building the tarball.
-      - name: 'Install Java 1.11'
+      - name: 'Install Java v11'
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '11' # Always use Java v1.11 for building the tarball.
+          java-version: '11' # Always use Java v11 for building the tarball.
       - name: 'Check out, build, pack'
         run: |
           # Check out the target branch.
