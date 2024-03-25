@@ -77,6 +77,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
       - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
@@ -106,6 +110,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
       - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
