@@ -66,6 +66,7 @@ jobs:
         run: sf  plugins install @salesforce/sfdx-scanner
       - run: cat /Users/runner/.sfdx-scanner/Config.json || exit 0
       - run: sf scanner run --target "./code-fixtures/folder-a/MyClassA1.cls" --format csv --engine pmd
+      - run: cat /Users/runner/.sfdx-scanner/Config.json || exit 0
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
