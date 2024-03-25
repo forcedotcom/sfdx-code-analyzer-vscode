@@ -64,6 +64,7 @@ jobs:
       - name: Install Production scanner
         if: ${{ inputs.use-scanner-tarball == false }}
         run: sf  plugins install @salesforce/sfdx-scanner
+      - run: sf scanner run --target "./code-fixtures/folder-a/MyClassA1.cls" --format csv --engine pmd
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
