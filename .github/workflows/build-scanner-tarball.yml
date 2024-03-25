@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '8' # Always use Java v1.8 for building the tarball.
+          java-version: '11' # Always use Java v1.8 for building the tarball.
       - name: 'Check out, build, pack'
         run: |
           # Check out the target branch.
