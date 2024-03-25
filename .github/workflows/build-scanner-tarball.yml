@@ -27,7 +27,7 @@ jobs:
           # Check out the target branch.
           git clone https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
           cd sfdx-scanner
-          git checkout ${{ inputs.target-branch }}
+          git checkout joshdebug
           # Install and build dependencies.
           yarn
           yarn build
