@@ -5,24 +5,27 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import {SettingsManager} from './settings';
-import {ExecutionResult, RuleResult} from '../types';
-import cspawn = require('cross-spawn');
+import {RuleResult} from '../types';
+import {exists} from './file';
+import {messages} from './messages';
 import {RunAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunAction';
+import {RunDfaAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunDfaAction';
 import {InputProcessor, InputProcessorImpl} from '@salesforce/sfdx-scanner/lib/lib/InputProcessor';
 import { Display } from '@salesforce/sfdx-scanner/lib/lib/Display';
 import { VSCodeDisplay } from './display';
 import { RuleFilterFactory, RuleFilterFactoryImpl } from '@salesforce/sfdx-scanner/lib/lib/RuleFilterFactory';
-import { EngineOptionsFactory, RunEngineOptionsFactory } from '@salesforce/sfdx-scanner/lib/lib/EngineOptionsFactory';
+import { EngineOptionsFactory, RunEngineOptionsFactory, RunDfaEngineOptionsFactory } from '@salesforce/sfdx-scanner/lib/lib/EngineOptionsFactory';
 import { ResultsProcessorFactory, ResultsProcessorFactoryImpl } from '@salesforce/sfdx-scanner/lib/lib/output/ResultsProcessorFactory';
 import {Logger} from "@salesforce/core";
 import { AnyJson } from "@salesforce/ts-types";
-import { Inputs } from './types';
+import { Inputs } from '@salesforce/sfdx-scanner/lib/types';
 
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
  */
 export class ScanRunner {
+
     /**
      * Run the non-DFA rules against the specified target files
      * @param targets A list of files to be targeted by the scan
@@ -30,11 +33,10 @@ export class ScanRunner {
      */
     public async run(targets: string[]): Promise<RuleResult[]> {
         // Create the arg array.
-        const args: Inputs = this.createPathlessArgArray(targets);
+        const args: Inputs = await this.createPathlessArgArray(targets);
 
         // Invoke the scanner.
-        // const executionResult = await this.invokeAnalyzer(args);
-        const executionResult: AnyJson = await this.invokeAnalyzerWithoutCli(args);
+        const executionResult: AnyJson = await this.invokeAnalyzer(args);
 
         // Process the results.
         // return this.processPathlessResults(executionResult); 
@@ -52,11 +54,12 @@ export class ScanRunner {
         // Create the arg array.
         const args: Inputs = this.createDfaArgArray(targets, projectDir);
 
-        // Invoke the scanner.
-        const executionResult: AnyJson = await this.invokeAnalyzerWithoutCli(args);
+        // Invoke the scanner. It is ok to cast anyjson as string since 
+        // dfa output is in HTML format.
+        const executionResult: string = await this.invokeDfaAnalyzer(args) as string;
 
         // Process the results.
-        return executionResult as string;
+        return executionResult;
     }
 
     /**
@@ -68,8 +71,7 @@ export class ScanRunner {
         const args: Inputs = {
             'targets': `${targets.join(',')}`,
             'projectdir': [projectDir],
-            'format': `html`,
-            'json': true,
+            'format': `html`
         }
         // There are a number of custom settings that we need to check too.
         // First we should check whether warning violations are disabled.
@@ -102,42 +104,28 @@ export class ScanRunner {
      * Creates the arguments for an execution of {@code sf scanner run}.
      * @param targets The files to be scanned.
      */
-    private createPathlessArgArray(targets: string[]): Inputs {
+    private async createPathlessArgArray(targets: string[]): Promise<Inputs> {
         const args: Inputs = {
             'targets': `${targets.join(',')}`,
             'engine': 'pmd,retire-js',
             'format': 'json'
         }
+        const customPmdConfig: string = SettingsManager.getPmdCustomConfigFile();
+        // If there's a non-null, non-empty PMD config file specified, use it.
+        if (customPmdConfig && customPmdConfig.length > 0) {
+            if (!(await exists(customPmdConfig))) {
+                throw new Error(messages.error.pmdConfigNotFoundGenerator(customPmdConfig));
+            }
+            args['pmdconfig'] = customPmdConfig;
+        }
         return args;
     }
 
     /**
-     * Uses the provided arguments to run a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
      */
-    private async invokeAnalyzer(args: string[]): Promise<ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
-
-            let stdout = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', () => {
-                // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as ExecutionResult);
-            });
-        });
-    }
-
-        /**
-     * Uses the provided arguments to run a Salesforce Code Analyzer command.
-     * @param args The arguments to be supplied
-     */
-    private async invokeAnalyzerWithoutCli(args: Inputs): Promise<AnyJson> {
-        const sfVersion = '0.5';
+    private async invokeAnalyzer(args: Inputs): Promise<AnyJson> {
+        const sfVersion = '0.0.5';
         const logger: Logger = await Logger.child('vscode');
         const display:Display = new VSCodeDisplay();
         const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
@@ -150,6 +138,28 @@ export class ScanRunner {
     }
 
     private async validateAndRun(runAction:RunAction, args: Inputs): Promise<AnyJson> {
+        await runAction.validateInputs(args);
+        return runAction.run(args);
+    }
+
+    /**
+     * Uses the provided arguments to run a Salesforce Code Analyzer command.
+     * @param args The arguments to be supplied
+     */
+    private async invokeDfaAnalyzer(args: Inputs): Promise<AnyJson> {
+        const sfVersion = '0.0.5';
+        const logger: Logger = await Logger.child('vscode');
+        const display:Display = new VSCodeDisplay();
+        const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
+        const ruleFilterFactory: RuleFilterFactory = new RuleFilterFactoryImpl();
+        const engineOptionsFactory: EngineOptionsFactory = new RunDfaEngineOptionsFactory(inputProcessor);
+        const resultsProcessorFactory: ResultsProcessorFactory = new ResultsProcessorFactoryImpl();
+        const runAction:RunDfaAction = new RunDfaAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
+            resultsProcessorFactory);
+        return this.validateAndRunDfa(runAction, args);
+    }
+
+    private async validateAndRunDfa(runAction:RunDfaAction, args: Inputs): Promise<AnyJson> {
         await runAction.validateInputs(args);
         return runAction.run(args);
     }
