@@ -64,8 +64,8 @@ jobs:
       - name: Install Production scanner
         if: ${{ inputs.use-scanner-tarball == false }}
         run: sf  plugins install @salesforce/sfdx-scanner
-      - run: cat /Users/runner/.sfdx-scanner/Config.json || exit 0
-      - run: echo $JAVA_HOME
+      # Sanity check (and to ensure that java home is set in our config before running from inside of vscode)
+      - run: sf scanner rule list
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
@@ -73,10 +73,6 @@ jobs:
       - name: 'Run Tests (non-Linux)'
         run: yarn test
         if: runner.os != 'Linux'
-      - run: echo $JAVA_HOME
-        if: ${{ always() }}
-      - run: cat /Users/runner/.sfdx-scanner/Config.json || exit 0
-        if: ${{ always() }}
       # Lint, to make sure we're following best practices.
       - name: 'Lint'
         run: yarn lint
