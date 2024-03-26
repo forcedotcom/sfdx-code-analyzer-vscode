@@ -54,7 +54,7 @@ suite('Extension Test Suite', () => {
 			// ===== SETUP =====
 			// Set the timeout to a frankly absurd value, just to make sure Github Actions
 			// can finish it in time.
-			this.timeout(60000);
+			this.timeout(90000);
 			// Open a file in the editor.
 			const fileUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 			const doc = await vscode.workspace.openTextDocument(fileUri);
