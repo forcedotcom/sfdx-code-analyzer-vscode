@@ -64,6 +64,10 @@ jobs:
       - name: Install Production scanner
         if: ${{ inputs.use-scanner-tarball == false }}
         run: sf  plugins install @salesforce/sfdx-scanner
+      # For non-Linux systems, we need to manually run a scanner command outside of the extension to make sure the
+      # java home property gets set properly.
+      - name: Run list command to set config
+        run: sf scanner rule list
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
