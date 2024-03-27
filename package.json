@@ -13,7 +13,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "0.4.0",
+    "version": "0.5.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
@@ -119,6 +119,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Scan the current file on save automatically."
+                },
+                "codeAnalyzer.analyzeOnOpen.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Scan the current file on open automatically."
                 }
             }
         },

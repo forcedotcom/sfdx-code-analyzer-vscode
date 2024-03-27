@@ -20,13 +20,13 @@ jobs:
     environment: publish
     steps:
       # Check out the main branch and get its head commit as output for later.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: 'main'
       - id: get-main-head
         run: echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
       # Check out the tag to be released and get its head commit as output for later.
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
       - id: get-tag-head
@@ -69,14 +69,18 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
           token: ${{ env.GITHUB_TOKEN }}
       # Set up node and install dependencies.
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
       - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
@@ -98,14 +102,18 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
           token: ${{ env.GITHUB_TOKEN }}
       # Set up node and install dependencies.
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
       - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
