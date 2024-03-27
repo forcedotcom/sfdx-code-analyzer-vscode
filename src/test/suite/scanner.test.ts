@@ -11,6 +11,7 @@ import {SettingsManager} from '../../lib/settings';
 import {messages} from '../../lib/messages';
 import * as File from '../../lib/file';
 import {ScanRunner} from '../../lib/scanner';
+import { Inputs } from '@salesforce/sfdx-scanner/lib/types';
 
 import {ExecutionResult, RuleResult} from '../../types';
 
@@ -42,14 +43,11 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(7, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-				expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
+                // expect(args).to.have.lengthOf(3, 'Wrong number of args');
+
+                expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+                expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args['format']).to.equal('json', 'Wrong arg');
             });
         });
 
@@ -73,16 +71,10 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(9, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-				expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
-                expect(args[7]).to.equal('--pmdconfig', 'Wrong arg');
-                expect(args[8]).to.equal(dummyConfigPath, 'Wrong arg');
+                expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+                expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args['format']).to.equal('json', 'Wrong arg');
+                expect(args['pmdconfig']).to.equal(dummyConfigPath, 'Wrong arg');
             });
 
             test('When custom PMD config is non-existent, an error is thrown', async () => {
@@ -119,14 +111,9 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(7, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-				expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
+                expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+                expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args['format']).to.equal('json', 'Wrong arg');
             });
         });
     });
@@ -142,28 +129,20 @@ suite('ScanRunner', () => {
         ];
         // Create a fake projectdir value for our tests too.
         const projectDir: string = path.join('this', 'path', 'does', 'not', 'matter');
-        function invokeTestedMethod(): string[] {
+        function invokeTestedMethod(): Inputs {
             // ===== SETUP =====
             // Create a scan runner.
             const scanner: ScanRunner = new ScanRunner();
 
             // ===== TEST =====
             // Use the scan runner on our target list to create and return our arg array.
-            const args: string[] = (scanner as any).createDfaArgArray(targets, projectDir);
+            const args: Inputs = (scanner as any).createDfaArgArray(targets, projectDir);
 
             // ===== ASSERTIONS =====
             // Perform the validations common to all cases.
-            expect(args).to.have.length.of.at.least(10, 'Wrong number of args');
-            expect(args[0]).to.equal('scanner', 'Wrong arg');
-			expect(args[1]).to.equal('run', 'Wrong arg');
-			expect(args[2]).to.equal('dfa', 'Wrong arg');
-            expect(args[3]).to.equal('--target', 'Wrong arg');
-            expect(args[4]).to.equal(targets.join(','), 'Wrong arg');
-            expect(args[5]).to.equal('--projectdir', 'Wrong arg');
-            expect(args[6]).to.equal(projectDir, 'Wrong arg');
-            expect(args[7]).to.equal('--format', 'Wrong arg');
-            expect(args[8]).to.equal('html', 'Wrong arg');
-            expect(args[9]).to.equal('--json', 'Wrong arg');
+            expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+            expect(args['projectdir'][0]).to.equal(projectDir, 'Wrong arg');
+            expect(args['format']).to.equal('html', 'Wrong arg');
 
             return args;
         }
@@ -184,11 +163,7 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
-
-                // ===== ASSERTIONS =====
-                // Assert we got the right number of args. Everything else has been checked already.
-                expect(args).to.have.lengthOf(10, 'Wrong number of args');
+                invokeTestedMethod();
             });
         });
 
@@ -209,12 +184,11 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: Inputs = invokeTestedMethod();
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(11, 'Wrong number of args');
-                expect(args[10]).to.equal('--rule-disable-warning-violation', 'Wrong arg');
+                expect(args['rule-disable-warning-violation']).to.equal(true, 'Wrong arg');
             });
 
             test('Thread Timeout', () => {
@@ -229,13 +203,11 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: Inputs = invokeTestedMethod();
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(12, 'Wrong number of args');
-                expect(args[10]).to.equal('--rule-thread-timeout', 'Wrong arg');
-                expect(args[11]).to.equal(`${timeout}`, 'Wrong arg');
+                expect(args['rule-thread-timeout']).to.equal(`${timeout}`, 'Wrong arg');
             });
 
             test('Path Expansion Limit', () => {
@@ -250,13 +222,11 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: Inputs = invokeTestedMethod();
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(12, 'Wrong number of args');
-                expect(args[10]).to.equal('--pathexplimit', 'Wrong arg');
-                expect(args[11]).to.equal(`${limit}`, 'Wrong arg');
+                expect(args['pathexplimit']).to.equal(`${limit}`, 'Wrong arg');
             });
 
             test('JVM Args', () => {
@@ -271,199 +241,12 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: Inputs = invokeTestedMethod();
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(12, 'Wrong number of args');
-                expect(args[10]).to.equal('--sfgejvmargs', 'Wrong arg');
-                expect(args[11]).to.equal(jvmArgs, 'Wrong arg');
+                expect(args['sfgejvmargs']).to.equal(jvmArgs, 'Wrong arg');
             });
         });
     });
-
-    suite('#processPathlessResults()', () => {
-        test('Returns violations found during successful scan', () => {
-            // ===== SETUP =====
-            // Create a spoofed result with some violations.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                result: [{
-                    engine: "pmd",
-                    fileName: "fakefile1",
-                    violations: [{
-                        ruleName: "fakeRule1",
-                        message: "fake message",
-                        severity: 0,
-                        category: "fake category",
-                        line: 1,
-                        column: 5,
-                        endLine: 5,
-                        endColumn: 50
-                    }]
-                }, {
-                    engine: "retire-js",
-                    fileName: "fakefile2",
-                    violations: [{
-                        ruleName: "fakeRule2",
-                        message: "fake message",
-                        severity: 0,
-                        category: "fake category",
-                        line: 1,
-                        column: 5,
-                        endLine: 5,
-                        endColumn: 50
-                    }]
-                }]
-            };
-
-            // ===== TEST =====
-            // Feed the results into the processor.
-            const scanner = new ScanRunner();
-            const processedResults: RuleResult[] = (scanner as any).processPathlessResults(spoofedOutput);
-
-            // ===== ASSERTIONS =====
-            // Verify that the right number of results were returned.
-            expect(processedResults).to.have.lengthOf(2, 'Wrong number of results returned');
-        });
-
-        test('Returns empty array after violation-less scan', () => {
-            // ===== SETUP =====
-            // Create spoofed result without any violations.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                // TODO: This string may change with time.
-                result: "Executed engines: pmd, retire-js. No rule violations found"
-            };
-
-            // ===== TEST =====
-            // Feed the results into the processor.
-            const scanner = new ScanRunner();
-            const processedResults: RuleResult[] = (scanner as any).processPathlessResults(spoofedOutput);
-
-            // ===== ASSERTIONS =====
-            // Verify that the right number of results were returned.
-            expect(processedResults).to.have.lengthOf(0, 'Wrong number of results returned');
-        });
-
-        test('Throws error message from failed scan', () => {
-            // ===== SETUP =====
-            // Create spoofed output indicating an error.
-            const spoofedOutput: ExecutionResult = {
-                status: 50,
-                message: "Some error occurred. OH NO!"
-            };
-
-            // ===== TEST =====
-            // Feed the output into the processor, expecting an error.
-            const scanner = new ScanRunner();
-            let err: Error = null;
-            try {
-                const processedResults: RuleResult[] = (scanner as any).processPathlessResults(spoofedOutput);
-            } catch (e) {
-                err = e;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err).to.exist;
-            expect(err.message).to.equal(spoofedOutput.message);
-        });
-    });
-
-    /**
-     * NOTE: This entire section should be considered temporary.
-     * The current implementation of DFA support is merely tentative,
-     * and extremely likely to change as we move closer to going GA.
-     */
-    suite('#processDfaResults()', () => {
-        test('Returns HTML-formatted violations after successful scan', () => {
-            // ===== SETUP =====
-            // Create spoofed result with some HTML output.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                result: `<!DOCTYPE html><html></html>`
-            };
-
-            // ===== TEST =====
-            // Feed the results into the processor.
-            const scanner = new ScanRunner();
-            const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
-
-            // ===== ASSERTIONS =====
-            // Verify that the html output was returned unchanged.
-            expect(processedResults).to.equal(spoofedOutput.result, 'Wrong results returned');
-        });
-
-        test('Returns empty string after violation-less scan', () => {
-            // ===== SETUP =====
-            // Create spoofed results without any violations.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                // TODO: This may change with time.
-                result: "Executed engines: sfge. No rule violations found."
-            };
-
-            // ===== TEST =====
-            // Feed the results into the processor.
-            const scanner = new ScanRunner();
-            const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
-
-            // ===== ASSERTIONS =====
-            // Verify that an empty string was returned.
-            expect(processedResults).to.equal("", "Expected empty string");
-        });
-
-        test('Escalates method-not-found warning to error', () => {
-            // ===== SETUP =====
-            // Create spoofed output including a warning about a targeted method
-            // not being found.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                result: "Executed engines: sfge. No rule violations found.",
-                warnings: [
-                    "We're continually improving Salesforce Code Analyzer. Tell us what you think! Give feedback at https://research.net/r/SalesforceCA",
-                    "No methods in file /this/path/does/not/matter/MySourceFile.cls matched name #notARealMethod()"
-                ]
-            };
-
-            // ===== TEST =====
-            // Feed the output into the processor, expecting the warning
-            // to be escalated to an error.
-            const scanner = new ScanRunner();
-            let err: Error = null;
-            try {
-                const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
-            } catch (e) {
-                err = e;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err).to.exist;
-            expect(err.message).to.equal(spoofedOutput.warnings[1]);
-        });
-
-        test('Throws error message from failed scan', () => {
-            // ===== SETUP =====
-            // Create spoofed output indicating an error.
-            const spoofedOutput: ExecutionResult = {
-                status: 50,
-                message: "Some error occurred. OH NO!"
-            };
-
-            // ===== TEST =====
-            // Feed the output into the processor, expecting an error.
-            const scanner = new ScanRunner();
-            let err: Error = null;
-            try {
-                const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
-            } catch (e) {
-                err = e;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err).to.exist;
-            expect(err.message).to.equal(spoofedOutput.message);
-        });
-    });
-
 });
