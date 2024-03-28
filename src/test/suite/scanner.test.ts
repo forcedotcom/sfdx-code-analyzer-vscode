@@ -12,6 +12,7 @@ import {messages} from '../../lib/messages';
 import * as File from '../../lib/file';
 import {ScanRunner} from '../../lib/scanner';
 import { Inputs } from '@salesforce/sfdx-scanner/lib/types';
+import {RunAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunAction';
 
 import {ExecutionResult, RuleResult} from '../../types';
 
@@ -45,7 +46,7 @@ suite('ScanRunner', () => {
                 // Verify that the right arguments were created.
                 // expect(args).to.have.lengthOf(3, 'Wrong number of args');
 
-                expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+                expect(args['target']).to.equal(targets, 'Wrong arg');
                 expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
                 expect(args['format']).to.equal('json', 'Wrong arg');
             });
@@ -71,7 +72,7 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+                expect(args['target']).to.equal(targets, 'Wrong arg');
                 expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
                 expect(args['format']).to.equal('json', 'Wrong arg');
                 expect(args['pmdconfig']).to.equal(dummyConfigPath, 'Wrong arg');
@@ -111,7 +112,7 @@ suite('ScanRunner', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+                expect(args['target']).to.equal(targets, 'Wrong arg');
                 expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
                 expect(args['format']).to.equal('json', 'Wrong arg');
             });
@@ -140,7 +141,7 @@ suite('ScanRunner', () => {
 
             // ===== ASSERTIONS =====
             // Perform the validations common to all cases.
-            expect(args['targets']).to.equal(targets.join(','), 'Wrong arg');
+            expect(args['target']).to.equal(targets, 'Wrong arg');
             expect(args['projectdir'][0]).to.equal(projectDir, 'Wrong arg');
             expect(args['format']).to.equal('html', 'Wrong arg');
 

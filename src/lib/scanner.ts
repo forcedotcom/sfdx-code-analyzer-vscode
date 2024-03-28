@@ -36,7 +36,7 @@ export class ScanRunner {
         const args: Inputs = await this.createPathlessArgArray(targets);
 
         // Invoke the scanner.
-        const executionResult: AnyJson = await this.invokeAnalyzer(args);
+        const executionResult: AnyJson = await this.invokeAnalyzer(args, false);
 
         // Process the results.
         // return this.processPathlessResults(executionResult); 
@@ -56,7 +56,7 @@ export class ScanRunner {
 
         // Invoke the scanner. It is ok to cast anyjson as string since 
         // dfa output is in HTML format.
-        const executionResult: string = await this.invokeDfaAnalyzer(args) as string;
+        const executionResult: string = await this.invokeAnalyzer(args, true) as string;
 
         // Process the results.
         return executionResult;
@@ -69,7 +69,7 @@ export class ScanRunner {
      */
     private createDfaArgArray(targets: string[], projectDir: string): Inputs {
         const args: Inputs = {
-            'targets': `${targets.join(',')}`,
+            'target': targets,
             'projectdir': [projectDir],
             'format': `html`
         }
@@ -106,7 +106,7 @@ export class ScanRunner {
      */
     private async createPathlessArgArray(targets: string[]): Promise<Inputs> {
         const args: Inputs = {
-            'targets': `${targets.join(',')}`,
+            'target': targets,
             'engine': 'pmd,retire-js',
             'format': 'json'
         }
@@ -122,45 +122,28 @@ export class ScanRunner {
     }
 
     /**
+     * Uses the provided arguments similar to running a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
      */
-    private async invokeAnalyzer(args: Inputs): Promise<AnyJson> {
+    private async invokeAnalyzer(args: Inputs, isDfa: boolean): Promise<AnyJson> {
         const sfVersion = '0.0.5';
         const logger: Logger = await Logger.child('vscode');
         const display:Display = new VSCodeDisplay();
         const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
         const ruleFilterFactory: RuleFilterFactory = new RuleFilterFactoryImpl();
-        const engineOptionsFactory: EngineOptionsFactory = new RunEngineOptionsFactory(inputProcessor);
         const resultsProcessorFactory: ResultsProcessorFactory = new ResultsProcessorFactoryImpl();
-        const runAction:RunAction = new RunAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
-            resultsProcessorFactory);
-        return this.validateAndRun(runAction, args);
-    }
-
-    private async validateAndRun(runAction:RunAction, args: Inputs): Promise<AnyJson> {
-        await runAction.validateInputs(args);
-        return runAction.run(args);
-    }
-
-    /**
-     * Uses the provided arguments to run a Salesforce Code Analyzer command.
-     * @param args The arguments to be supplied
-     */
-    private async invokeDfaAnalyzer(args: Inputs): Promise<AnyJson> {
-        const sfVersion = '0.0.5';
-        const logger: Logger = await Logger.child('vscode');
-        const display:Display = new VSCodeDisplay();
-        const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
-        const ruleFilterFactory: RuleFilterFactory = new RuleFilterFactoryImpl();
-        const engineOptionsFactory: EngineOptionsFactory = new RunDfaEngineOptionsFactory(inputProcessor);
-        const resultsProcessorFactory: ResultsProcessorFactory = new ResultsProcessorFactoryImpl();
-        const runAction:RunDfaAction = new RunDfaAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
-            resultsProcessorFactory);
-        return this.validateAndRunDfa(runAction, args);
-    }
-
-    private async validateAndRunDfa(runAction:RunDfaAction, args: Inputs): Promise<AnyJson> {
-        await runAction.validateInputs(args);
-        return runAction.run(args);
+        if (isDfa) {
+            const engineOptionsFactory: EngineOptionsFactory = new RunDfaEngineOptionsFactory(inputProcessor);
+            const runAction:RunDfaAction = new RunDfaAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
+                resultsProcessorFactory);
+            await runAction.validateInputs(args);
+            return runAction.run(args);
+        } else {
+            const engineOptionsFactory: EngineOptionsFactory = new RunEngineOptionsFactory(inputProcessor);
+            const runAction:RunAction = new RunAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
+                resultsProcessorFactory);
+            await runAction.validateInputs(args);
+            return runAction.run(args);
+        }
     }
 }
