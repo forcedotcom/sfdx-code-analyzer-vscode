@@ -126,7 +126,7 @@ export class ScanRunner {
      * @param args The arguments to be supplied
      */
     private async invokeAnalyzer(args: Inputs, isDfa: boolean): Promise<AnyJson> {
-        const sfVersion = '0.0.5';
+        const sfVersion = '0.0.0';
         const logger: Logger = await Logger.child('vscode');
         const display:Display = new NoOpDisplay();
         const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
