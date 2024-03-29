@@ -3,7 +3,7 @@ import {Spinner, Ux} from "@salesforce/sf-plugins-core";
 import {AnyJson} from "@salesforce/ts-types";
 
 
-export class VSCodeDisplay implements Display {
+export class NoOpDisplay implements Display {
     private readonly displayable: Displayable;
 	private readonly spinner: Spinner;
 	private readonly isVerboseSet: boolean;
