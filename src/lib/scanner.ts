@@ -39,7 +39,6 @@ export class ScanRunner {
         const executionResult: AnyJson = await this.invokeAnalyzer(args, false);
 
         // Process the results.
-        // return this.processPathlessResults(executionResult); 
         return executionResult as RuleResult[];
     }
 
