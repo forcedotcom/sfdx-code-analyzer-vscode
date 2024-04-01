@@ -5,15 +5,27 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import {SettingsManager} from './settings';
-import {ExecutionResult, RuleResult} from '../types';
+import {RuleResult} from '../types';
 import {exists} from './file';
 import {messages} from './messages';
-import cspawn = require('cross-spawn');
+import {RunAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunAction';
+import {RunDfaAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunDfaAction';
+import {InputProcessor, InputProcessorImpl} from '@salesforce/sfdx-scanner/lib/lib/InputProcessor';
+import { Display } from '@salesforce/sfdx-scanner/lib/lib/Display';
+import { VSCodeDisplay } from './display';
+import { RuleFilterFactory, RuleFilterFactoryImpl } from '@salesforce/sfdx-scanner/lib/lib/RuleFilterFactory';
+import { EngineOptionsFactory, RunEngineOptionsFactory, RunDfaEngineOptionsFactory } from '@salesforce/sfdx-scanner/lib/lib/EngineOptionsFactory';
+import { ResultsProcessorFactory, ResultsProcessorFactoryImpl } from '@salesforce/sfdx-scanner/lib/lib/output/ResultsProcessorFactory';
+import {Logger} from "@salesforce/core";
+import { AnyJson } from "@salesforce/ts-types";
+import { Inputs } from '@salesforce/sfdx-scanner/lib/types';
+
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
  */
 export class ScanRunner {
+
     /**
      * Run the non-DFA rules against the specified target files
      * @param targets A list of files to be targeted by the scan
@@ -21,13 +33,13 @@ export class ScanRunner {
      */
     public async run(targets: string[]): Promise<RuleResult[]> {
         // Create the arg array.
-        const args: string[] = await this.createPathlessArgArray(targets);
+        const args: Inputs = await this.createPathlessArgArray(targets);
 
         // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeAnalyzer(args);
+        const executionResult: AnyJson = await this.invokeAnalyzer(args, false);
 
         // Process the results.
-        return this.processPathlessResults(executionResult);
+        return executionResult as RuleResult[];
     }
 
     /**
@@ -39,13 +51,14 @@ export class ScanRunner {
      */
     public async runDfa(targets: string[], projectDir: string): Promise<string> {
         // Create the arg array.
-        const args: string[] = this.createDfaArgArray(targets, projectDir);
+        const args: Inputs = this.createDfaArgArray(targets, projectDir);
 
-        // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeAnalyzer(args);
+        // Invoke the scanner. It is ok to cast anyjson as string since 
+        // dfa output is in HTML format.
+        const executionResult: string = await this.invokeAnalyzer(args, true) as string;
 
         // Process the results.
-        return this.processDfaResults(executionResult);
+        return executionResult;
     }
 
     /**
@@ -53,39 +66,31 @@ export class ScanRunner {
      * @param targets The files/methods to be targeted.
      * @param projectDir The root of the project to be scanned.
      */
-    private createDfaArgArray(targets: string[], projectDir: string): string[] {
-        const args: string[] = [
-            'scanner', 'run', 'dfa',
-            '--target', `${targets.join(',')}`,
-            `--projectdir`, projectDir,
-            // NOTE: For now, we're using HTML output since it's the easiest to display to the user.
-            //       This is exceedingly likely to change as we refine and polish the extension.
-            `--format`, `html`,
-            // NOTE: Using `--json` gives us easily-processed results, but denies us access to some
-            //       elements of logging, most notably the informative progress reporting provided
-            //       by the engine's spinner. This was deemed an acceptable trade-off during initial
-            //       implementation, but we may wish to rethink this in the future as we polish things.
-            `--json`
-        ];
+    private createDfaArgArray(targets: string[], projectDir: string): Inputs {
+        const args: Inputs = {
+            'target': targets,
+            'projectdir': [projectDir],
+            'format': `html`
+        }
         // There are a number of custom settings that we need to check too.
         // First we should check whether warning violations are disabled.
         if (SettingsManager.getGraphEngineDisableWarningViolations()) {
-            args.push('--rule-disable-warning-violation');
+            args['rule-disable-warning-violation'] = true;
         }
         // Then we should check whether a custom timeout was specified.
         const threadTimeout: number = SettingsManager.getGraphEngineThreadTimeout();
         if (threadTimeout != null) {
-            args.push('--rule-thread-timeout', `${threadTimeout}`);
+            args['rule-thread-timeout'] = `${threadTimeout}`;
         }
         // Then we should check whether a custom path expansion limit is set.
         const pathExpansionLimit: number = SettingsManager.getGraphEnginePathExpansionLimit();
         if (pathExpansionLimit != null) {
-            args.push('--pathexplimit', `${pathExpansionLimit}`);
+            args['pathexplimit'] = `${pathExpansionLimit}`;
         }
         // Then we should check whether custom JVM args were specified.
         const jvmArgs: string = SettingsManager.getGraphEngineJvmArgs();
         if (jvmArgs) {
-            args.push('--sfgejvmargs', jvmArgs);
+            args['sfgejvmargs'] = jvmArgs;
         }
         // NOTE: We don't check custom threadcount because we can only run against one entrypoint.
         //       If we ever add multi-entrypoint scanning in VSCode, we'll also need a setting for
@@ -98,116 +103,46 @@ export class ScanRunner {
      * Creates the arguments for an execution of {@code sf scanner run}.
      * @param targets The files to be scanned.
      */
-    private async createPathlessArgArray(targets: string[]): Promise<string[]> {
-        const args: string[] = [
-            'scanner', 'run',
-            '--target', `${targets.join(',')}`,
-            '--engine', 'pmd,retire-js',
-            '--json'
-        ];
+    private async createPathlessArgArray(targets: string[]): Promise<Inputs> {
+        const args: Inputs = {
+            'target': targets,
+            'engine': 'pmd,retire-js',
+            'format': 'json'
+        }
         const customPmdConfig: string = SettingsManager.getPmdCustomConfigFile();
         // If there's a non-null, non-empty PMD config file specified, use it.
         if (customPmdConfig && customPmdConfig.length > 0) {
             if (!(await exists(customPmdConfig))) {
                 throw new Error(messages.error.pmdConfigNotFoundGenerator(customPmdConfig));
             }
-            args.push('--pmdconfig', customPmdConfig);
+            args['pmdconfig'] = customPmdConfig;
         }
         return args;
     }
 
     /**
-     * Uses the provided arguments to run a Salesforce Code Analyzer command.
+     * Uses the provided arguments similar to running a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
      */
-    private async invokeAnalyzer(args: string[]): Promise<ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
-
-            let stdout = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', () => {
-                // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as ExecutionResult);
-            });
-        });
-    }
-
-    /**
-     *
-     * @param executionResult The results from a scan
-     * @returns The HTML-formatted scan results, or an empty string.
-     * @throws If {@code executionResult.result} is not a string.
-     * @throws If {@code executionResult.warnings} contains any warnings about methods not being found.
-     * @throws if {@code executionResult.status} is non-zero.
-     */
-    private processDfaResults(executionResult: ExecutionResult): string {
-        // 0 is the status code indicating a successful analysis.
-        if (executionResult.status === 0) {
-            // Since we're using HTML format, the results should always be a string.
-            // Enforce this assumption.
-            if (typeof executionResult.result !== 'string') {
-                // Hardcoding this message should be fine, because it should only ever
-                // appear in response to developer error, not user error.
-                throw new Error('Output should always be a string.');
-            }
-
-            // Before we do anything else, check our warnings, since we're escalating
-            // some of them to errors.
-            // NOTE: This section should be considered tentative. In addition to being
-            //       generally inelegant, it's not great practice to key off specific
-            //       messages in this fashion.
-            if (executionResult.warnings?.length > 0) {
-                for (const warning of executionResult.warnings) {
-                    // Since (for now) DFA only runs on a single method,
-                    // if we couldn't find that method, then that's a critical
-                    // error even though DFA itself just considered it a warning.
-                    if (warning.toLowerCase().startsWith('no methods in file ')) {
-                        throw new Error(warning);
-                    }
-                }
-            }
-
-            const result: string = executionResult.result;
-
-            if (result.startsWith("<!DOCTYPE")) {
-                // If the results are an HTML body, then violations were found. Return that.
-                return result;
+    private async invokeAnalyzer(args: Inputs, isDfa: boolean): Promise<AnyJson> {
+        const sfVersion = '0.0.0';
+        const logger: Logger = await Logger.child('vscode');
+        const display:Display = new VSCodeDisplay();
+        const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
+        const ruleFilterFactory: RuleFilterFactory = new RuleFilterFactoryImpl();
+        const resultsProcessorFactory: ResultsProcessorFactory = new ResultsProcessorFactoryImpl();
+        if (isDfa) {
+            const engineOptionsFactory: EngineOptionsFactory = new RunDfaEngineOptionsFactory(inputProcessor);
+            const runAction:RunDfaAction = new RunDfaAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
+                resultsProcessorFactory);
+            await runAction.validateInputs(args);
+            return runAction.run(args);
             } else {
-
-                // Otherwise, violations weren't found. Return an empty string.
-                return "";
-            }
-        } else {
-            // Any other status code indicates an error of some kind.
-            throw new Error(executionResult.message);
-        }
-    }
-
-    /**
-     *
-     * @param executionResult The results from a scan.
-     * @returns The Rule Results pulled out of the execution results, or an empty array.
-     * @throws if {@coder executionResult.status} is non-zero
-     */
-    private processPathlessResults(executionResult: ExecutionResult): RuleResult[] {
-        // 0 is the status code indicating a successful analysis.
-        if (executionResult.status === 0) {
-            // If the results were a string, that indicates that no results were found.
-            // TODO: Maybe change the plugin to return an empty array instead?
-            //       If that happens, this needs to change.
-            if (typeof executionResult.result === 'string') {
-                return [];
-            } else {
-                return executionResult.result;
-            }
-        } else {
-            // Any other status code indicates an error of some kind.
-            throw new Error(executionResult.message);
+            const engineOptionsFactory: EngineOptionsFactory = new RunEngineOptionsFactory(inputProcessor);
+            const runAction:RunAction = new RunAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
+                resultsProcessorFactory);
+            await runAction.validateInputs(args);
+            return runAction.run(args);
         }
     }
 }
