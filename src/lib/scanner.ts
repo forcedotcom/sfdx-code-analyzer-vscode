@@ -12,7 +12,7 @@ import {RunAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunAction';
 import {RunDfaAction} from '@salesforce/sfdx-scanner/lib/lib/actions/RunDfaAction';
 import {InputProcessor, InputProcessorImpl} from '@salesforce/sfdx-scanner/lib/lib/InputProcessor';
 import { Display } from '@salesforce/sfdx-scanner/lib/lib/Display';
-import { NoOpDisplay } from './display';
+import { VSCodeDisplay } from './display';
 import { RuleFilterFactory, RuleFilterFactoryImpl } from '@salesforce/sfdx-scanner/lib/lib/RuleFilterFactory';
 import { EngineOptionsFactory, RunEngineOptionsFactory, RunDfaEngineOptionsFactory } from '@salesforce/sfdx-scanner/lib/lib/EngineOptionsFactory';
 import { ResultsProcessorFactory, ResultsProcessorFactoryImpl } from '@salesforce/sfdx-scanner/lib/lib/output/ResultsProcessorFactory';
@@ -128,7 +128,7 @@ export class ScanRunner {
     private async invokeAnalyzer(args: Inputs, isDfa: boolean): Promise<AnyJson> {
         const sfVersion = '0.0.0';
         const logger: Logger = await Logger.child('vscode');
-        const display:Display = new NoOpDisplay();
+        const display:Display = new VSCodeDisplay();
         const inputProcessor: InputProcessor = new InputProcessorImpl(sfVersion, display);
         const ruleFilterFactory: RuleFilterFactory = new RuleFilterFactoryImpl();
         const resultsProcessorFactory: ResultsProcessorFactory = new ResultsProcessorFactoryImpl();
@@ -138,7 +138,7 @@ export class ScanRunner {
                 resultsProcessorFactory);
             await runAction.validateInputs(args);
             return runAction.run(args);
-        } else {
+                    } else {
             const engineOptionsFactory: EngineOptionsFactory = new RunEngineOptionsFactory(inputProcessor);
             const runAction:RunAction = new RunAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
                 resultsProcessorFactory);

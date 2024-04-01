@@ -3,42 +3,44 @@ import {Spinner, Ux} from "@salesforce/sf-plugins-core";
 import {AnyJson} from "@salesforce/ts-types";
 
 
-export class NoOpDisplay implements Display {
+export class VSCodeDisplay implements Display {
     private readonly displayable: Displayable;
 	private readonly spinner: Spinner;
 	private readonly isVerboseSet: boolean;
+    private stdout:string[] = [];
+    private stderr:string[] = [];
     
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayInfo(msg: string): void {
+        this.stdout.push(msg);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayVerboseInfo(msg: string): void {
+        this.stdout.push(msg);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     displayConfirmationPrompt(msg: string): Promise<boolean> {
         throw new Error('Method not implemented');
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayStyledHeader(headerText: string): void {
+        this.stdout.push(headerText);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayError(msg: string): void {
+        this.stderr.push(msg);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayWarning(msg: string): void {
+        this.stderr.push(msg);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayVerboseWarning(msg: string): void {
+        this.stderr.push(msg);
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     displayUniqueWarning(msg: string): void {
+        this.stderr.push(msg);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
@@ -64,4 +66,12 @@ export class NoOpDisplay implements Display {
     public displayStyledObject(obj: AnyJson): void {
 		this.displayable.styledObject(obj);
 	}
-}
+
+    public getInfo(): string[] {
+        return this.stdout;
+    }
+
+    public getErrorsAndWarnings(): string [] {
+        return this.stderr;
+    }
+ }
