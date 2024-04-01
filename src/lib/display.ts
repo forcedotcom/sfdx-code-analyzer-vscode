@@ -1,12 +1,9 @@
-import { Display, Displayable } from '@salesforce/sfdx-scanner/lib/lib/Display';
-import {Spinner, Ux} from "@salesforce/sf-plugins-core";
+import { Display } from '@salesforce/sfdx-scanner/lib/lib/Display';
+import { Ux } from "@salesforce/sf-plugins-core";
 import {AnyJson} from "@salesforce/ts-types";
 
 
 export class VSCodeDisplay implements Display {
-    private readonly displayable: Displayable;
-	private readonly spinner: Spinner;
-	private readonly isVerboseSet: boolean;
     private stdout:string[] = [];
     private stderr:string[] = [];
     
@@ -63,8 +60,8 @@ export class VSCodeDisplay implements Display {
     displayTable<R extends Ux.Table.Data>(data: R[], columns: Ux.Table.Columns<R>): void {
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function, @typescript-eslint/no-unused-vars
     public displayStyledObject(obj: AnyJson): void {
-		this.displayable.styledObject(obj);
 	}
 
     public getInfo(): string[] {
