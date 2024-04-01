@@ -137,7 +137,7 @@ export class ScanRunner {
                 resultsProcessorFactory);
             await runAction.validateInputs(args);
             return runAction.run(args);
-                    } else {
+            } else {
             const engineOptionsFactory: EngineOptionsFactory = new RunEngineOptionsFactory(inputProcessor);
             const runAction:RunAction = new RunAction(logger, display, inputProcessor, ruleFilterFactory, engineOptionsFactory,
                 resultsProcessorFactory);
