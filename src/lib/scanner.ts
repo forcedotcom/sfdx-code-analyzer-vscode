@@ -39,7 +39,7 @@ export class ScanRunner {
         const executionResult: AnyJson = await this.invokeAnalyzer(args, false);
 
         // Process the results.
-        return executionResult as RuleResult[];
+        return this.processResults(executionResult);
     }
 
     /**
@@ -144,5 +144,13 @@ export class ScanRunner {
             await runAction.validateInputs(args);
             return runAction.run(args);
         }
+    }
+
+    private processResults(results: AnyJson): RuleResult[] {
+        const ruleResult = results as string;
+        if (ruleResult.includes('No rule violations found.')) {
+            return [];
+        }
+        return results as RuleResult[];
     }
 }
