@@ -146,11 +146,21 @@ export class ScanRunner {
         }
     }
 
+    /**
+     * Processes results from runAction. The results is in the RuleResult format when there are violations.
+     * Where there are no violations, it is in string format.
+     * @param results in AnyJson format
+     * @returns 
+     */
     private processResults(results: AnyJson): RuleResult[] {
-        const ruleResult = results as string;
-        if (ruleResult.includes('No rule violations found.')) {
+        if (this.checkForNoViolation(results)) {
             return [];
         }
         return results as RuleResult[];
+    }
+
+    private checkForNoViolation(results: AnyJson): boolean {
+        const ruleResult = results as string;
+        return ruleResult.includes('No rule violations found.');
     }
 }
