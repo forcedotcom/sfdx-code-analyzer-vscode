@@ -12,6 +12,7 @@ import {messages} from '../../lib/messages';
 import * as File from '../../lib/file';
 import {ScanRunner} from '../../lib/scanner';
 import { Inputs } from '@salesforce/sfdx-scanner/lib/types';
+import { RuleResult } from '../../types';
 
 suite('ScanRunner', () => {
     suite('#createPathlessArgArray()', () => {
@@ -111,6 +112,48 @@ suite('ScanRunner', () => {
                 expect(args['engine']).to.equal('pmd,retire-js', 'Wrong arg');
                 expect(args['format']).to.equal('json', 'Wrong arg');
             });
+        });
+    });
+
+    suite('#processResults()', () => {
+        test('Returns empty results when no violations found', () => {
+            // ===== SETUP =====
+            const spoofedOutput:string = 'some text. No rule violations found.';
+
+            // ===== TEST =====
+            const scanner = new ScanRunner();
+            const processedResults: RuleResult[] = (scanner as any).processResults(spoofedOutput);
+
+            // ===== ASSERTIONS =====
+            expect(processedResults).to.have.lengthOf(0, 'processed Result not empty.');
+        });
+
+        test('Returns RuleResults when violations found', () => {
+            // ===== SETUP =====
+            const spoofedOutput = [{
+                engine: "pmd",
+                fileName: "fakefile1",
+                violations: [{
+                    ruleName: "fakeRule1",
+                    message: "fake message",
+                    severity: 0,
+                    category: "fake category",
+                    line: 1,
+                    column: 5,
+                    endLine: 5,
+                    endColumn: 50
+                }]}];
+
+            // ===== TEST =====
+            const scanner = new ScanRunner();
+            const processedResults: RuleResult[] = (scanner as any).processResults(spoofedOutput);
+
+            // ===== ASSERTIONS =====
+            expect(processedResults).to.have.lengthOf(1, 'processed Result count incorrect.');
+            expect(processedResults[0].engine).to.equal('pmd');
+            expect(processedResults[0].fileName).to.equal('fakefile1');
+            expect(processedResults[0].violations).to.have.lengthOf(1, 'processed violations count incorrect.');
+            expect(processedResults[0].violations[0].ruleName).to.equal('fakeRule1');
         });
     });
 

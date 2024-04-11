@@ -39,7 +39,7 @@ export class ScanRunner {
         const executionResult: AnyJson = await this.invokeAnalyzer(args, false);
 
         // Process the results.
-        return executionResult as RuleResult[];
+        return this.processResults(executionResult);
     }
 
     /**
@@ -144,5 +144,23 @@ export class ScanRunner {
             await runAction.validateInputs(args);
             return runAction.run(args);
         }
+    }
+
+    /**
+     * Processes results from runAction. The results is in the RuleResult format when there are violations.
+     * Where there are no violations, it is in string format.
+     * @param results in AnyJson format
+     * @returns 
+     */
+    private processResults(results: AnyJson): RuleResult[] {
+        if (this.checkForNoViolation(results)) {
+            return [];
+        }
+        return results as RuleResult[];
+    }
+
+    private checkForNoViolation(results: AnyJson): boolean {
+        const ruleResult = results as string;
+        return ruleResult.includes('No rule violations found.');
     }
 }
