@@ -13,7 +13,6 @@ import * as File from '../../lib/file';
 import {ScanRunner} from '../../lib/scanner';
 import { Inputs } from '@salesforce/sfdx-scanner/lib/types';
 import { RuleResult } from '../../types';
-import { AnyJson } from "@salesforce/ts-types";
 
 suite('ScanRunner', () => {
     suite('#createPathlessArgArray()', () => {
