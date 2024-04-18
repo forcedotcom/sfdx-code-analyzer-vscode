@@ -1,3 +1,9 @@
+# The compiled action is contained in the dist directory
+!dist/
+
+# npm output
+package-lock.json
+
 # Dependency directory
 node_modules
 
