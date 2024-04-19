@@ -20,7 +20,7 @@ jobs:
       - name: 'Set up NodeJS'
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*' # Node LTS should always be fine.
+          node-version: '20.12.1' # Node LTS should always be fine.
       - name: 'Install Java v11'
         uses: actions/setup-java@v4
         with:

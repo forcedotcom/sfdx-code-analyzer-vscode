@@ -12,9 +12,9 @@ jobs:
       # Private actions must check out repo first.
       - name: Checkout
         uses: actions/checkout@v4
-      # TODO: Implement this action
       - name: Verify PR Title
-        run: echo 'Nope not yet'
+        uses: ./github-actions/verify-pr-title
+        id: verify_pr_title
   # RUN TESTS
   # Step 1: Build the scanner tarball so it can be installed locally.
   build_scanner_tarball:
