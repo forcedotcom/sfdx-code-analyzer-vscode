@@ -29,8 +29,8 @@ jobs:
           cd sfdx-scanner
           git checkout ${{ inputs.target-branch }}
           # Install and build dependencies.
-          npm
-          npm run build
+          yarn
+          yarn build
           # Create the tarball.
           npm pack
       # Upload the tarball as an artifact so it's usable elsewhere.
