@@ -27,7 +27,7 @@ jobs:
           distribution: 'temurin'
           java-version: '11' # Always use Java v11 for running tests.
       - name: 'Install node module dependencies'
-        run: npm install --frozen-lockfile
+        run: npm install ci
       # We'll need to install the CLI tool, since some of the tests
       # are integration tests.
       - name: Install SF CLI
