@@ -35,7 +35,7 @@ async function main() {
 			{
 				encoding: 'utf-8',
 				stdio: 'inherit',
-				shell: true
+				shell: process.platform === 'win32'
 			}
 		);
 
