@@ -28,13 +28,15 @@ async function main() {
 		console.log(`path: ${vscodeExecutablePath}`);
 		const [cliPath, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
 
+		console.log(cliPath);
 		// Install the Salesforce Core extension pack
 		cp.spawnSync(
 			cliPath,
 			[...args, '--install-extension', EXTENSION_PACK_ID],
 			{
 				encoding: 'utf-8',
-				stdio: 'inherit'
+				stdio: 'inherit',
+				shell: true
 			}
 		);
 
