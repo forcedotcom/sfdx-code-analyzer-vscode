@@ -28,7 +28,6 @@ async function main() {
 		console.log(`path: ${vscodeExecutablePath}`);
 		const [cliPath, ...args] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
 
-		console.log(cliPath);
 		// Install the Salesforce Core extension pack
 		cp.spawnSync(
 			cliPath,

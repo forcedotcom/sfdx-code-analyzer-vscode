@@ -29,9 +29,6 @@ export class CoreExtensionService {
 
 	private static async getCoreExtensionApiOrUndefined(): Promise<CoreExtensionApi|undefined> {
 		const coreExtension = vscode.extensions.getExtension(CORE_EXTENSION_ID);
-		vscode.extensions.all.forEach((ext) => {
-			console.log(ext.id);
-		});
 		if (!coreExtension) {
 			console.log(`${CORE_EXTENSION_ID} not found; cannot load core dependencies. Returning undefined instead.`);
 			return undefined;
