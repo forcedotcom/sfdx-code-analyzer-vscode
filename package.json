@@ -33,7 +33,6 @@
         "SFCA"
     ],
     "dependencies": {
-        "@salesforce/sfdx-scanner": "4.0.0",
         "cross-spawn": "^7.0.3",
         "glob": "^8.0.3",
         "globby": "^11.0.0",
