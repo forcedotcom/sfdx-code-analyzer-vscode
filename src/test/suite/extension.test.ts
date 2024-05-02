@@ -75,6 +75,8 @@ suite('Extension Test Suite', () => {
 			for (const diagnostic of diagnostics) {
 				expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
 				expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+				expect(diagnostic.code).to.have.property('target');
+				expect((diagnostic.code['target'] as vscode.Uri).scheme).to.equal('https');
 			}
 		});
 

@@ -81,7 +81,7 @@ export class DiagnosticManager {
         );
         diagnostic.source = messages.diagnostics.source.generator(engine);
         diagnostic.code = violation.url ? {
-            target: vscode.Uri.file(violation.url),
+            target: vscode.Uri.parse(violation.url),
             value: violation.ruleName
         } : violation.ruleName;
         return diagnostic;
