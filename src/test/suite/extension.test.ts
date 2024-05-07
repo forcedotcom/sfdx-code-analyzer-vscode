@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _isValidFileForAnalysis } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, dfaStatusBarItem, _isValidFileForAnalysis } from '../../extension';
 import {messages} from '../../lib/messages';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
@@ -239,7 +239,7 @@ suite('Extension Test Suite', () => {
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
-				await _runAndDisplayDfa(statusBar, null, {
+				await _runAndDisplayDfa(null, {
 					commandName: fakeTelemetryName,
 					outputChannel
 				});
@@ -265,7 +265,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command, expecting an error.
 				let err: Error = null;
 				try {
-					await _runAndDisplayDfa(statusBar, null, {
+					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName,
 						outputChannel
 					});
@@ -282,6 +282,68 @@ suite('Extension Test Suite', () => {
 				expect(exceptionTelemStub.firstCall.args[2]).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
 			});
 		});
+	});
+
+	suite('#_shouldProceedWithDfaRun()', () => {
+		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		let context: vscode.ExtensionContext;
+		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+
+		suiteSetup(async function () {
+			this.timeout(10000);
+			// Activate the extension.
+			context = await ext.activate();
+		});
+
+		teardown(async () => {
+			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+		});
+
+		test('Returns true when no existing DFA process detected', async() => {
+			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, 1234);
+			_shouldProceedWithDfaRun(context, outputChannel).then( (result) => {
+				expect(result).to.equal(true);
+			}
+			);
+		});
+
+		test('Returns false when no existing DFA process detected', async() => {
+			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+			_shouldProceedWithDfaRun(context, outputChannel).then( (result) => {
+				expect(result).to.equal(false);
+			}
+			);
+		});
+	});
+
+	suite('#_stopExistingDfaRun()', () => {
+		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		let context: vscode.ExtensionContext;
+		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+
+		suiteSetup(async function () {
+			this.timeout(10000);
+			// Activate the extension.
+			context = await ext.activate();
+		});
+
+		teardown(async () => {
+			void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+			Sinon.restore();
+		});
+
+		test('Cache cleared as part of stopping the existing DFA run', async() => {
+			context.globalState.update(Constants.GLOBAL_DFA_PROCESS, 1234);
+			_stopExistingDfaRun(context, outputChannel, true);
+			expect(context.globalState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.undefined;
+		});
+
+		test('Cache stays cleared when there are no existing DFA runs', async() => {
+			void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+			_stopExistingDfaRun(context, outputChannel, true);
+			expect(context.globalState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.undefined;
+		});
+
 	});
 
 	suite('#isValidFileForAnalysis', () => {

@@ -11,6 +11,8 @@ import {SettingsManager} from '../../lib/settings';
 import {messages} from '../../lib/messages';
 import * as File from '../../lib/file';
 import {ScanRunner} from '../../lib/scanner';
+import * as vscode from 'vscode';
+import * as Constants from '../../lib/constants';
 
 import {ExecutionResult, RuleResult} from '../../types';
 
@@ -466,4 +468,28 @@ suite('ScanRunner', () => {
         });
     });
 
+    suite('#invokeDfaAnalyzer()', () => {
+        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		let context: vscode.ExtensionContext;
+		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+
+		suiteSetup(async function () {
+			this.timeout(10000);
+			// Activate the extension.
+			context = await ext.activate();
+		});
+
+        test('Adds process Id to the cache', () => {
+            // ===== SETUP =====
+            const args:string[] = [];
+            const scanner = new ScanRunner();
+            void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+
+            // ===== TEST =====
+            (scanner as any).invokeDfaAnalyzer(args, context);
+
+            // ===== ASSERTIONS =====
+            expect(context.globalState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.not.undefined;
+        });
+    });
 });
