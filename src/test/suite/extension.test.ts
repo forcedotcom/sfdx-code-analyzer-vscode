@@ -239,7 +239,7 @@ suite('Extension Test Suite', () => {
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
-				await _runAndDisplayDfa(statusBar, {
+				await _runAndDisplayDfa(statusBar, null, {
 					commandName: fakeTelemetryName,
 					outputChannel
 				});
@@ -265,7 +265,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command, expecting an error.
 				let err: Error = null;
 				try {
-					await _runAndDisplayDfa(statusBar, {
+					await _runAndDisplayDfa(statusBar, null, {
 						commandName: fakeTelemetryName,
 						outputChannel
 					});

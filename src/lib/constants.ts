@@ -13,6 +13,7 @@ export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
 export const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
 export const COMMAND_RUN_ON_SELECTED = 'sfca.runOnSelected';
 export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
+export const COMMAND_STOP_DFA = 'sfca.stopDfa';
 
 // telemetry event keys
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
@@ -23,3 +24,6 @@ export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
+
+// cache names
+export const GLOBAL_DFA_PROCESS = 'dfaScanProcess';

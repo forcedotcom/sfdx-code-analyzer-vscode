@@ -85,6 +85,10 @@
             {
                 "command": "sfca.runDfaOnSelectedMethod",
                 "title": "SF: Scan selected method with Graph Engine path-based analysis"
+            },
+            {
+                "command": "sfca.stopDfa",
+                "title": "SFDX: Stop currently executing Graph Engine based path-based analysis"
             }
         ],
         "configuration": {
@@ -139,6 +143,10 @@
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
                     "when": "false"
+                },
+                {
+                    "command": "sfca.stopDfa",
+                    "when": "true"
                 }
             ],
             "editor/context": [

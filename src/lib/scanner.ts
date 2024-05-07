@@ -4,10 +4,12 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
+import * as vscode from 'vscode';
 import {SettingsManager} from './settings';
 import {ExecutionResult, RuleResult} from '../types';
 import {exists} from './file';
 import {messages} from './messages';
+import * as Constants from './constants';
 import cspawn = require('cross-spawn');
 
 /**
@@ -37,12 +39,12 @@ export class ScanRunner {
      * @param projectDir The directory containing all files in the project to be scanned.
      * @returns The HTML-formatted scan results, or an empty string if no violations were found.
      */
-    public async runDfa(targets: string[], projectDir: string): Promise<string> {
+    public async runDfa(targets: string[], projectDir: string, context: vscode.ExtensionContext): Promise<string> {
         // Create the arg array.
         const args: string[] = this.createDfaArgArray(targets, projectDir);
 
         // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeAnalyzer(args);
+        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context);
 
         // Process the results.
         return this.processDfaResults(executionResult);
@@ -134,6 +136,30 @@ export class ScanRunner {
                 // No matter what, stdout will be an execution result.
                 res(JSON.parse(stdout) as ExecutionResult);
             });
+        });
+    }
+
+    /**
+     * Uses the provided arguments to run a Salesforce Code Analyzer command.
+     * @param args The arguments to be supplied
+     */
+    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
+        return new Promise((res) => {
+            const cp = cspawn.spawn('sf', args);
+            void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, cp.pid);
+
+            let stdout = '';
+
+            cp.stdout.on('data', data => {
+                stdout += data;
+            });
+
+            cp.on('exit', () => {
+                // No matter what, stdout will be an execution result.
+                res(JSON.parse(stdout) as ExecutionResult);
+                void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+            });
+            
         });
     }
 
