@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _isValidFileForAnalysis } from '../../extension';
 import {messages} from '../../lib/messages';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
@@ -281,6 +281,23 @@ suite('Extension Test Suite', () => {
 				expect(exceptionTelemStub.firstCall.args[1]).to.include(messages.error.sfdxScannerMissing);
 				expect(exceptionTelemStub.firstCall.args[2]).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
 			});
+		});
+	});
+
+	suite('#isValidFileForAnalysis', () => {
+		test('Returns true for valid files', async() => {
+			// ===== SETUP ===== and ===== ASSERTIONS =====
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.apex"))).to.equal(true);
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.cls"))).to.equal(true);
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.trigger"))).to.equal(true);
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.ts"))).to.equal(true);
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.js"))).to.equal(true);
+		});
+
+		test('Returns false for invalid files', async() => {
+			// ===== SETUP ===== and ===== ASSERTIONS =====
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.java"))).to.equal(false);
+			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file"))).to.equal(false);
 		});
 	});
 });

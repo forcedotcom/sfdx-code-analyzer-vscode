@@ -18,6 +18,7 @@ import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import { CoreExtensionService, TelemetryService } from './lib/core-extension-service';
 import * as Constants from './lib/constants';
+import * as path from 'path';
 
 type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -128,11 +129,13 @@ export function registerScanOnOpen(outputChannel: vscode.LogOutputChannel) {
 			if (
 				SettingsManager.getAnalyzeOnOpen()
 			) {
-				await _runAndDisplayPathless([documentUri], {
-					commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
-					diagnosticCollection,
-					outputChannel
-				});
+				if (_isValidFileForAnalysis(documentUri)) {
+					await _runAndDisplayPathless([documentUri], {
+						commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
+						diagnosticCollection,
+						outputChannel
+					});
+				}
 			}
 		}
 	);
@@ -279,3 +282,9 @@ async function summarizeResultsAsToast(targets: string[], results: RuleResult[])
 export function deactivate() {
 	TelemetryService.dispose();
 }
+
+export function _isValidFileForAnalysis(documentUri: vscode.Uri) {
+	const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts'];
+	return allowedFileTypes.includes(path.extname(documentUri.path));
+}
+
