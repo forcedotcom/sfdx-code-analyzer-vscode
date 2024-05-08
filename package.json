@@ -117,12 +117,12 @@
                 "codeAnalyzer.analyzeOnSave.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Scan the current file on save automatically."
+                    "description": "Scan files on save automatically."
                 },
                 "codeAnalyzer.analyzeOnOpen.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Scan the current file on open automatically."
+                    "description": "Scan files on open automatically."
                 }
             }
         },
