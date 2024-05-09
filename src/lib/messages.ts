@@ -25,7 +25,7 @@ export const messages = {
     graphEngine: {
         noViolationsFound: "Scan was completed. No violations found.",
         resultsTab: "Graph Engine Results",
-        spinnerText: '$(loading~spin) Running Graph Engine analysis...',
+        spinnerText: 'Running Graph Engine analysis...',
         statusBarName: "Graph Engine Analysis",
         noDfaRun: "No existing DFA run found.",
         dfaRunStopped: "Graph Engine based run stopped.",

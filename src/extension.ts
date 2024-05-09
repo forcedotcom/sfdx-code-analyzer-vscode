@@ -33,8 +33,6 @@ type RunInfo = {
  */
 let diagnosticCollection: vscode.DiagnosticCollection = null;
 
-export let dfaStatusBarItem: vscode.StatusBarItem = null;
-
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
  * The activation trigger can be changed by changing activationEvents in package.json
@@ -86,13 +84,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	registerScanOnOpen(outputChannel);
 	await _stopExistingDfaRun(context, outputChannel, false);
 	outputChannel.appendLine('Registered scanOnSave as part of sfdx-code-analyzer-vscode activation.');
-	dfaStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-	dfaStatusBarItem.name = messages.graphEngine.statusBarName;
-	context.subscriptions.push(dfaStatusBarItem);
+
 	const runDfaOnSelectedMethod = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
-		return _runAndDisplayDfa(context, {
-			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
-			outputChannel
+		await vscode.window.withProgress({
+			location: vscode.ProgressLocation.Window,
+			title: messages.graphEngine.spinnerText,
+			cancellable: true
+		}, (progress, token) => {
+			token.onCancellationRequested(async () => {
+				await _stopExistingDfaRun(context, outputChannel, true);
+			});
+			return _runAndDisplayDfa(context, {
+				commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
+				outputChannel
+			});
 		});
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, stopDfa);
@@ -106,7 +111,6 @@ export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outp
 	if (pid) {
 		try {
 			process.kill(pid as number, SIGKILL);
-			dfaStatusBarItem.hide();
 			await vscode.window.showInformationMessage(messages.graphEngine.dfaRunStopped);
 		} catch (e) {
 			const errMsg = e instanceof Error ? e.message : e as string;
@@ -239,16 +243,12 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 		await verifyPluginInstallation();
 		if (await _shouldProceedWithDfaRun(context, outputChannel)) {
 			// Set the Status Bar Item's text and un-hide it.
-			dfaStatusBarItem.text = messages.graphEngine.spinnerText;
-			dfaStatusBarItem.show();
-			dfaStatusBarItem.tooltip = 'To cancel go to command palette';
 			// Get the targeted method.
 			const methodLevelTarget: string = await targeting.getSelectedMethod();
 			// Pull out the file from the target and use it to identify the project directory.
 			const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
 			const projectDir: string = targeting.getProjectDir(currentFile);
 			const results: string = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
-			dfaStatusBarItem.hide();
 			if (results.length > 0) {
 				const panel = vscode.window.createWebviewPanel(
 					'dfaResults',
@@ -280,7 +280,6 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 		vscode.window.showErrorMessage(messages.error.analysisFailedGenerator(errMsg));
 		outputChannel.error(errMsg)
 		outputChannel.show();
-		dfaStatusBarItem.hide();
 	}
 }
 
