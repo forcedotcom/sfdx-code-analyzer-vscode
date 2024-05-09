@@ -471,7 +471,6 @@ suite('ScanRunner', () => {
     suite('#invokeDfaAnalyzer()', () => {
         let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
-		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 
 		suiteSetup(async function () {
 			this.timeout(10000);
@@ -491,5 +490,16 @@ suite('ScanRunner', () => {
             // ===== ASSERTIONS =====
             expect(context.globalState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.not.undefined;
         });
+    });
+
+    suite('#invokeAnalyzer()', () => {
+        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		let context: vscode.ExtensionContext;
+
+		suiteSetup(async function () {
+			this.timeout(10000);
+			// Activate the extension.
+			context = await ext.activate();
+		});
     });
 });
