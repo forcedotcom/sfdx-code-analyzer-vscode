@@ -33,6 +33,8 @@ type RunInfo = {
  */
 let diagnosticCollection: vscode.DiagnosticCollection = null;
 
+let customCancellationToken: vscode.CancellationTokenSource | null = null;
+
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
  * The activation trigger can be changed by changing activationEvents in package.json
@@ -94,10 +96,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			token.onCancellationRequested(async () => {
 				await _stopExistingDfaRun(context, outputChannel, true);
 			});
+			customCancellationToken = new vscode.CancellationTokenSource();
+			customCancellationToken.token.onCancellationRequested(async () => {
+				customCancellationToken?.dispose();
+				customCancellationToken = null;
+				await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+				return;
+			});
 			return _runAndDisplayDfa(context, {
 				commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
 				outputChannel
-			});
+			}, customCancellationToken);
 		});
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, stopDfa);
@@ -233,7 +242,7 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: 
  * @param runInfo.outputChannel The output channel where information should be logged as needed
  * @param runInfo.commandName The specific command being run
  */
-export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo): Promise<void> {
+export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo, cancelToken: vscode.CancellationTokenSource): Promise<void> {
 	const {
 		outputChannel,
 		commandName
@@ -260,7 +269,7 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 				);
 				panel.webview.html = results;
 			} else {
-				await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+				cancelToken.cancel();
 			}
 			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_DFA_ANALYSIS, {
 				executedCommand: commandName,
