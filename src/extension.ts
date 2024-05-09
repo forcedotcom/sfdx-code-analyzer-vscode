@@ -78,9 +78,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			outputChannel
 		});
 	});
-	const stopDfa = vscode.commands.registerCommand(Constants.COMMAND_STOP_DFA, () => {
-		return _stopExistingDfaRun(context, outputChannel, true);
-	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
 	registerScanOnSave(outputChannel);
 	registerScanOnOpen(outputChannel);
@@ -109,7 +106,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			}, customCancellationToken);
 		});
 	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, stopDfa);
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);

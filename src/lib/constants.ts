@@ -13,7 +13,6 @@ export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
 export const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
 export const COMMAND_RUN_ON_SELECTED = 'sfca.runOnSelected';
 export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
-export const COMMAND_STOP_DFA = 'sfca.stopDfa';
 
 // telemetry event keys
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
