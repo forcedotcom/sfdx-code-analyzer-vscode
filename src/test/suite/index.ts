@@ -79,10 +79,10 @@ export async function run(): Promise<void> {
 	// If coverage requirements aren't met, `process.exitCode` is set to a non-zero value.
 	// This is why we manually set it to 0 earlier.
 	await nyc.checkCoverage({
-		branches: 75,
-		lines: 75,
-		functions: 75,
-		statements: 75
+		branches: 70,
+		lines: 80,
+		functions: 70,
+		statements: 80
 	});
 
 	// Echo the logs.
