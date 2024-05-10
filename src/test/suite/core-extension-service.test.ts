@@ -16,7 +16,7 @@ suite('core-extension-service.ts', () => {
             expect(CoreExtensionService.isAboveMinimumRequiredVersion('1.0.0', '1.0.2')).to.equal(true);
         });
 
-        test('returns true when actual is less than min version', () => {
+        test('returns false when actual is less than min version', () => {
             expect(CoreExtensionService.isAboveMinimumRequiredVersion('1.0.0', '0.0.9')).to.equal(false);
         });
 
