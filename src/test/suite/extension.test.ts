@@ -340,23 +340,27 @@ suite('Extension Test Suite', () => {
 		});
 
 		teardown(async () => {
+			Sinon.restore();
 			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
 		});
 
-		test('Returns true when no existing DFA process detected', async() => {
+		test('Returns true and confirmation message not called when no existing DFA process detected', async() => {
+			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
+			
+			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+
+			expect(await _shouldProceedWithDfaRun(context, outputChannel)).to.equal(true);
+			Sinon.assert.callCount(infoMessageSpy, 0);
+		});
+
+		test('Confirmation message called when DFA process detected', async() => {
+			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, 1234);
-			_shouldProceedWithDfaRun(context, outputChannel).then( (result) => {
-				expect(result).to.equal(true);
-			}
-			);
-		});
 
-		test('Returns false when no existing DFA process detected', async() => {
-			await context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
-			_shouldProceedWithDfaRun(context, outputChannel).then( (result) => {
-				expect(result).to.equal(false);
-			}
-			);
+			_shouldProceedWithDfaRun(context, outputChannel);
+
+			Sinon.assert.callCount(infoMessageSpy, 1);
+			expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.stopDfaRunConfirmationText);
 		});
 	});
 
