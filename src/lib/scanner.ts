@@ -146,7 +146,7 @@ export class ScanRunner {
     private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
         return new Promise((res) => {
             const cp = cspawn.spawn('sf', args);
-            void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, cp.pid);
+            void context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, cp.pid);
 
             let stdout = '';
 
@@ -157,7 +157,7 @@ export class ScanRunner {
             cp.on('exit', () => {
                 // No matter what, stdout will be an execution result.
                 res(JSON.parse(stdout) as ExecutionResult);
-                void context.globalState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+                void context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
             });
             
         });
