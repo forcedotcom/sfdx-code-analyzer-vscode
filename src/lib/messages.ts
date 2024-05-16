@@ -25,8 +25,13 @@ export const messages = {
     graphEngine: {
         noViolationsFound: "Scan was completed. No violations found.",
         resultsTab: "Graph Engine Results",
-        spinnerText: '$(loading~spin) Running Graph Engine analysis...',
-        statusBarName: "Graph Engine Analysis"
+        spinnerText: 'Running Graph Engine analysis...',
+        statusBarName: "Graph Engine Analysis",
+        noDfaRun: "No existing DFA run found.",
+        dfaRunStopped: "Graph Engine based run stopped.",
+        stopDfaRunConfirmationText: "There is an existing DFA run. Do you want to stop that?",
+        stopDfaRunConfirmationYes : "Yes",
+        stopDfaRunConfirmationNo : "No"
     },
     fixer: {
         supressOnLine: "Suppress violations on this line."

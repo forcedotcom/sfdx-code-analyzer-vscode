@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _isValidFileForAnalysis } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation } from '../../extension';
 import {messages} from '../../lib/messages';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
@@ -239,10 +239,10 @@ suite('Extension Test Suite', () => {
 
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
-				await _runAndDisplayDfa(statusBar, {
+				await _runAndDisplayDfa(null, {
 					commandName: fakeTelemetryName,
 					outputChannel
-				});
+				}, null);
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
@@ -265,10 +265,10 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command, expecting an error.
 				let err: Error = null;
 				try {
-					await _runAndDisplayDfa(statusBar, {
+					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName,
 						outputChannel
-					});
+					}, null);
 				} catch (e) {
 					err = e;
 				}
@@ -283,6 +283,115 @@ suite('Extension Test Suite', () => {
 			});
 		});
 	});
+
+	suite('#verifyPluginInstallation()', () => {
+		teardown(() => {
+			Sinon.restore();
+		});
+
+		test('Errors if `sfdx-scanner` is missing', async () => {
+			// ===== SETUP =====
+			// Simulate SF being available but SFDX Scanner being absent.
+			Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
+			Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
+
+			// ===== TEST =====
+			// Attempt to run the appropriate extension command, expecting an error.
+			let err: Error = null;
+			try {
+				await verifyPluginInstallation();
+			} catch (e) {
+				err = e;
+			}
+
+			// ===== ASSERTIONS =====
+			expect(err.message).to.include(messages.error.sfdxScannerMissing);
+		});
+
+		test('Errors if `cli` is missing', async () => {
+			// ===== SETUP =====
+			// Simulate SF being available but SFDX Scanner being absent.
+			Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+			Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(true);
+
+			// ===== TEST =====
+			// Attempt to run the appropriate extension command, expecting an error.
+			let err: Error = null;
+			try {
+				await verifyPluginInstallation();
+			} catch (e) {
+				err = e;
+			}
+
+			// ===== ASSERTIONS =====
+			expect(err.message).to.include(messages.error.sfMissing);
+		});
+	});
+
+	suite('#_shouldProceedWithDfaRun()', () => {
+		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		let context: vscode.ExtensionContext;
+		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+
+		suiteSetup(async function () {
+			this.timeout(10000);
+			// Activate the extension.
+			context = await ext.activate();
+		});
+
+		teardown(async () => {
+			Sinon.restore();
+			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+		});
+
+		test('Returns true and confirmation message not called when no existing DFA process detected', async() => {
+			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
+			
+			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+
+			expect(await _shouldProceedWithDfaRun(context, outputChannel)).to.equal(true);
+			Sinon.assert.callCount(infoMessageSpy, 0);
+		});
+
+		test('Confirmation message called when DFA process detected', async() => {
+			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
+			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
+
+			_shouldProceedWithDfaRun(context, outputChannel);
+
+			Sinon.assert.callCount(infoMessageSpy, 1);
+			expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.stopDfaRunConfirmationText);
+		});
+	});
+
+	suite('#_stopExistingDfaRun()', () => {
+        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        let context: vscode.ExtensionContext;
+        const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+
+        suiteSetup(async function () {
+            this.timeout(10000);
+            // Activate the extension.
+            context = await ext.activate();
+        });
+
+        teardown(async () => {
+            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+            Sinon.restore();
+        });
+
+        test('Cache cleared as part of stopping the existing DFA run', async() => {
+            context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
+            _stopExistingDfaRun(context, outputChannel);
+            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
+        });
+
+        test('Cache stays cleared when there are no existing DFA runs', async() => {
+            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+            _stopExistingDfaRun(context, outputChannel);
+            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
+        });
+    });
 
 	suite('#isValidFileForAnalysis', () => {
 		test('Returns true for valid files', async() => {
