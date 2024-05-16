@@ -83,27 +83,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	registerScanOnOpen(outputChannel);
 	outputChannel.appendLine('Registered scanOnSave as part of sfdx-code-analyzer-vscode activation.');
 
+	// It is possible that the cache was not cleared when VS Code exited the last time. Just to be on the safe side, we clear the DFA process cache at activation.
+	void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+
 	const runDfaOnSelectedMethod = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
-		await vscode.window.withProgress({
-			location: vscode.ProgressLocation.Window,
-			title: messages.graphEngine.spinnerText,
-			cancellable: true
-		}, (progress, token) => {
-			token.onCancellationRequested(async () => {
-				await _stopExistingDfaRun(context, outputChannel);
+		if (await _shouldProceedWithDfaRun(context)) {
+			await vscode.window.withProgress({
+				location: vscode.ProgressLocation.Window,
+				title: messages.graphEngine.spinnerText,
+				cancellable: true
+			}, (progress, token) => {
+				token.onCancellationRequested(async () => {
+					await _stopExistingDfaRun(context, outputChannel);
+				});
+				customCancellationToken = new vscode.CancellationTokenSource();
+				customCancellationToken.token.onCancellationRequested(async () => {
+					customCancellationToken?.dispose();
+					customCancellationToken = null;
+					await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+					return;
+				});
+				return _runAndDisplayDfa(context, {
+					commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
+					outputChannel
+				}, customCancellationToken);
 			});
-			customCancellationToken = new vscode.CancellationTokenSource();
-			customCancellationToken.token.onCancellationRequested(async () => {
-				customCancellationToken?.dispose();
-				customCancellationToken = null;
-				await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
-				return;
-			});
-			return _runAndDisplayDfa(context, {
-				commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
-				outputChannel
-			}, customCancellationToken);
-		});
+		}
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
@@ -116,8 +121,12 @@ export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outp
 	if (pid) {
 		try {
 			process.kill(pid as number, SIGKILL);
+			void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 			await vscode.window.showInformationMessage(messages.graphEngine.dfaRunStopped);
 		} catch (e) {
+			// Exception is thrown by process.kill if between the time the pid exists and kill is executed, the process
+			// ends by itself. Ideally it should clear the cache, but doing this as an abundant of caution.
+			void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 			const errMsg = e instanceof Error ? e.message : e as string;
 			outputChannel.appendLine('Failed killing DFA process.');
 			outputChannel.appendLine(errMsg);
@@ -125,7 +134,6 @@ export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outp
 	} else {
 		await vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);	
 	}
-	void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 }
 
 /**
@@ -246,32 +254,30 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
-		if (await _shouldProceedWithDfaRun(context, outputChannel)) {
-			// Set the Status Bar Item's text and un-hide it.
-			// Get the targeted method.
-			const methodLevelTarget: string = await targeting.getSelectedMethod();
-			// Pull out the file from the target and use it to identify the project directory.
-			const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
-			const projectDir: string = targeting.getProjectDir(currentFile);
-			const results: string = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
-			if (results.length > 0) {
-				const panel = vscode.window.createWebviewPanel(
-					'dfaResults',
-					messages.graphEngine.resultsTab,
-					vscode.ViewColumn.Two,
-					{
-						enableScripts: true
-					}
-				);
-				panel.webview.html = results;
-			} else {
-				cancelToken.cancel();
-			}
-			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_DFA_ANALYSIS, {
-				executedCommand: commandName,
-				duration: (Date.now() - startTime).toString()
-			})
+		// Set the Status Bar Item's text and un-hide it.
+		// Get the targeted method.
+		const methodLevelTarget: string = await targeting.getSelectedMethod();
+		// Pull out the file from the target and use it to identify the project directory.
+		const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
+		const projectDir: string = targeting.getProjectDir(currentFile);
+		const results: string = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
+		if (results.length > 0) {
+			const panel = vscode.window.createWebviewPanel(
+				'dfaResults',
+				messages.graphEngine.resultsTab,
+				vscode.ViewColumn.Two,
+				{
+					enableScripts: true
+				}
+			);
+			panel.webview.html = results;
+		} else {
+			cancelToken.cancel();
 		}
+		TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_DFA_ANALYSIS, {
+			executedCommand: commandName,
+			duration: (Date.now() - startTime).toString()
+		})
 	} catch (e) {
 		const errMsg = e instanceof Error ? e.message : e as string;
 		console.log(errMsg);
@@ -288,15 +294,10 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 	}
 }
 
-export async function _shouldProceedWithDfaRun(context: vscode.ExtensionContext, channel: vscode.LogOutputChannel): Promise<boolean> {
+export async function _shouldProceedWithDfaRun(context: vscode.ExtensionContext): Promise<boolean> {
 	if (context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)) {
-		await vscode.window.showInformationMessage(messages.graphEngine.stopDfaRunConfirmationText, messages.graphEngine.stopDfaRunConfirmationYes, messages.graphEngine.stopDfaRunConfirmationNo)
-			.then(async answer => {
-				if (answer === messages.graphEngine.stopDfaRunConfirmationYes) {
-					await _stopExistingDfaRun(context, channel);
-				}
-			});
-			return false;
+		await vscode.window.showInformationMessage(messages.graphEngine.existingDfaRunText);
+		return false;
 	}
 	return true;
 }

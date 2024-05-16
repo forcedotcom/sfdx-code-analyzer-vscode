@@ -21,7 +21,7 @@ suite('core-extension-service.ts', () => {
         });
 
         test('returns true when actual and min versions are equal', () => {
-            expect(CoreExtensionService.isAboveMinimumRequiredVersion('1.0.0', '1.0.1')).to.equal(true);
+            expect(CoreExtensionService.isAboveMinimumRequiredVersion('1.0.0', '1.0.0')).to.equal(true);
         });
     });
 });

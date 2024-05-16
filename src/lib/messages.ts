@@ -27,11 +27,9 @@ export const messages = {
         resultsTab: "Graph Engine Results",
         spinnerText: 'Running Graph Engine analysis...',
         statusBarName: "Graph Engine Analysis",
-        noDfaRun: "No existing DFA run found.",
-        dfaRunStopped: "Graph Engine based run stopped.",
-        stopDfaRunConfirmationText: "There is an existing DFA run. Do you want to stop that?",
-        stopDfaRunConfirmationYes : "Yes",
-        stopDfaRunConfirmationNo : "No"
+        noDfaRun: "We didn't find a running Salesforce Graph Engine analysis, so nothing was canceled.",
+        dfaRunStopped: "Salesforce Graph Engine analysis canceled.",
+        existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
         supressOnLine: "Suppress violations on this line."
