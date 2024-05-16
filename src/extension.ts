@@ -254,7 +254,6 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
-		// Set the Status Bar Item's text and un-hide it.
 		// Get the targeted method.
 		const methodLevelTarget: string = await targeting.getSelectedMethod();
 		// Pull out the file from the target and use it to identify the project directory.
