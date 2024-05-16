@@ -25,4 +25,4 @@ export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
 
 // cache names
-export const GLOBAL_DFA_PROCESS = 'dfaScanProcess';
+export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';

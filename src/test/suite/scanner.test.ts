@@ -482,13 +482,13 @@ suite('ScanRunner', () => {
             // ===== SETUP =====
             const args:string[] = [];
             const scanner = new ScanRunner();
-            void context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
             // ===== TEST =====
             (scanner as any).invokeDfaAnalyzer(args, context);
 
             // ===== ASSERTIONS =====
-            expect(context.workspaceState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.not.undefined;
+            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.not.undefined;
         });
     });
 

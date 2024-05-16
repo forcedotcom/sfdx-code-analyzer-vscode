@@ -341,13 +341,13 @@ suite('Extension Test Suite', () => {
 
 		teardown(async () => {
 			Sinon.restore();
-			await context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 		});
 
 		test('Returns true and confirmation message not called when no existing DFA process detected', async() => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 			
-			await context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
 			expect(await _shouldProceedWithDfaRun(context, outputChannel)).to.equal(true);
 			Sinon.assert.callCount(infoMessageSpy, 0);
@@ -355,7 +355,7 @@ suite('Extension Test Suite', () => {
 
 		test('Confirmation message called when DFA process detected', async() => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
-			await context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, 1234);
+			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
 			_shouldProceedWithDfaRun(context, outputChannel);
 
@@ -376,20 +376,20 @@ suite('Extension Test Suite', () => {
         });
 
         teardown(async () => {
-            void context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             Sinon.restore();
         });
 
         test('Cache cleared as part of stopping the existing DFA run', async() => {
-            context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, 1234);
+            context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
             _stopExistingDfaRun(context, outputChannel);
-            expect(context.workspaceState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.undefined;
+            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
         test('Cache stays cleared when there are no existing DFA runs', async() => {
-            void context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             _stopExistingDfaRun(context, outputChannel);
-            expect(context.workspaceState.get(Constants.GLOBAL_DFA_PROCESS)).to.be.undefined;
+            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
 

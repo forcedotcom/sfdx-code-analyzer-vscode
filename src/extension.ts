@@ -111,8 +111,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	return Promise.resolve(context);
 }
 
-export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel) {
-	const pid = context.workspaceState.get(Constants.GLOBAL_DFA_PROCESS);
+export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
+	const pid = context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS);
 	if (pid) {
 		try {
 			process.kill(pid as number, SIGKILL);
@@ -125,7 +125,7 @@ export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outp
 	} else {
 		await vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);	
 	}
-	void context.workspaceState.update(Constants.GLOBAL_DFA_PROCESS, undefined);
+	void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 }
 
 /**
@@ -289,12 +289,11 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 }
 
 export async function _shouldProceedWithDfaRun(context: vscode.ExtensionContext, channel: vscode.LogOutputChannel): Promise<boolean> {
-	if (context.workspaceState.get(Constants.GLOBAL_DFA_PROCESS)) {
+	if (context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)) {
 		await vscode.window.showInformationMessage(messages.graphEngine.stopDfaRunConfirmationText, messages.graphEngine.stopDfaRunConfirmationYes, messages.graphEngine.stopDfaRunConfirmationNo)
 			.then(async answer => {
 				if (answer === messages.graphEngine.stopDfaRunConfirmationYes) {
 					await _stopExistingDfaRun(context, channel);
-					return true;
 				}
 			});
 			return false;
