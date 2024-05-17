@@ -126,4 +126,86 @@ jobs:
         run: find ./extensions -type f -name "*.vsix" -exec npx ovsx publish {} -p ${{ env.IDEE_OVSX_PAT }} \;
       - run: echo "SUCCESSFULLY PUBLISHED"
 
+  create-main2dev-pull-request:
+    needs: [publish-openvsx, publish-vscode]
+    runs-on: macos-latest
+    env:
+      GH_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # Check out `main`
+      - uses: actions/checkout@v4
+        with:
+          ref: 'main'
+      # Create a new branch based on `main`, so that merge conflicts can be resolved manually if need be.
+      - run: |
+          NEW_VERSION=$(jq -r ".version" package.json)
+          git checkout -b m2d/v$NEW_VERSION
+          git push --set-upstream origin m2d/v$NEW_VERSION
+      # Download the VSIX attached to the release, get its SHA sum, and update the SHA file accordingly.
+      - name: Download Extension From Release
+        run: |
+          mkdir ./extensions
+          gh release download ${{ github.event.release.tag_name || inputs.tag }} -D ./extensions
+          find . -type f -name "*.vsix" -exec shasum -a 256 {} \; >> SHA_INFO
+          SHA_INFO=$(cat SHA_INFO)
+          cat SHA256-template.md >> SHA256.md
+          sed -i -e "s|SHA_TEMPLATE|$SHA_INFO|g" SHA256.md
+      # Use the GraphQL API to create a signed commit that updates SHA256.md as appropriate
+      - run: |
+          # GraphQL needs to know what branch to push to.
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          # GraphQL needs a message for the commit.
+          NEW_VERSION=$(jq -r ".version" package.json)
+          MESSAGE="Updating SHA256.md after $NEW_VERSION release"
+          # GraphQL needs the latest version of the file we changed, as a Base64 encoded string.
+          NEW_SHA256="$(cat SHA256.md | base64)"
+          gh api graphql -F message="$MESSAGE" -F branch="$BRANCH" -F newSha="$NEW_SHA256" \
+          -F oldOid=`git rev-parse HEAD` -f query='
+            mutation ($message: String!, $branch: String!, $newSha: Base64String!, $oldOid: GitObjectID!) {
+              createCommitOnBranch(input: {
+                branch: {
+                  repositoryNameWithOwner: "forcedotcom/sfdx-code-analyzer-vscode",
+                  branchName: $branch
+                },
+                message: {
+                  headline: $message
+                },
+                fileChanges: {
+                  additions: [
+                    {
+                      path: "SHA256.md",
+                      contents: $newSha
+                    }
+                  ]
+                },
+                expectedHeadOid: $oldOid
+              }) {
+                commit {
+                  id
+                }
+              }
+            }'
+      # Create the pull request between branches
+      - run: |
+          NEW_VERSION=$(jq -r ".version" package.json)
+          # For whatever reason, the version of 'echo' on GHAs doesn't process backspace by default.
+          # The non-POSIX-standard -e flag causes it to do that.
+          echo -e "This branch and PR were automatically created following the successful release of v$NEW_VERSION.\n\
+          It must be MERGED into dev, NOT SQUASHED OR REBASED. Squashing or rebasing this branch onto dev can cause potentially irreconcilable merge conflicts later.\n\
+          As an additional safeguard and reminder, the title of this PR MUST include the word 'merging' in the description portion of the PR title, e.g., 'Main2Dev @W-XXXXXX@ Merging main to dev after vX.Y.Z'.\n\
+          If there are conflicts between dev and this branch, you should do the following locally:\n\
+          - $ git checkout dev\n\
+          - $ git pull\n\
+          - $ git fetch --all\n\
+          - $ git checkout m2d/v$NEW_VERSION\n\
+          - $ git pull origin dev --no-rebase # You MUST include this flag, or someone's day will be ruined.\n\
+          - Resolve the merge conflicts manually. When in doubt, ask the code's author for help.\n\
+          - $ git commit\n\
+          - $ git push" > body.txt
+          # Create the pull request
+          gh pr create -B dev -H m2d/v$NEW_VERSION --title "Filler title. Read description and rename." -F body.txt
+
 

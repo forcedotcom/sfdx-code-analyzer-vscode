@@ -15,7 +15,7 @@ const PR_TYPE_PORTION = 'MAIN2DEV';
  * reminder that the PR must be merged with a rebase instead of a simple merge) and
  * "vX.Y.Z", which should correspond to the new release.
  */
-const DESCRIPTOR_PORTION = '.*rebasing.+\\d+\\.\\d+\\.\\d+.*';
+const DESCRIPTOR_PORTION = '.*merging.+\\d+\\.\\d+\\.\\d+.*';
 
 /**
  * This RegExp matches the title format for pull requests merging {@code main} back
