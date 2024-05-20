@@ -349,7 +349,7 @@ suite('Extension Test Suite', () => {
 			
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
-			expect(await _shouldProceedWithDfaRun(context, outputChannel)).to.equal(true);
+			expect(await _shouldProceedWithDfaRun(context)).to.equal(true);
 			Sinon.assert.callCount(infoMessageSpy, 0);
 		});
 
@@ -357,10 +357,10 @@ suite('Extension Test Suite', () => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-			_shouldProceedWithDfaRun(context, outputChannel);
+			_shouldProceedWithDfaRun(context);
 
 			Sinon.assert.callCount(infoMessageSpy, 1);
-			expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.stopDfaRunConfirmationText);
+			expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.existingDfaRunText);
 		});
 	});
 
