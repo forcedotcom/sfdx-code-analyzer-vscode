@@ -3,6 +3,19 @@ description: Report an issue with the Salesforce Code Analyzer Extension
 title: "[BUG] <YOUR_TITLE_HERE>"
 labels: []
 body:
+- type: dropdown
+  attributes:
+    label: Have you verified this is Salesforce Code Analyzer Extension specific?
+    description: |
+      Oftentimes, issues are not specific to this extension, and can be reproduced with the Salesforce CLI directly. Before creating this issue, please check to see if the same issue occurs when running the [Salesforce Code Analyzer CLI](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer-command-reference.md) directly. If so, then please report the issue in the [sfdx-scanner repo](https://github.com/forcedotcom/sfdx-scanner/issues) instead. Otherwise, you may create your issue here.
+
+      **I have verified that the issue is only reproducible when running the Salesforce Code Analyzer Extension.**
+      <sup>(You must select "Yes" to create an issue.)</sup>
+    options:
+    - ''
+    - "Yes"
+  validations:
+    required: true
 - type: textarea
   attributes:
     label: Bug Description
@@ -23,6 +36,8 @@ body:
   attributes:
     label: Expected Behavior
     description: Provide a clear and concise description of what you expected to happen.
+  validations:
+    required: true
 - type: input
   attributes:
     label: Operating System
