@@ -9,7 +9,8 @@ on:
         default: false
       target-branch:
         description: "What branch should be checked out?"
-        required: falsetype: string
+        required: false
+        type: string
         # If no target branch is specified, just use the one we'd use normally.
         default: ${{ github.sha }}
 
