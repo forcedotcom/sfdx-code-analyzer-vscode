@@ -15,7 +15,7 @@ make sure that their SHA values match the values in the list below.
 shasum -a 256 <location_of_the_downloaded_file>
 
 3. Confirm that the SHA in your output matches the value in this list of SHAs.
-   SHA_TEMPLATE
+   <<SHA_TEMPLATE>>
 4. Change the filename extension for the file that you downloaded from .zip to
    .vsix.
 

@@ -152,7 +152,7 @@ jobs:
           find . -type f -name "*.vsix" -exec shasum -a 256 {} \; >> SHA_INFO
           SHA_INFO=$(cat SHA_INFO)
           cat SHA256-template.md >> SHA256.md
-          sed -i -e "s|SHA_TEMPLATE|$SHA_INFO|g" SHA256.md
+          sed -i -e "s|<<SHA_TEMPLATE>>|$SHA_INFO|g" SHA256.md
       # Use the GraphQL API to create a signed commit that updates SHA256.md as appropriate
       - run: |
           # GraphQL needs to know what branch to push to.
