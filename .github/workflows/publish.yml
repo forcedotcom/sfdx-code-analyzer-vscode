@@ -151,8 +151,8 @@ jobs:
           gh release download ${{ github.event.release.tag_name || inputs.tag }} -D ./extensions
           find . -type f -name "*.vsix" -exec shasum -a 256 {} \; >> SHA_INFO
           SHA_INFO=$(cat SHA_INFO)
-          cat SHA256-template.md >> SHA256.md
-          sed -i -e "s|<<SHA_TEMPLATE>>|$SHA_INFO|g" SHA256.md
+          cat templates/SHA256.md > SHA256.md
+          sed -i -e "s|<<SHA_VALUE>>|$SHA_INFO|g" SHA256.md
       # Use the GraphQL API to create a signed commit that updates SHA256.md as appropriate
       - run: |
           # GraphQL needs to know what branch to push to.
