@@ -128,6 +128,7 @@ jobs:
   # Build the scanner tarball so it can be installed locally when we run tests.
   build-scanner-tarball:
     name: 'Build scanner tarball'
+    needs: verify-should-run
     uses: ./.github/workflows/build-scanner-tarball.yml
     with:
       # Note: Using `dev` here is technically incorrect. For full completeness's sake, we should probably be
@@ -138,9 +139,10 @@ jobs:
   # Run all the various tests against the newly created branch.
   test-release-branch:
     name: 'Run unit tests'
-    needs: build-scanner-tarball
+    needs: [build-scanner-tarball, create-release-branch]
     uses: ./.github/workflows/run-tests.yml
     with:
       # We want to validate the extension against whatever version of the scanner we *plan* to publish,
       # not what's *already* published.
       use-scanner-tarball: true
+      target-branch: ${{ needs.create-release-branch.outputs.branch-name }}
