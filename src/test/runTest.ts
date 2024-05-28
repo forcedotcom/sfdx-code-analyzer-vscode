@@ -34,12 +34,17 @@ async function main() {
 			[...args, '--install-extension', EXTENSION_PACK_ID],
 			{
 				encoding: 'utf-8',
-				stdio: 'inherit'
+				stdio: 'inherit',
+				shell: process.platform === 'win32'
 			}
 		);
 
+		const extensionTestsEnv = {
+			JAVA_HOME: process.env.JAVA_HOME
+		}
+
 		// Download VS Code, unzip it and run the integration test
-		await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath });
+		await runTests({ vscodeExecutablePath, extensionDevelopmentPath, extensionTestsPath, extensionTestsEnv });
 	} catch (err) {
 		console.error('Failed to run tests');
 		process.exit(1);

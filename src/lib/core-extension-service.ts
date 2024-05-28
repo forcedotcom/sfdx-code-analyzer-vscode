@@ -56,7 +56,7 @@ export class CoreExtensionService {
 	 * @param minRequiredVersion
 	 * @param actualVersion
 	 */
-	private static isAboveMinimumRequiredVersion(minRequiredVersion: string, actualVersion: string): boolean {
+	public static isAboveMinimumRequiredVersion(minRequiredVersion: string, actualVersion: string): boolean {
 		return satisfies(actualVersion, ">=" + minRequiredVersion);
 	}
 

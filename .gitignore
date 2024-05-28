@@ -4,6 +4,7 @@ node_modules
 .vscode-test/
 *.vsix
 .sfdx
+.idea
 **/.DS_Store
 coverage
 typescript-test-results

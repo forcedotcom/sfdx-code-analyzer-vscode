@@ -7,6 +7,12 @@ on:
         required: false
         type: boolean
         default: false
+      target-branch:
+        description: "What branch should be checked out?"
+        required: false
+        type: string
+        # If no target branch is specified, just use the one we'd use normally.
+        default: ${{ github.sha }}
 
 jobs:
   build-and-run:
@@ -17,6 +23,8 @@ jobs:
     steps:
       - name: 'Check out the code'
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target-branch }}
       - name: 'Set up NodeJS'
         uses: actions/setup-node@v4
         with:
@@ -64,10 +72,6 @@ jobs:
       - name: Install Production scanner
         if: ${{ inputs.use-scanner-tarball == false }}
         run: sf  plugins install @salesforce/sfdx-scanner
-      # For non-Linux systems, we need to manually run a scanner command outside of the extension to make sure the
-      # java home property gets set properly.
-      - name: Run list command to set config
-        run: sf scanner rule list
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test

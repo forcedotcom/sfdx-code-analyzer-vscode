@@ -25,8 +25,11 @@ export const messages = {
     graphEngine: {
         noViolationsFound: "Scan was completed. No violations found.",
         resultsTab: "Graph Engine Results",
-        spinnerText: '$(loading~spin) Running Graph Engine analysis...',
-        statusBarName: "Graph Engine Analysis"
+        spinnerText: 'Running Graph Engine analysis...',
+        statusBarName: "Graph Engine Analysis",
+        noDfaRun: "We didn't find a running Salesforce Graph Engine analysis, so nothing was canceled.",
+        dfaRunStopped: "Salesforce Graph Engine analysis canceled.",
+        existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
         supressOnLine: "Suppress violations on this line."

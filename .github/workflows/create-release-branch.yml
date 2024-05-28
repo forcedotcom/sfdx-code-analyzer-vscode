@@ -1,0 +1,148 @@
+name: create-release-branch
+on:
+  workflow_dispatch:
+    inputs:
+      # When the workflow is executed manually, the user can select whether the branch should correspond to a major,
+      # minor, or patch release.
+      release-type:
+        type: choice
+        description: what kind of release?
+        options:
+          - major
+          - minor
+          - patch
+        required: true
+  schedule:
+    # Cron syntax is "minute[0-59] hour[0-23] date[1-31] month[1-12] day[0-6]". '*' is 'any value,' and multiple values
+    # can be specified with comma-separated lists. All times are UTC.
+    # So this expression means "run at 12 PM UTC, every Friday".
+    - cron: "0 12 * * 5"
+
+
+jobs:
+  # Depending on circumstances, we may want to exit early instead of running the workflow to completion.
+  verify-should-run:
+    runs-on: macos-latest
+    outputs:
+      should-run: ${{ steps.main.outputs.should_run }}
+    steps:
+      - id: main
+        run: |
+          # If the workflow was manually triggered, then it should always be allowed to run to completion.
+          [[ "${{ github.event_name }}" = "workflow_dispatch" ]] && echo "should_run=true" >> "$GITHUB_OUTPUT" && exit 0
+          # `date -u` returns UTC datetime, and `%u` formats the output to be the day of the week, with 1 being Monday,
+          # 2 being Tuesday, etc.
+          TODAY_DOW=$(date -u +%u)
+          # This `date` expression returns the last Tuesday of the month, which is our Release Day. %d formats the output
+          # as the day of the month (1-31).
+          NEXT_RELEASE_DATE=$(date -u -v1d -v+1m -v-1d -v-tue +%d)
+          # This `date` expression returns next Tuesday, and `%d` formats the output as the day of the month (1-31).
+          NEXT_TUESDAY_DATE=$(date -u -v+tue +%d)
+          # If the workflow wasn't manually triggered, then it should only be allowed to run to completion on the Friday
+          # before Release Day.
+          [[ $TODAY_DOW != 5 || $NEXT_RELEASE_DATE != $NEXT_TUESDAY_DATE ]] && echo "should_run=false" >> "$GITHUB_OUTPUT" || echo "should_run=true" >> "$GITHUB_OUTPUT"
+  create-release-branch:
+    runs-on: macos-latest
+    needs: verify-should-run
+    if: ${{ needs.verify-should-run.outputs.should-run == 'true' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: write
+    outputs:
+      branch-name: ${{ steps.create-branch.outputs.branch_name }}
+    steps:
+      # Checkout `dev`
+      - uses: actions/checkout@v4
+        with:
+          ref: 'dev'
+      # We need to set up Node and install our Node dependencies.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*' # Always use Node LTS for building dependencies.
+      - run: yarn
+      # Increment the version as desired.
+      - name: Increment version
+        run: |
+          # A workflow dispatch event lets the user specify what release type they want.
+          if [[ "${{ github.event_name }}" = "workflow_dispatch" ]]; then
+            RELEASE_TYPE=${{ github.event.inputs.release-type }}
+          # The regularly scheduled releases are always minor.
+          else
+            RELEASE_TYPE=minor
+          fi
+          # Increment the version as needed
+          npm --no-git-tag-version version $RELEASE_TYPE
+      # Create the new branch as a direct copy of `dev` and push it to GitHub so the API can
+      # interact with it later.
+      - id: create-branch
+        run: |
+          NEW_VERSION=$(jq -r ".version" package.json)
+          git checkout -b release-$NEW_VERSION
+          # Push the branch immediately without committing anything.
+          git push --set-upstream origin release-$NEW_VERSION
+          # Output the branch name so we can use it in later jobs.
+          echo "branch_name=release-$NEW_VERSION" >> "$GITHUB_OUTPUT"
+      # Update our dependencies
+      - run: yarn upgrade
+      # Use the GraphQL API to create a signed commmit with our changes.
+      - run: |
+          # GraphQL needs to know what branch to push to.
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          # GraphQL needs a message for the commit.
+          NEW_VERSION=$(jq -r ".version" package.json)
+          MESSAGE="Preparing for v$NEW_VERSION release."
+          # GraphQL needs the latest versions of the files we changed, as Base64 encoded strings.
+          NEW_PACKAGE="$(cat package.json | base64)"
+          NEW_YARN_LOCK="$(cat yarn.lock | base64)"
+          gh api graphql -F message="$MESSAGE" -F oldOid=`git rev-parse HEAD` -F branch="$BRANCH" \
+          -F newPackage="$NEW_PACKAGE" -F newYarnLock="$NEW_YARN_LOCK" \
+          -f query='
+            mutation ($message: String!, $oldOid: GitObjectID!, $branch: String!, $newPackage: Base64String!, $newYarnLock: Base64String!) {
+              createCommitOnBranch(input: {
+                branch: {
+                  repositoryNameWithOwner: "forcedotcom/sfdx-code-analyzer-vscode",
+                  branchName: $branch
+                },
+                message: {
+                  headline: $message
+                },
+                fileChanges: {
+                  additions: [
+                    {
+                      path: "package.json",
+                      contents: $newPackage
+                    }, {
+                      path: "yarn.lock",
+                      contents: $newYarnLock
+                    }
+                  ]
+                },
+                expectedHeadOid: $oldOid
+              }) {
+                commit {
+                  id
+                }
+              }
+            }'
+  # Build the scanner tarball so it can be installed locally when we run tests.
+  build-scanner-tarball:
+    name: 'Build scanner tarball'
+    needs: verify-should-run
+    uses: ./.github/workflows/build-scanner-tarball.yml
+    with:
+      # Note: Using `dev` here is technically incorrect. For full completeness's sake, we should probably be
+      # using the branch corresponding to the upcoming scanner release. However, identifying that branch is
+      # non-trivial, and there are unlikely to be major differences between the two that appear in the few days
+      # between creating the branch and releasing it, so it _should_ be fine.
+      target-branch: 'dev'
+  # Run all the various tests against the newly created branch.
+  test-release-branch:
+    name: 'Run unit tests'
+    needs: [build-scanner-tarball, create-release-branch]
+    uses: ./.github/workflows/run-tests.yml
+    with:
+      # We want to validate the extension against whatever version of the scanner we *plan* to publish,
+      # not what's *already* published.
+      use-scanner-tarball: true
+      target-branch: ${{ needs.create-release-branch.outputs.branch-name }}
