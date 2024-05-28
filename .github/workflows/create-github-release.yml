@@ -42,10 +42,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: vsix
-          # Download the VSIX to a subdirectory of HOME, so it's guaranteed to be somewhere we can see.
-          path: ~/downloads/vsix
-      # The VSIX is zipped. Unzip it.
-      - run: unzip ~/downloads/vsix
       # Create the release
       - name: Create github release
         uses: softprops/action-gh-release@v2
@@ -53,7 +49,9 @@ jobs:
           tag_name: v${{ steps.get-version-property.outputs.package_version }}
           name: v${{ steps.get-version-property.outputs.package_version }}
           body: See [release notes](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/release-notes.html)
+          target_commitish: main
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           make_latest: true
           # Attach the unzipped VSIX using a glob
-          files: ~/downloads/*.vsix
+          files: |
+            *.vsix
