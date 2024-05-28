@@ -53,4 +53,5 @@ jobs:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           make_latest: true
           # Attach the unzipped VSIX using a glob
-          files: *.vsix
+          files: |
+            *.vsix
