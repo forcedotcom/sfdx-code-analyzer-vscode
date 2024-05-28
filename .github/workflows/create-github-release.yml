@@ -43,7 +43,7 @@ jobs:
         with:
           name: vsix
           # Download the VSIX to a subdirectory of HOME, so it's guaranteed to be somewhere we can see.
-          path: ~/downloads/vsix
+          path: ~/downloads
       # The VSIX is zipped. Unzip it.
       - run: unzip ~/downloads/vsix
       # Create the release
