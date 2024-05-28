@@ -44,8 +44,6 @@ jobs:
           name: vsix
           # Download the VSIX to a subdirectory of HOME, so it's guaranteed to be somewhere we can see.
           path: ~/downloads
-      # The VSIX is zipped. Unzip it.
-      - run: unzip ~/downloads/vsix
       # Create the release
       - name: Create github release
         uses: softprops/action-gh-release@v2
