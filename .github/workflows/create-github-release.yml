@@ -42,8 +42,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: vsix
-          # Download the VSIX to a subdirectory of HOME, so it's guaranteed to be somewhere we can see.
-          path: ~/downloads
       # Create the release
       - name: Create github release
         uses: softprops/action-gh-release@v2
@@ -55,4 +53,4 @@ jobs:
           token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
           make_latest: true
           # Attach the unzipped VSIX using a glob
-          files: ~/downloads/*.vsix
+          files: *.vsix
