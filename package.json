@@ -85,6 +85,14 @@
             {
                 "command": "sfca.runDfaOnSelectedMethod",
                 "title": "SFDX: Scan selected method with Graph Engine path-based analysis"
+            },
+            {
+                "command": "sfca.removeDiagnosticsOnActiveFile",
+                "title": "SFDX: Remove diagnostics from current file"
+            },
+            {
+                "command": "sfca.removeDiagnosticsOnSelectedFile",
+                "title": "SFDX: Remove diagnostics from selected file"
             }
         ],
         "configuration": {
@@ -139,6 +147,10 @@
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
                     "when": "false"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnActiveFile",
+                    "when": "true"
                 }
             ],
             "editor/context": [
@@ -147,11 +159,18 @@
                 },
                 {
                     "command": "sfca.runDfaOnSelectedMethod"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnActiveFile"
                 }
             ],
             "explorer/context": [
                 {
                     "command": "sfca.runOnSelected"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnSelectedFile",
+                    "when": "true"
                 }
             ]
         },

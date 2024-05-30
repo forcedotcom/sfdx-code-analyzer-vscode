@@ -21,7 +21,7 @@ import * as Constants from './lib/constants';
 import * as path from 'path';
 import { SIGKILL } from 'constants';
 
-type RunInfo = {
+export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
 	outputChannel: vscode.LogOutputChannel;
 	commandName: string;
@@ -78,6 +78,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			outputChannel
 		});
 	});
+	const removeDiagnosticsOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE, (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
+		return _clearDiagnosticsForSelectedFiles(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], {
+			commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
+			diagnosticCollection,
+			outputChannel
+		});
+	});
+	const removeDiagnosticsOnSelectedFile = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTRICS_ON_SELECTED_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
+		return _clearDiagnosticsForSelectedFiles(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], {
+			commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
+			diagnosticCollection,
+			outputChannel
+		});
+	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
 	registerScanOnSave(outputChannel);
 	registerScanOnOpen(outputChannel);
@@ -110,7 +124,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			});
 		}
 	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod);
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
@@ -308,6 +322,41 @@ export function _clearDiagnostics(): void {
 	diagnosticCollection.clear();
 }
 
+/**
+ * Clear diagnostics for a specific files
+ * @param selections selected files
+ * @param runInfo command and diagnostic collection object
+ */
+export async function _clearDiagnosticsForSelectedFiles(selections: vscode.Uri[], runInfo: RunInfo): Promise<void> {
+	const {
+		diagnosticCollection,
+		outputChannel,
+		commandName
+	} = runInfo;
+	const startTime = Date.now();
+
+	try {
+		const targets: string[] = await targeting.getTargets(selections);
+
+		for (const target of targets) {
+			diagnosticCollection.delete(vscode.Uri.file(target));
+		}
+		
+		TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
+			executedCommand: commandName,
+			duration: (Date.now() - startTime).toString()
+		});
+	} catch (e) {
+        const errMsg = e instanceof Error ? e.message : e as string;
+        console.log(errMsg);
+        TelemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS, errMsg, {
+            executedCommand: commandName,
+            duration: (Date.now() - startTime).toString()
+        });
+        outputChannel.error(errMsg);
+        outputChannel.show();
+    }
+}
 /**
  * Display a Toast summarizing the results of a non-DFA scan, i.e. how many files were scanned, how many had violations, and how many violations were found.
  * @param targets The files that were scanned. This may be a superset of the files that actually had violations.
