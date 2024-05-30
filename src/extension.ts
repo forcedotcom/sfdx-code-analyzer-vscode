@@ -86,7 +86,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		});
 	});
 	const removeDiagnosticsOnSelectedFile = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTRICS_ON_SELECTED_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
-		return _clearDiagnosticsForSelectedFiles(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], {
+		return _clearDiagnosticsForSelectedFiles([], {
 			commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
 			diagnosticCollection,
 			outputChannel
