@@ -92,6 +92,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			outputChannel
 		});
 	});
+	const removeSingleDiagnostic = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_SINGLE_DIAGNOSTIC, (uri: vscode.Uri, diagnostic: vscode.Diagnostic) => {
+		_removeSingleDiagnostic(uri, diagnostic, diagnosticCollection);
+	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
 	registerScanOnSave(outputChannel);
 	registerScanOnOpen(outputChannel);
@@ -124,10 +127,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			});
 		}
 	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile);
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeSingleDiagnostic);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+export function _removeSingleDiagnostic(uri: vscode.Uri, diagnosticToRemove: vscode.Diagnostic, diagnosticCollection: vscode.DiagnosticCollection) {
+	const currentDiagnostics = diagnosticCollection.get(uri) || [];
+	const updatedDiagnostics = currentDiagnostics.filter(diagnostic => diagnostic != diagnosticToRemove);
+	diagnosticCollection.set(uri, updatedDiagnostics);
 }
 
 export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
