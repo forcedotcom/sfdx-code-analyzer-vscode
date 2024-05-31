@@ -6,6 +6,7 @@
  */
 import * as vscode from 'vscode';
 import {messages} from './messages';
+import * as Constants from './constants';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -125,6 +126,11 @@ export class _PmdFixGenerator extends FixGenerator {
         action.edit = new vscode.WorkspaceEdit();
         action.edit.insert(this.document.uri, endOfLine, " // NOPMD");
         action.diagnostics = [this.diagnostic];
+        action.command = {
+            command: Constants.COMMAND_REMOVE_SINGLE_DIAGNOSTIC,
+            title: 'Clear Single Diagnostic',
+            arguments: [this.document.uri, this.diagnostic]
+        };
         return action;
     }
 }

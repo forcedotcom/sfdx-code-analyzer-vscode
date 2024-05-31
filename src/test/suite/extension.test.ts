@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, RunInfo } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeSingleDiagnostic, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
@@ -531,6 +531,75 @@ suite('Extension Test Suite', () => {
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
 			expect(runInfo.diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
+		});
+	});
+
+	suite('_removeSingleDiagnostic Test Suite', () => {
+		let diagnosticCollection: vscode.DiagnosticCollection;
+	
+		setup(() => {
+			// Create a new diagnostic collection for each test
+			diagnosticCollection = vscode.languages.createDiagnosticCollection();
+		});
+	
+		teardown(() => {
+			// Clear the diagnostic collection after each test
+			diagnosticCollection.clear();
+		});
+	
+		test('Should remove a single diagnostic from the collection', () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file1.cls');
+			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
+			const anotherDiagnostic = new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Another diagnostic', vscode.DiagnosticSeverity.Error);
+	
+			// Set initial diagnostics
+			diagnosticCollection.set(uri, [diagnosticToRemove, anotherDiagnostic]);
+	
+			expect(diagnosticCollection.get(uri)).to.have.lengthOf(2, 'Expected two diagnostics to be present before removal');
+	
+			// ===== TEST =====
+			_removeSingleDiagnostic(uri, diagnosticToRemove, diagnosticCollection);
+	
+			// ===== ASSERTIONS =====
+			const remainingDiagnostics = diagnosticCollection.get(uri);
+			expect(remainingDiagnostics).to.have.lengthOf(1, 'Expected one diagnostic to remain after removal');
+			expect(remainingDiagnostics[0].message).to.equal('Another diagnostic', 'Expected the remaining diagnostic to be the one not removed');
+		});
+	
+		test('Should handle removing a diagnostic from an empty collection', () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file2.cls');
+			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
+	
+			expect(diagnosticCollection.get(uri)).to.be.empty;
+	
+			// ===== TEST =====
+			_removeSingleDiagnostic(uri, diagnosticToRemove, diagnosticCollection);
+	
+			// ===== ASSERTIONS =====
+			const remainingDiagnostics = diagnosticCollection.get(uri);
+			expect(remainingDiagnostics).to.be.empty;
+		});
+	
+		test('Should handle case where diagnostic is not found', () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file3.cls');
+			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
+			const existingDiagnostic = new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Existing diagnostic', vscode.DiagnosticSeverity.Error);
+	
+			// Set initial diagnostics
+			diagnosticCollection.set(uri, [existingDiagnostic]);
+	
+			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected one diagnostic to be present before attempting removal');
+	
+			// ===== TEST =====
+			_removeSingleDiagnostic(uri, diagnosticToRemove, diagnosticCollection);
+	
+			// ===== ASSERTIONS =====
+			const remainingDiagnostics = diagnosticCollection.get(uri);
+			expect(remainingDiagnostics).to.have.lengthOf(1, 'Expected the diagnostic collection to remain unchanged');
+			expect(remainingDiagnostics[0].message).to.equal('Existing diagnostic', 'Expected the existing diagnostic to remain unchanged');
 		});
 	});
 	
