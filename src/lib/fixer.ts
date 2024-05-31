@@ -98,6 +98,7 @@ export class _PmdFixGenerator extends FixGenerator {
         const fixes: vscode.CodeAction[] = [];
         if (this.documentSupportsLineLevelSuppression()) {
             fixes.push(this.generateLineLevelSuppression());
+            fixes.push(this.generateClassLevelSuppression());
         }
         return fixes;
     }
@@ -133,4 +134,50 @@ export class _PmdFixGenerator extends FixGenerator {
         };
         return action;
     }
+
+        /**
+     *
+     * @returns An action that will apply a line-level suppression to the targeted diagnostic.
+     */
+    private generateClassLevelSuppression(): vscode.CodeAction {
+        // Create a position indicating the very end of the violation's start line.
+        // const endOfLine: vscode.Position = new vscode.Position(this.diagnostic.range.start.line, Number.MAX_SAFE_INTEGER);
+        const classStartPosition = this.findClassEndOfLinePosition(this.diagnostic);
+
+        const action = new vscode.CodeAction(messages.fixer.supressOnClass, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+        action.edit.insert(this.document.uri, classStartPosition, " // @SuppressWarnings('PMD') ");
+        action.diagnostics = [this.diagnostic];
+        return action;
+    }
+
+   /**
+     * Finds the end of the line position of the class in the document where the diagnostic is located.
+     * @returns The position at the end of the line of the class.
+     */
+   private findClassEndOfLinePosition(diagnostic: vscode.Diagnostic): vscode.Position {
+    const text = this.document.getText();
+    const diagnosticLine = diagnostic.range.start.line;
+
+    // Split the text into lines for easier processing
+    const lines = text.split('\n');
+    let classStartLine: number | undefined;
+
+    // Iterate from the diagnostic line upwards to find the class declaration
+    for (let lineNumber = diagnosticLine; lineNumber >= 0; lineNumber--) {
+        const line = lines[lineNumber];
+        if (line.includes(' class ')) {
+            classStartLine = lineNumber;
+            break;
+        }
+    }
+
+    if (classStartLine !== undefined) {
+        const classLineText = lines[classStartLine];
+        return new vscode.Position(classStartLine, classLineText.length);
+    }
+    
+    // Default to the start of the document if class is not found
+    return new vscode.Position(0, 0);
+}
 }
