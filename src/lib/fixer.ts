@@ -132,52 +132,104 @@ export class _PmdFixGenerator extends FixGenerator {
             title: 'Clear Single Diagnostic',
             arguments: [this.document.uri, this.diagnostic]
         };
+
         return action;
     }
 
-        /**
-     *
-     * @returns An action that will apply a line-level suppression to the targeted diagnostic.
-     */
     private generateClassLevelSuppression(): vscode.CodeAction {
-        // Create a position indicating the very end of the violation's start line.
-        // const endOfLine: vscode.Position = new vscode.Position(this.diagnostic.range.start.line, Number.MAX_SAFE_INTEGER);
-        const classStartPosition = this.findClassEndOfLinePosition(this.diagnostic);
+        // Find the end-of-line position of the class declaration where the diagnostic is found.
+        const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
+        // const classEndOfLinePosition = 0;
 
         const action = new vscode.CodeAction(messages.fixer.supressOnClass, vscode.CodeActionKind.QuickFix);
         action.edit = new vscode.WorkspaceEdit();
-        action.edit.insert(this.document.uri, classStartPosition, " // @SuppressWarnings('PMD') ");
+    
+        // Determine the appropriate suppression rule based on the type of diagnostic.code
+        let suppressionRule: string;
+        if (typeof this.diagnostic.code === 'object' && this.diagnostic.code !== null && 'value' in this.diagnostic.code) {
+            suppressionRule = `PMD.${this.diagnostic.code.value}`;
+        } else {
+            suppressionRule = `PMD`;
+        }
+    
+        // Extract text from the start to end of the class declaration to search for existing suppressions
+        const classText = this.findLineBeforeClassStartDeclaration(classStartPosition);
+        const suppressionRegex = /@SuppressWarnings\s*\(\s*'([^']*)'\s*\)/;
+        const suppressionMatch = classText.match(suppressionRegex);
+    
+        if (suppressionMatch) {
+            // If @SuppressWarnings exists, check if the rule is already present
+            const existingRules = suppressionMatch[1].split(',').map(rule => rule.trim());
+            if (!existingRules.includes(suppressionRule)) {
+                // If the rule is not present, add it to the existing @SuppressWarnings
+                const updatedRules = [...existingRules, suppressionRule].join(', ');
+                const updatedSuppression = `@SuppressWarnings('${updatedRules}')`;
+                const suppressionStartPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]));
+                const suppressionEndPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
+                const suppressionRange = new vscode.Range(suppressionStartPosition, suppressionEndPosition);
+                action.edit.replace(this.document.uri, suppressionRange, updatedSuppression);
+            }
+        } else {
+            // If @SuppressWarnings does not exist, insert a new one
+            const newSuppression = `@SuppressWarnings('${suppressionRule}')\n`;
+            action.edit.insert(this.document.uri, classStartPosition, newSuppression);
+        }
+    
         action.diagnostics = [this.diagnostic];
+        action.command = {
+            command: Constants.COMMAND_RUN_ON_SELECTED,
+            title: 'Re-run diagnostic for this file',
+            arguments: [this.document.uri]
+        };
+
         return action;
     }
-
-   /**
-     * Finds the end of the line position of the class in the document where the diagnostic is located.
-     * @returns The position at the end of the line of the class.
-     */
-   private findClassEndOfLinePosition(diagnostic: vscode.Diagnostic): vscode.Position {
-    const text = this.document.getText();
-    const diagnosticLine = diagnostic.range.start.line;
-
-    // Split the text into lines for easier processing
-    const lines = text.split('\n');
-    let classStartLine: number | undefined;
-
-    // Iterate from the diagnostic line upwards to find the class declaration
-    for (let lineNumber = diagnosticLine; lineNumber >= 0; lineNumber--) {
-        const line = lines[lineNumber];
-        if (line.includes(' class ')) {
-            classStartLine = lineNumber;
-            break;
-        }
-    }
-
-    if (classStartLine !== undefined) {
-        const classLineText = lines[classStartLine];
-        return new vscode.Position(classStartLine, classLineText.length);
-    }
     
-    // Default to the start of the document if class is not found
-    return new vscode.Position(0, 0);
-}
+    /**
+     * Finds the start position of the class in the document.
+     * Assumes that the class declaration starts with the keyword "class".
+     * @returns The position at the start of the class.
+     */
+    private findClassStartPosition(diagnostic: vscode.Diagnostic, document: vscode.TextDocument): vscode.Position {
+        const text = document.getText();
+        const diagnosticLine = diagnostic.range.start.line;
+    
+        // Split the text into lines for easier processing
+        const lines = text.split('\n');
+        let classStartLine: number | undefined;
+    
+        // Iterate from the diagnostic line upwards to find the class declaration
+        for (let lineNumber = diagnosticLine; lineNumber >= 0; lineNumber--) {
+            const line = lines[lineNumber];
+            // if (line.includes(' class ')) {
+            if (line.match(/class\s+\w+/)) {
+                classStartLine = lineNumber;
+                break;
+            }
+        }
+    
+        if (classStartLine !== undefined) {
+            return new vscode.Position(classStartLine, 0);
+        }
+        
+        // Default to the start of the document if class is not found
+        return new vscode.Position(0, 0);
+    }
+
+    /**
+     * Finds the entire line that is one line above a class declaration statement.
+     * Assumes that the class declaration starts with the keyword "class".
+     * @returns The text of the line that is one line above the class declaration.
+     */
+    private findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position): string {
+        // Ensure that there is a line before the class declaration
+        if (classStartPosition.line > 0) {
+            const lineBeforeClassPosition = classStartPosition.line - 1;
+            const lineBeforeClass = this.document.lineAt(lineBeforeClassPosition);
+            return lineBeforeClass.text;
+        }
+
+        // Return an empty string if no class declaration is found or it's the first line of the document
+        return '';
+    }
 }
