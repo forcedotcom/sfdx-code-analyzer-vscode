@@ -151,6 +151,10 @@
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
                     "when": "true"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnSelectedFile",
+                    "when": "false"
                 }
             ],
             "editor/context": [
