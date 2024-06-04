@@ -136,7 +136,7 @@ export class _PmdFixGenerator extends FixGenerator {
         return action;
     }
 
-    private generateClassLevelSuppression(): vscode.CodeAction {
+    public generateClassLevelSuppression(): vscode.CodeAction {
         // Find the end-of-line position of the class declaration where the diagnostic is found.
         const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
         // const classEndOfLinePosition = 0;
@@ -153,7 +153,7 @@ export class _PmdFixGenerator extends FixGenerator {
         }
     
         // Extract text from the start to end of the class declaration to search for existing suppressions
-        const classText = this.findLineBeforeClassStartDeclaration(classStartPosition);
+        const classText = this.findLineBeforeClassStartDeclaration(classStartPosition, this.document);
         const suppressionRegex = /@SuppressWarnings\s*\(\s*'([^']*)'\s*\)/;
         const suppressionMatch = classText.match(suppressionRegex);
     
@@ -177,8 +177,8 @@ export class _PmdFixGenerator extends FixGenerator {
     
         action.diagnostics = [this.diagnostic];
         action.command = {
-            command: Constants.COMMAND_RUN_ON_SELECTED,
-            title: 'Re-run diagnostic for this file',
+            command: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE,
+            title: 'Remove diagnostics for this file',
             arguments: [this.document.uri]
         };
 
@@ -190,7 +190,7 @@ export class _PmdFixGenerator extends FixGenerator {
      * Assumes that the class declaration starts with the keyword "class".
      * @returns The position at the start of the class.
      */
-    private findClassStartPosition(diagnostic: vscode.Diagnostic, document: vscode.TextDocument): vscode.Position {
+    public findClassStartPosition(diagnostic: vscode.Diagnostic, document: vscode.TextDocument): vscode.Position {
         const text = document.getText();
         const diagnosticLine = diagnostic.range.start.line;
     
@@ -221,11 +221,11 @@ export class _PmdFixGenerator extends FixGenerator {
      * Assumes that the class declaration starts with the keyword "class".
      * @returns The text of the line that is one line above the class declaration.
      */
-    private findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position): string {
+    public findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position, document: vscode.TextDocument): string {
         // Ensure that there is a line before the class declaration
         if (classStartPosition.line > 0) {
             const lineBeforeClassPosition = classStartPosition.line - 1;
-            const lineBeforeClass = this.document.lineAt(lineBeforeClassPosition);
+            const lineBeforeClass = document.lineAt(lineBeforeClassPosition);
             return lineBeforeClass.text;
         }
 

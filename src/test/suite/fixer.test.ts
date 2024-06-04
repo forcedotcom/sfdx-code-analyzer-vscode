@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import {expect} from 'chai';
 import path = require('path');
+import Sinon = require('sinon');
 import {messages} from '../../lib/messages';
 import {_NoOpFixGenerator, _PmdFixGenerator} from '../../lib/fixer';
 
@@ -97,7 +98,7 @@ suite('fixer.ts', () => {
                         const fixes: vscode.CodeAction[] = fixGenerator.generateFixes();
 
                         // We expect to get one fix, to inject the suppression at the end of the line.
-                        expect(fixes).to.have.lengthOf(1, 'Wrong action count');
+                        expect(fixes).to.have.lengthOf(2, 'Wrong action count');
                         const fix = fixes[0].edit.get(fileUri)[0];
                         expect(fix.newText).to.equal(' // NOPMD', 'Wrong suppression added');
                         expect(fix.range.start.isEqual(new vscode.Position(7, Number.MAX_SAFE_INTEGER))).to.equal(true, 'Should be at the end of the violation line');
@@ -129,6 +130,33 @@ suite('fixer.ts', () => {
                         expect(fix.range.start.isEqual(new vscode.Position(12, 53))).to.equal(true, 'Should be at start of end-of-line comment');
                     });
                     */
+                });
+
+                suite('Class-level suppression', () => {
+                    test('Find class start position above the diagnostic line', async () => {
+                        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+
+                        let doc: vscode.TextDocument;
+                        doc = await vscode.workspace.openTextDocument(fileUri);
+                        const diag = new vscode.Diagnostic(
+                            new vscode.Range(
+                                new vscode.Position(7, 4),
+                                new vscode.Position(7, 10)
+                            ),
+                            'This message is unimportant',
+                            vscode.DiagnosticSeverity.Warning
+                        );
+
+                        // Instantiate our fixer
+                        const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+
+                        // Call findClassStartPosition method
+                        const position = fixGenerator.findClassStartPosition(diag, doc);
+
+                        // Verify the position is correct
+                        expect(position.line).to.equal(6);
+                        expect(position.character).to.equal(0);
+                    });
                 });
             });
         });

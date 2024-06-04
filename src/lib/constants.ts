@@ -14,7 +14,7 @@ export const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
 export const COMMAND_RUN_ON_SELECTED = 'sfca.runOnSelected';
 export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE = 'sfca.removeDiagnosticsOnActiveFile';
-export const COMMAND_REMOVE_DIAGNOSTRICS_ON_SELECTED_FILE = 'sfca.removeDiagnosticsOnSelectedFile';
+export const COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE = 'sfca.removeDiagnosticsOnSelectedFile';
 export const COMMAND_REMOVE_SINGLE_DIAGNOSTIC = 'sfca.removeSingleDiagnostic'
 
 
