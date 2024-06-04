@@ -88,11 +88,11 @@
             },
             {
                 "command": "sfca.removeDiagnosticsOnActiveFile",
-                "title": "*** SFDX: Remove diagnostics from current file ***"
+                "title": "SFDX: Remove Code Analyzer diagnostics from current file"
             },
             {
                 "command": "sfca.removeDiagnosticsOnSelectedFile",
-                "title": "*** SFDX: Remove diagnostics from selected file ***"
+                "title": "SFDX: Remove Code Analyzer diagnostics from selected files or folders"
             }
         ],
         "configuration": {
