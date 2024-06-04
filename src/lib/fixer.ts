@@ -197,12 +197,45 @@ export class _PmdFixGenerator extends FixGenerator {
         // Split the text into lines for easier processing
         const lines = text.split('\n');
         let classStartLine: number | undefined;
+
+        const singleLineCommentPattern = /^\s*\/\//;
+        const blockCommentStartPattern = /^\s*\/\*/;
+        const blockCommentEndPattern = /\*\//;
+        // Regex matches class declaration not within double quotes
+        const classDeclarationPattern = /(?<!["'])\b(\w+\s+)+class\s+\w+/;
+
+        let inBlockComment = false;
     
         // Iterate from the diagnostic line upwards to find the class declaration
         for (let lineNumber = diagnosticLine; lineNumber >= 0; lineNumber--) {
             const line = lines[lineNumber];
-            // if (line.includes(' class ')) {
-            if (line.match(/class\s+\w+/)) {
+
+            // Check if we are in a block comment
+            if (inBlockComment) {
+                if (line.match(blockCommentStartPattern)) {
+                    inBlockComment = false;
+                }
+                continue;
+            }
+
+            // Skip single-line comments
+            if (line.match(singleLineCommentPattern)) {
+                continue;
+            }
+
+            // Skip block comment in a single line
+            if (line.match(blockCommentEndPattern) && line.match(blockCommentStartPattern)) {
+                continue;
+            }
+
+            // Check if this line is the start of a block comment
+            if (line.match(blockCommentEndPattern)) {
+                inBlockComment = true;
+                continue;
+            }
+            
+            const match = line.match(classDeclarationPattern);
+            if (!inBlockComment && match && !this.isWithinQuotes(line, match.index)) {
                 classStartLine = lineNumber;
                 break;
             }
@@ -231,5 +264,22 @@ export class _PmdFixGenerator extends FixGenerator {
 
         // Return an empty string if no class declaration is found or it's the first line of the document
         return '';
+    }
+
+    /**
+     * Helper function to check if match is within quotes
+     * @param line 
+     * @param matchIndex 
+     * @returns 
+     */
+    public isWithinQuotes(line: string, matchIndex: number): boolean {
+        const beforeMatch = line.slice(0, matchIndex);
+        const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
+        const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
+
+        // Check if the number of quotes before the match is odd (inside quotes)
+        if (singleQuotesBefore % 2 !== 0 || doubleQuotesBefore % 2 !== 0) return true;
+
+        return false;
     }
 }
