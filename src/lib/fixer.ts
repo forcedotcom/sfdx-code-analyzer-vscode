@@ -163,7 +163,7 @@ export class _PmdFixGenerator extends FixGenerator {
             if (!existingRules.includes(suppressionRule)) {
                 // If the rule is not present, add it to the existing @SuppressWarnings
                 const updatedRules = [...existingRules, suppressionRule].join(', ');
-                const updatedSuppression = `@SuppressWarnings('${updatedRules}')`;
+                const updatedSuppression = this.generateUpdatedSuppressionTag(updatedRules, this.document.languageId);
                 const suppressionStartPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]));
                 const suppressionEndPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
                 const suppressionRange = new vscode.Range(suppressionStartPosition, suppressionEndPosition);
@@ -171,7 +171,7 @@ export class _PmdFixGenerator extends FixGenerator {
             }
         } else {
             // If @SuppressWarnings does not exist, insert a new one
-            const newSuppression = `@SuppressWarnings('${suppressionRule}')\n`;
+            const newSuppression = this.generateNewSuppressionTag(suppressionRule, this.document.languageId);
             action.edit.insert(this.document.uri, classStartPosition, newSuppression);
         }
     
@@ -185,6 +185,24 @@ export class _PmdFixGenerator extends FixGenerator {
         return action;
     }
     
+    public generateUpdatedSuppressionTag(updatedRules: string, lang: string) {
+        if (lang === 'apex') {
+            return `@SuppressWarnings('${updatedRules}')`;
+        } else if (lang === 'java') {
+            return `@SuppressWarnings("${updatedRules}")`;
+        }
+        return '';
+    }
+
+    public generateNewSuppressionTag(suppressionRule: string, lang: string) {
+        if (lang === 'apex') {
+            return `@SuppressWarnings('${suppressionRule}')\n`;
+        } else if (lang === 'java') {
+            return `@SuppressWarnings("${suppressionRule}")\n`;
+        }
+        return '';
+    }
+
     /**
      * Finds the start position of the class in the document.
      * Assumes that the class declaration starts with the keyword "class".
@@ -251,7 +269,6 @@ export class _PmdFixGenerator extends FixGenerator {
 
     /**
      * Finds the entire line that is one line above a class declaration statement.
-     * Assumes that the class declaration starts with the keyword "class".
      * @returns The text of the line that is one line above the class declaration.
      */
     public findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position, document: vscode.TextDocument): string {
@@ -262,7 +279,7 @@ export class _PmdFixGenerator extends FixGenerator {
             return lineBeforeClass.text;
         }
 
-        // Return an empty string if no class declaration is found or it's the first line of the document
+        // Return an empty string if it's the first line of the document
         return '';
     }
 

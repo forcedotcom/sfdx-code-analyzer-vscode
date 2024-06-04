@@ -133,104 +133,235 @@ suite('fixer.ts', () => {
                 });
 
                 suite('Class-level suppression', () => {
-                    test('Should find class start position above the diagnostic line', async () => {
-                        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+                    suite('#findClassStartPosition()', () => {
+                        test('Should find class start position above the diagnostic line', async () => {
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
 
-                        let doc: vscode.TextDocument;
-                        doc = await vscode.workspace.openTextDocument(fileUri);
-                        const diag = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(7, 4),
-                                new vscode.Position(7, 10)
-                            ),
-                            'This message is unimportant',
-                            vscode.DiagnosticSeverity.Warning
-                        );
+                            let doc: vscode.TextDocument;
+                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            const diag = new vscode.Diagnostic(
+                                new vscode.Range(
+                                    new vscode.Position(7, 4),
+                                    new vscode.Position(7, 10)
+                                ),
+                                'This message is unimportant',
+                                vscode.DiagnosticSeverity.Warning
+                            );
 
-                        // Instantiate our fixer
-                        const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+                            // Instantiate our fixer
+                            const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
 
-                        // Call findClassStartPosition method
-                        const position = fixGenerator.findClassStartPosition(diag, doc);
+                            // Call findClassStartPosition method
+                            const position = fixGenerator.findClassStartPosition(diag, doc);
 
-                        // Verify the position is correct
-                        expect(position.line).to.equal(6);
-                        expect(position.character).to.equal(0);
+                            // Verify the position is correct
+                            expect(position.line).to.equal(6);
+                            expect(position.character).to.equal(0);
+                        });
+
+                        test('Should ignore class defined in single line comment', async () => {
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+
+                            let doc: vscode.TextDocument;
+                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            const diag = new vscode.Diagnostic(
+                                new vscode.Range(
+                                    new vscode.Position(10, 0),
+                                    new vscode.Position(10, 1)
+                                ),
+                                'This message is unimportant',
+                                vscode.DiagnosticSeverity.Warning
+                            );
+
+                            // Instantiate our fixer
+                            const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+
+                            // Call findClassStartPosition method
+                            const position = fixGenerator.findClassStartPosition(diag, doc);
+
+                            // Verify the position is correct
+                            expect(position.line).to.equal(6);
+                            expect(position.character).to.equal(0);
+                        });
+
+                        test('Should ignore class defined in a block comment comment', async () => {
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+
+                            let doc: vscode.TextDocument;
+                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            const diag = new vscode.Diagnostic(
+                                new vscode.Range(
+                                    new vscode.Position(17, 0),
+                                    new vscode.Position(17, 1)
+                                ),
+                                'This message is unimportant',
+                                vscode.DiagnosticSeverity.Warning
+                            );
+
+                            // Instantiate our fixer
+                            const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+
+                            // Call findClassStartPosition method
+                            const position = fixGenerator.findClassStartPosition(diag, doc);
+
+                            // Verify the position is correct
+                            expect(position.line).to.equal(6);
+                            expect(position.character).to.equal(0);
+                        });
+
+                        test('Should ignore class defined as a string', async () => {
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+
+                            let doc: vscode.TextDocument;
+                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            const diag = new vscode.Diagnostic(
+                                new vscode.Range(
+                                    new vscode.Position(23, 0),
+                                    new vscode.Position(23, 1)
+                                ),
+                                'This message is unimportant',
+                                vscode.DiagnosticSeverity.Warning
+                            );
+
+                            // Instantiate our fixer
+                            const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+
+                            // Call findClassStartPosition method
+                            const position = fixGenerator.findClassStartPosition(diag, doc);
+
+                            // Verify the position is correct
+                            expect(position.line).to.equal(6);
+                            expect(position.character).to.equal(0);
+                        });
+                    });
+                });
+                suite('#generateNewSuppressionTag()', () => {
+                    // Instantiate our fixer
+                    const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
+
+                    test('Should generate the correct suppression tag for Apex language', async () => {
+                        const suppressionRule = 'rule1';
+                        const lang = 'apex';
+                        const expectedSuppressionTag = `@SuppressWarnings('${suppressionRule}')\n`;
+                        expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal(expectedSuppressionTag);
+                    });
+                
+                    test('Should generate the correct suppression tag for Java language', async () => {
+                        const suppressionRule = 'rule2';
+                        const lang = 'java';
+                        const expectedSuppressionTag = `@SuppressWarnings("${suppressionRule}")\n`;
+                        expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal(expectedSuppressionTag);
+                    });
+                
+                    test('Should return an empty string for unsupported languages', async () => {
+                        const suppressionRule = 'rule3';
+                        const lang = 'python'; // Assuming python as an unsupported language
+                        expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal('');
+                    });
+                });
+                suite('#generateUpdatedSuppressionTag()', () => {
+                    // Instantiate our fixer
+                    const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
+                
+                    test('Should generate the correct suppression tag for Apex language with single quotes', async () => {
+                        const updatedRules = 'rule1';
+                        const lang = 'apex';
+                        const expectedSuppressionTag = `@SuppressWarnings('${updatedRules}')`;
+                        expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal(expectedSuppressionTag);
+                    });
+                
+                    test('Should generate the correct suppression tag for Java language with double quotes', async () => {
+                        const updatedRules = 'rule2';
+                        const lang = 'java';
+                        const expectedSuppressionTag = `@SuppressWarnings("${updatedRules}")`;
+                        expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal(expectedSuppressionTag);
+                    });
+                
+                    test('Should return an empty string for unsupported languages', async () => {
+                        const updatedRules = 'rule3';
+                        const lang = 'python'; // Assuming python as an unsupported language
+                        expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal('');
+                    });
+                });
+                suite('#findLineBeforeClassStartDeclaration()', () => {
+                    // Instantiate our fixer
+                    const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
+                
+                    test('Should find the correct line before class start declaration when it is not the first line', async () => {
+                        const classStartPosition = new vscode.Position(2, 0);
+                        const document = {
+                            lineAt: (lineNumber: number) => {
+                                return {
+                                    // Simulating document content and for easy testing, line number starts at 0
+                                    text: `This is line ${lineNumber}`,
+                                };
+                            },
+                        } as vscode.TextDocument;
+                
+                        // Call findLineBeforeClassStartDeclaration method
+                        const line = fixGenerator.findLineBeforeClassStartDeclaration(classStartPosition, document);
+                
+                        // Verify the line content is correct
+                        expect(line).to.equal('This is line 1');
                     });
 
-                    test('Should ignore class defined in single line comment', async () => {
-                        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
-
-                        let doc: vscode.TextDocument;
-                        doc = await vscode.workspace.openTextDocument(fileUri);
-                        const diag = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(10, 0),
-                                new vscode.Position(10, 1)
-                            ),
-                            'This message is unimportant',
-                            vscode.DiagnosticSeverity.Warning
-                        );
-
-                        // Instantiate our fixer
-                        const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
-
-                        // Call findClassStartPosition method
-                        const position = fixGenerator.findClassStartPosition(diag, doc);
-
-                        // Verify the position is correct
-                        expect(position.line).to.equal(6);
-                        expect(position.character).to.equal(0);
+                    test('Should return empty string when class declaration is the first line', async () => {
+                        const classStartPosition = new vscode.Position(0, 0);
+                        const document = {
+                            lineAt: (lineNumber: number) => {
+                                return {
+                                    // Simulating document content and for easy testing, line number starts at 0
+                                    text: `This is line ${lineNumber}`,
+                                };
+                            },
+                        } as vscode.TextDocument;
+                
+                        // Call findLineBeforeClassStartDeclaration method
+                        const line = fixGenerator.findLineBeforeClassStartDeclaration(classStartPosition, document);
+                
+                        // Verify the line content is correct
+                        expect(line).to.equal('');
                     });
-
-                    test('Should ignore class defined in a block comment comment', async () => {
-                        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
-
-                        let doc: vscode.TextDocument;
-                        doc = await vscode.workspace.openTextDocument(fileUri);
-                        const diag = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(17, 0),
-                                new vscode.Position(17, 1)
-                            ),
-                            'This message is unimportant',
-                            vscode.DiagnosticSeverity.Warning
-                        );
-
-                        // Instantiate our fixer
-                        const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
-
-                        // Call findClassStartPosition method
-                        const position = fixGenerator.findClassStartPosition(diag, doc);
-
-                        // Verify the position is correct
-                        expect(position.line).to.equal(6);
-                        expect(position.character).to.equal(0);
+                });
+                suite('#isWithinQuotes()', () => {
+                    // Instantiate our fixer
+                    const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
+                
+                    test('Should return true if the match is within single quotes', async () => {
+                        const line = "This is 'a matching string'";
+                        const matchIndex = 15; // Index where match occurs within the string
+                        const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
+                        expect(isWithin).to.equal(true);
                     });
-
-                    test('Should ignore class defined as a string', async () => {
-                        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
-
-                        let doc: vscode.TextDocument;
-                        doc = await vscode.workspace.openTextDocument(fileUri);
-                        const diag = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(23, 0),
-                                new vscode.Position(23, 1)
-                            ),
-                            'This message is unimportant',
-                            vscode.DiagnosticSeverity.Warning
-                        );
-
-                        // Instantiate our fixer
-                        const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
-
-                        // Call findClassStartPosition method
-                        const position = fixGenerator.findClassStartPosition(diag, doc);
-
-                        // Verify the position is correct
-                        expect(position.line).to.equal(6);
-                        expect(position.character).to.equal(0);
+                
+                    test('Should return true if the match is within double quotes', async () => {
+                        const line = 'This is "a matching string"';
+                        const matchIndex = 21; // Index where match occurs within the string
+                        const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
+                        expect(isWithin).to.equal(true);
+                    });
+                
+                    test('Should return false if the match is not within quotes', async () => {
+                        const line = 'This is a line without quotes';
+                        const matchIndex = 5; // Index where match occurs within the string
+                        const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
+                        expect(isWithin).to.equal(false);
+                    });
+                
+                    test('Should return false if the match is at the start of a string within quotes', async () => {
+                        const line = "'quotes' is at the start of a string";
+                        const matchIndex = 10; // Index where match occurs within the string and it is after the quotes
+                        const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
+                        expect(isWithin).to.equal(false);
+                    });
+                
+                    test('Should return true if the match is at the start of a string but quotes is not closed', async () => {
+                        // This is an extreme case where someone opens a quote and has class defined in it
+                        // and the closure of the quote is not on the same line.
+                        const line = "'quotes is at the start of a string";
+                        const matchIndex = 10; // Index where match occurs within the string and it is after the quotes
+                        const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
+                        expect(isWithin).to.equal(true);
                     });
 
                 });
