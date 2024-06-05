@@ -107,11 +107,11 @@ suite('fixer.ts', () => {
 
                     test('Does not add suppression if suppression for that same line already exists', async () => {
                         existingFixes.add(7);
-                        // Create our fake diagnostic, positioned at the line with no comment at the end.
+                        // Create our fake diagnostic whose start position is the same as the existing fix already added
                         const diag = new vscode.Diagnostic(
                             new vscode.Range(
-                                new vscode.Position(7, 4),
-                                new vscode.Position(7, 10)
+                                new vscode.Position(7, 0),
+                                new vscode.Position(8, 0)
                             ),
                             'This message is unimportant',
                             vscode.DiagnosticSeverity.Warning
