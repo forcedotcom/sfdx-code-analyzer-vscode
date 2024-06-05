@@ -90,6 +90,12 @@ export class _NoOpFixGenerator extends FixGenerator {
  * @private Must be exported for testing purposes, but shouldn't be used publicly, hence the leading underscore.
  */
 export class _PmdFixGenerator extends FixGenerator {
+    private singleLineCommentPattern = /^\s*\/\//;
+    private blockCommentStartPattern = /^\s*\/\*/;
+    private blockCommentEndPattern = /\*\//;
+    private classDeclarationPattern = /\b(\w+\s+)+class\s+\w+/;
+    public suppressionRegex = /@SuppressWarnings\s*\(\s*'([^']*)'\s*\)/;
+
     /**
      * Generate an array of fixes, if possible.
      * @returns
@@ -154,8 +160,7 @@ export class _PmdFixGenerator extends FixGenerator {
     
         // Extract text from the start to end of the class declaration to search for existing suppressions
         const classText = this.findLineBeforeClassStartDeclaration(classStartPosition, this.document);
-        const suppressionRegex = /@SuppressWarnings\s*\(\s*'([^']*)'\s*\)/;
-        const suppressionMatch = classText.match(suppressionRegex);
+        const suppressionMatch = classText.match(this.suppressionRegex);
     
         if (suppressionMatch) {
             // If @SuppressWarnings exists, check if the rule is already present
@@ -216,12 +221,6 @@ export class _PmdFixGenerator extends FixGenerator {
         const lines = text.split('\n');
         let classStartLine: number | undefined;
 
-        const singleLineCommentPattern = /^\s*\/\//;
-        const blockCommentStartPattern = /^\s*\/\*/;
-        const blockCommentEndPattern = /\*\//;
-        // Regex matches class declaration not within double quotes
-        const classDeclarationPattern = /(?<!["'])\b(\w+\s+)+class\s+\w+/;
-
         let inBlockComment = false;
     
         // Iterate from the diagnostic line upwards to find the class declaration
@@ -230,29 +229,29 @@ export class _PmdFixGenerator extends FixGenerator {
 
             // Check if we are in a block comment
             if (inBlockComment) {
-                if (line.match(blockCommentStartPattern)) {
+                if (line.match(this.blockCommentStartPattern)) {
                     inBlockComment = false;
                 }
                 continue;
             }
 
             // Skip single-line comments
-            if (line.match(singleLineCommentPattern)) {
+            if (line.match(this.singleLineCommentPattern)) {
                 continue;
             }
 
             // Skip block comment in a single line
-            if (line.match(blockCommentEndPattern) && line.match(blockCommentStartPattern)) {
+            if (line.match(this.blockCommentEndPattern) && line.match(this.blockCommentStartPattern)) {
                 continue;
             }
 
             // Check if this line is the start of a block comment
-            if (line.match(blockCommentEndPattern)) {
+            if (line.match(this.blockCommentEndPattern)) {
                 inBlockComment = true;
                 continue;
             }
             
-            const match = line.match(classDeclarationPattern);
+            const match = line.match(this.classDeclarationPattern);
             if (!inBlockComment && match && !this.isWithinQuotes(line, match.index)) {
                 classStartLine = lineNumber;
                 break;
