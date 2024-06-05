@@ -20,12 +20,13 @@ export class Fixer implements vscode.CodeActionProvider {
      * @returns All actions corresponding to diagnostics in the specified range of the target document.
      */
     public provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
+        const processedLines = new Set<number>(); 
         // Iterate over all diagnostics.
         return context.diagnostics
             // Throw out diagnostics that aren't ours, or are for the wrong line.
             .filter(diagnostic => messages.diagnostics.source && messages.diagnostics.source.isSource(diagnostic.source) && diagnostic.range.isEqual(range))
             // Get and use the appropriate fix generator.
-            .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes())
+            .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines))
             // Combine all the fixes into one array.
             .reduce((acc, next) => [...acc, ...next], []);
     }
@@ -72,7 +73,7 @@ abstract class FixGenerator {
      * Abstract template method for generating fixes.
      * @abstract
      */
-    public abstract generateFixes(): vscode.CodeAction[];
+    public abstract generateFixes(processedLines: Set<number>): vscode.CodeAction[];
 }
 
 /**
@@ -80,7 +81,8 @@ abstract class FixGenerator {
  * @private Must be exported for testing purposes, but shouldn't be used publicly, hence the leading underscore.
  */
 export class _NoOpFixGenerator extends FixGenerator {
-    public generateFixes(): vscode.CodeAction[] {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    public generateFixes(processedLines: Set<number>): vscode.CodeAction[] {
         return [];
     }
 }
@@ -94,10 +96,14 @@ export class _PmdFixGenerator extends FixGenerator {
      * Generate an array of fixes, if possible.
      * @returns
      */
-    public generateFixes(): vscode.CodeAction[] {
+    public generateFixes(processedLines: Set<number>): vscode.CodeAction[] {
         const fixes: vscode.CodeAction[] = [];
         if (this.documentSupportsLineLevelSuppression()) {
-            fixes.push(this.generateLineLevelSuppression());
+            const lineNumber = this.diagnostic.range.start.line;
+            if (!processedLines.has(lineNumber)) {
+                fixes.push(this.generateLineLevelSuppression());
+                processedLines.add(lineNumber);
+            }
         }
         return fixes;
     }
@@ -127,9 +133,9 @@ export class _PmdFixGenerator extends FixGenerator {
         action.edit.insert(this.document.uri, endOfLine, " // NOPMD");
         action.diagnostics = [this.diagnostic];
         action.command = {
-            command: Constants.COMMAND_REMOVE_SINGLE_DIAGNOSTIC,
+            command: Constants.COMMAND_DIAGNOSTICS_IN_RANGE,
             title: 'Clear Single Diagnostic',
-            arguments: [this.document.uri, this.diagnostic]
+            arguments: [this.document.uri, this.diagnostic.range]
         };
         return action;
     }
