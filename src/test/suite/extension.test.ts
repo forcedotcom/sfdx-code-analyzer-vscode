@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeSingleDiagnostic, RunInfo } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
@@ -559,7 +559,7 @@ suite('Extension Test Suite', () => {
 			expect(diagnosticCollection.get(uri)).to.have.lengthOf(2, 'Expected two diagnostics to be present before removal');
 	
 			// ===== TEST =====
-			_removeSingleDiagnostic(uri, diagnosticToRemove, diagnosticCollection);
+			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
 	
 			// ===== ASSERTIONS =====
 			const remainingDiagnostics = diagnosticCollection.get(uri);
@@ -575,7 +575,7 @@ suite('Extension Test Suite', () => {
 			expect(diagnosticCollection.get(uri)).to.be.empty;
 	
 			// ===== TEST =====
-			_removeSingleDiagnostic(uri, diagnosticToRemove, diagnosticCollection);
+			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
 	
 			// ===== ASSERTIONS =====
 			const remainingDiagnostics = diagnosticCollection.get(uri);
@@ -594,7 +594,7 @@ suite('Extension Test Suite', () => {
 			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected one diagnostic to be present before attempting removal');
 	
 			// ===== TEST =====
-			_removeSingleDiagnostic(uri, diagnosticToRemove, diagnosticCollection);
+			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
 	
 			// ===== ASSERTIONS =====
 			const remainingDiagnostics = diagnosticCollection.get(uri);

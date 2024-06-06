@@ -20,13 +20,14 @@ suite('fixer.ts', () => {
 	});
 
     suite('_NoOpFixGenerator', () => {
+        const existingFixes = new Set<number>(); 
         suite('#generateFixes()', () => {
             test('Returns empty array', () => {
                 // Doesn't matter what we feed to the no-op constructor.
                 const fixGenerator = new _NoOpFixGenerator(null, null);
 
                 // Attempt to generate fixes.
-                const fixes: vscode.CodeAction[] = fixGenerator.generateFixes();
+                const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(existingFixes);
 
                 // Verify array is empty.
                 expect(fixes).to.have.lengthOf(0, 'Should be no fixes');
@@ -59,7 +60,7 @@ suite('fixer.ts', () => {
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
 
                     // Attempt to generate fixes for the file.
-                    const fixes: vscode.CodeAction[] = fixGenerator.generateFixes();
+                    const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(null);
 
                     // We should get none.
                     expect(fixes).to.have.lengthOf(0, 'No fixes should be offered');
@@ -79,6 +80,7 @@ suite('fixer.ts', () => {
                 });
 
                 suite('Line-level suppression', () => {
+                    const existingFixes = new Set<number>(); 
                     test('Appends suppression to end of commentless line', async () => {
                         // Create our fake diagnostic, positioned at the line with no comment at the end.
                         const diag = new vscode.Diagnostic(
@@ -94,13 +96,35 @@ suite('fixer.ts', () => {
                         const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
 
                         // Attempt to generate fixes for the file.
-                        const fixes: vscode.CodeAction[] = fixGenerator.generateFixes();
+                        const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(existingFixes);
 
                         // We expect to get one fix, to inject the suppression at the end of the line.
                         expect(fixes).to.have.lengthOf(1, 'Wrong action count');
                         const fix = fixes[0].edit.get(fileUri)[0];
                         expect(fix.newText).to.equal(' // NOPMD', 'Wrong suppression added');
                         expect(fix.range.start.isEqual(new vscode.Position(7, Number.MAX_SAFE_INTEGER))).to.equal(true, 'Should be at the end of the violation line');
+                    });
+
+                    test('Does not add suppression if suppression for that same line already exists', async () => {
+                        existingFixes.add(7);
+                        // Create our fake diagnostic whose start position is the same as the existing fix already added
+                        const diag = new vscode.Diagnostic(
+                            new vscode.Range(
+                                new vscode.Position(7, 0),
+                                new vscode.Position(8, 0)
+                            ),
+                            'This message is unimportant',
+                            vscode.DiagnosticSeverity.Warning
+                        );
+
+                        // Instantiate our fixer.
+                        const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+
+                        // Attempt to generate fixes for the file.
+                        const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(existingFixes);
+
+                        // We expect to get no fix, since there is already a fix
+                        expect(fixes).to.have.lengthOf(0, 'Wrong action count');
                     });
 
                     /*

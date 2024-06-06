@@ -92,8 +92,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			outputChannel
 		});
 	});
-	const removeSingleDiagnostic = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_SINGLE_DIAGNOSTIC, (uri: vscode.Uri, diagnostic: vscode.Diagnostic) => {
-		_removeSingleDiagnostic(uri, diagnostic, diagnosticCollection);
+	const removeDiagnosticsInRange = vscode.commands.registerCommand(Constants.COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) => {
+		_removeDiagnosticsInRange(uri, range, diagnosticCollection);
 	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
 	registerScanOnSave(outputChannel);
@@ -127,16 +127,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			});
 		}
 	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeSingleDiagnostic);
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
 }
 
-export function _removeSingleDiagnostic(uri: vscode.Uri, diagnosticToRemove: vscode.Diagnostic, diagnosticCollection: vscode.DiagnosticCollection) {
+export function _removeDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
 	const currentDiagnostics = diagnosticCollection.get(uri) || [];
-	const updatedDiagnostics = currentDiagnostics.filter(diagnostic => diagnostic != diagnosticToRemove);
+	const updatedDiagnostics = filterOutDiagnosticsInRange(currentDiagnostics, range);
 	diagnosticCollection.set(uri, updatedDiagnostics);
+}
+
+function filterOutDiagnosticsInRange(currentDiagnostics: readonly vscode.Diagnostic[], range: vscode.Range) {
+	return currentDiagnostics.filter(diagnostic => (diagnostic.range.start.line != range.start.line && diagnostic.range.end.line != range.end.line));
 }
 
 export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
