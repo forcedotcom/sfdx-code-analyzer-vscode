@@ -99,6 +99,8 @@ export class _PmdFixGenerator extends FixGenerator {
     public generateFixes(processedLines: Set<number>): vscode.CodeAction[] {
         const fixes: vscode.CodeAction[] = [];
         if (this.documentSupportsLineLevelSuppression()) {
+            // We only check for the start line and not the entire range because irrespective of the range of a specific violation,
+            // we add the NOPMD tag only on the first line of the violation.
             const lineNumber = this.diagnostic.range.start.line;
             if (!processedLines.has(lineNumber)) {
                 fixes.push(this.generateLineLevelSuppression());
