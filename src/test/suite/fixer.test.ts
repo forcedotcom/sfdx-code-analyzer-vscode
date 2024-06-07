@@ -124,8 +124,8 @@ suite('fixer.ts', () => {
                         // Attempt to generate fixes for the file.
                         const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(existingFixes);
 
-                        // We expect to get no fix, since there is already a fix
-                        expect(fixes).to.have.lengthOf(0, 'Wrong action count');
+                        // We expect to get one fix (class level suppression), no new line level suppression added since there is already a fix
+                        expect(fixes).to.have.lengthOf(1, 'Wrong action count');
                     });
 
                     /*
