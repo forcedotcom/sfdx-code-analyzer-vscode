@@ -92,6 +92,12 @@ export class _NoOpFixGenerator extends FixGenerator {
  * @private Must be exported for testing purposes, but shouldn't be used publicly, hence the leading underscore.
  */
 export class _PmdFixGenerator extends FixGenerator {
+    public singleLineCommentPattern = /^\s*\/\//;
+    public blockCommentStartPattern = /^\s*\/\*/;
+    public blockCommentEndPattern = /\*\//;
+    public classDeclarationPattern = /\b(\w+\s+)+class\s+\w+/;
+    public suppressionRegex = /@SuppressWarnings\s*\(\s*["']([^"']*)["']\s*\)/i;
+
     /**
      * Generate an array of fixes, if possible.
      * @returns
@@ -106,6 +112,7 @@ export class _PmdFixGenerator extends FixGenerator {
                 fixes.push(this.generateLineLevelSuppression());
                 processedLines.add(lineNumber);
             }
+            fixes.push(this.generateClassLevelSuppression());
         }
         return fixes;
     }
@@ -139,6 +146,159 @@ export class _PmdFixGenerator extends FixGenerator {
             title: 'Clear Single Diagnostic',
             arguments: [this.document.uri, this.diagnostic.range]
         };
+
         return action;
+    }
+
+    public generateClassLevelSuppression(): vscode.CodeAction {
+        // Find the end-of-line position of the class declaration where the diagnostic is found.
+        const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
+
+        const action = new vscode.CodeAction(messages.fixer.supressOnClass, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
+    
+        // Determine the appropriate suppression rule based on the type of diagnostic.code
+        let suppressionRule: string;
+        if (typeof this.diagnostic.code == 'object' && 'value' in this.diagnostic.code) {
+            suppressionRule = `PMD.${this.diagnostic.code.value}`;
+        } else {
+            suppressionRule = `PMD`;
+        }
+    
+        // Extract text from the start to end of the class declaration to search for existing suppressions
+        const classText = this.findLineBeforeClassStartDeclaration(classStartPosition, this.document);
+        const suppressionMatch = classText.match(this.suppressionRegex);
+    
+        if (suppressionMatch) {
+            // If @SuppressWarnings exists, check if the rule is already present
+            const existingRules = suppressionMatch[1].split(',').map(rule => rule.trim());
+            if (!existingRules.includes(suppressionRule)) {
+                // If the rule is not present, add it to the existing @SuppressWarnings
+                const updatedRules = [...existingRules, suppressionRule].join(', ');
+                const updatedSuppression = this.generateUpdatedSuppressionTag(updatedRules, this.document.languageId);
+                const suppressionStartPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]));
+                const suppressionEndPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
+                const suppressionRange = new vscode.Range(suppressionStartPosition, suppressionEndPosition);
+                action.edit.replace(this.document.uri, suppressionRange, updatedSuppression);
+            }
+        } else {
+            // If @SuppressWarnings does not exist, insert a new one
+            const newSuppression = this.generateNewSuppressionTag(suppressionRule, this.document.languageId);
+            action.edit.insert(this.document.uri, classStartPosition, newSuppression);
+        }
+    
+        action.diagnostics = [this.diagnostic];
+        action.command = {
+            command: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE,
+            title: 'Remove diagnostics for this file',
+            arguments: [this.document.uri]
+        };
+
+        return action;
+    }
+    
+    public generateUpdatedSuppressionTag(updatedRules: string, lang: string) {
+        if (lang === 'apex') {
+            return `@SuppressWarnings('${updatedRules}')`;
+        } else if (lang === 'java') {
+            return `@SuppressWarnings("${updatedRules}")`;
+        }
+        return '';
+    }
+
+    public generateNewSuppressionTag(suppressionRule: string, lang: string) {
+        if (lang === 'apex') {
+            return `@SuppressWarnings('${suppressionRule}')\n`;
+        } else if (lang === 'java') {
+            return `@SuppressWarnings("${suppressionRule}")\n`;
+        }
+        return '';
+    }
+
+    /**
+     * Finds the start position of the class in the document.
+     * Assumes that the class declaration starts with the keyword "class".
+     * @returns The position at the start of the class.
+     */
+    public findClassStartPosition(diagnostic: vscode.Diagnostic, document: vscode.TextDocument): vscode.Position {
+        const text = document.getText();
+        const diagnosticLine = diagnostic.range.start.line;
+    
+        // Split the text into lines for easier processing
+        const lines = text.split('\n');
+        let classStartLine: number | undefined;
+
+        let inBlockComment = false;
+    
+        // Iterate from the diagnostic line upwards to find the class declaration
+        for (let lineNumber = 0; lineNumber <= diagnosticLine; lineNumber++) {
+            const line = lines[lineNumber];
+
+            // Check if this line is the start of a block comment
+            if (!inBlockComment && line.match(this.blockCommentStartPattern)) {
+                inBlockComment = true;
+                continue;
+            }
+
+            // Check if we are in the end of block comment
+            if (inBlockComment && line.match(this.blockCommentEndPattern)) {
+                inBlockComment = false;
+                continue;
+            }
+
+            // Skip single-line comments
+            if (line.match(this.singleLineCommentPattern)) {
+                continue;
+            }
+
+            // Skip block comment in a single line
+            if (line.match(this.blockCommentEndPattern) && line.match(this.blockCommentStartPattern)) {
+                continue;
+            }
+            
+            const match = line.match(this.classDeclarationPattern);
+            if (!inBlockComment && match && !this.isWithinQuotes(line, match.index)) {
+                classStartLine = lineNumber;
+                break;
+            }
+        }
+    
+        if (classStartLine !== undefined) {
+            return new vscode.Position(classStartLine, 0);
+        }
+        
+        // Default to the start of the document if class is not found
+        return new vscode.Position(0, 0);
+    }
+
+    /**
+     * Finds the entire line that is one line above a class declaration statement.
+     * @returns The text of the line that is one line above the class declaration.
+     */
+    public findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position, document: vscode.TextDocument): string {
+        // Ensure that there is a line before the class declaration
+        if (classStartPosition.line > 0) {
+            const lineBeforeClassPosition = classStartPosition.line - 1;
+            const lineBeforeClass = document.lineAt(lineBeforeClassPosition);
+            return lineBeforeClass.text;
+        }
+
+        // Return an empty string if it's the first line of the document
+        return '';
+    }
+
+    /**
+     * Helper function to check if match is within quotes
+     * @param line 
+     * @param matchIndex 
+     * @returns 
+     */
+    public isWithinQuotes(line: string, matchIndex: number): boolean {
+        const beforeMatch = line.slice(0, matchIndex);
+        const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
+        const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
+
+        // Check if the number of quotes before the match is odd (inside quotes)
+        return singleQuotesBefore % 2 !== 0 || doubleQuotesBefore % 2 !== 0
     }
 }
