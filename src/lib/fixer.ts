@@ -92,11 +92,11 @@ export class _NoOpFixGenerator extends FixGenerator {
  * @private Must be exported for testing purposes, but shouldn't be used publicly, hence the leading underscore.
  */
 export class _PmdFixGenerator extends FixGenerator {
-    private singleLineCommentPattern = /^\s*\/\//;
-    private blockCommentStartPattern = /^\s*\/\*/;
-    private blockCommentEndPattern = /\*\//;
-    private classDeclarationPattern = /\b(\w+\s+)+class\s+\w+/;
-    public suppressionRegex = /@SuppressWarnings\s*\(\s*'([^']*)'\s*\)/;
+    public singleLineCommentPattern = /^\s*\/\//;
+    public blockCommentStartPattern = /^\s*\/\*/;
+    public blockCommentEndPattern = /\*\//;
+    public classDeclarationPattern = /\b(\w+\s+)+class\s+\w+/;
+    public suppressionRegex = /@SuppressWarnings\s*\(\s*["']([^"']*)["']\s*\)/i;
 
     /**
      * Generate an array of fixes, if possible.
@@ -153,14 +153,13 @@ export class _PmdFixGenerator extends FixGenerator {
     public generateClassLevelSuppression(): vscode.CodeAction {
         // Find the end-of-line position of the class declaration where the diagnostic is found.
         const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
-        // const classEndOfLinePosition = 0;
 
         const action = new vscode.CodeAction(messages.fixer.supressOnClass, vscode.CodeActionKind.QuickFix);
         action.edit = new vscode.WorkspaceEdit();
     
         // Determine the appropriate suppression rule based on the type of diagnostic.code
         let suppressionRule: string;
-        if (typeof this.diagnostic.code === 'object' && this.diagnostic.code !== null && 'value' in this.diagnostic.code) {
+        if (typeof this.diagnostic.code == 'object' && 'value' in this.diagnostic.code) {
             suppressionRule = `PMD.${this.diagnostic.code.value}`;
         } else {
             suppressionRule = `PMD`;
@@ -232,14 +231,18 @@ export class _PmdFixGenerator extends FixGenerator {
         let inBlockComment = false;
     
         // Iterate from the diagnostic line upwards to find the class declaration
-        for (let lineNumber = diagnosticLine; lineNumber >= 0; lineNumber--) {
+        for (let lineNumber = 0; lineNumber <= diagnosticLine; lineNumber++) {
             const line = lines[lineNumber];
 
-            // Check if we are in a block comment
-            if (inBlockComment) {
-                if (line.match(this.blockCommentStartPattern)) {
-                    inBlockComment = false;
-                }
+            // Check if this line is the start of a block comment
+            if (!inBlockComment && line.match(this.blockCommentStartPattern)) {
+                inBlockComment = true;
+                continue;
+            }
+
+            // Check if we are in the end of block comment
+            if (inBlockComment && line.match(this.blockCommentEndPattern)) {
+                inBlockComment = false;
                 continue;
             }
 
@@ -250,12 +253,6 @@ export class _PmdFixGenerator extends FixGenerator {
 
             // Skip block comment in a single line
             if (line.match(this.blockCommentEndPattern) && line.match(this.blockCommentStartPattern)) {
-                continue;
-            }
-
-            // Check if this line is the start of a block comment
-            if (line.match(this.blockCommentEndPattern)) {
-                inBlockComment = true;
                 continue;
             }
             
@@ -302,8 +299,6 @@ export class _PmdFixGenerator extends FixGenerator {
         const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
 
         // Check if the number of quotes before the match is odd (inside quotes)
-        if (singleQuotesBefore % 2 !== 0 || doubleQuotesBefore % 2 !== 0) return true;
-
-        return false;
+        return singleQuotesBefore % 2 !== 0 || doubleQuotesBefore % 2 !== 0
     }
 }

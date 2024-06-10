@@ -257,6 +257,30 @@ suite('fixer.ts', () => {
                             expect(position.line).to.equal(6);
                             expect(position.character).to.equal(0);
                         });
+                        test('Should ignore inner class', async () => {
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+
+                            let doc: vscode.TextDocument;
+                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            const diag = new vscode.Diagnostic(
+                                new vscode.Range(
+                                    new vscode.Position(27, 0),
+                                    new vscode.Position(27, 1)
+                                ),
+                                'This message is unimportant',
+                                vscode.DiagnosticSeverity.Warning
+                            );
+
+                            // Instantiate our fixer
+                            const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
+
+                            // Call findClassStartPosition method
+                            const position = fixGenerator.findClassStartPosition(diag, doc);
+
+                            // Verify the position is correct
+                            expect(position.line).to.equal(6);
+                            expect(position.character).to.equal(0);
+                        });
                     });
                 });
                 suite('#generateNewSuppressionTag()', () => {
@@ -389,7 +413,80 @@ suite('fixer.ts', () => {
                     });
 
                 });
+                
             });
         });
+        suite('Regex Pattern Tests', () => {
+            let fixGenerator: _PmdFixGenerator;
+    
+            setup(() => {
+                fixGenerator = new _PmdFixGenerator(null, null);
+            });
+    
+            test('singleLineCommentPattern matches single-line comments', () => {
+                const pattern = fixGenerator.singleLineCommentPattern;
+    
+                // Matching cases
+                expect(pattern.test('// This is a single-line comment')).to.be.true;
+    
+                // Non-matching cases
+                expect(pattern.test('This is not a comment')).to.be.false;
+                expect(pattern.test('/* This is a block comment start */')).to.be.false;
+            });
+    
+            test('blockCommentStartPattern matches block comment starts', () => {
+                const pattern = fixGenerator.blockCommentStartPattern;
+    
+                // Matching cases
+                expect(pattern.test('/* This is a block comment start')).to.be.true;
+                expect(pattern.test('    /* This is an indented block comment start')).to.be.true;
+    
+                // Non-matching cases
+                expect(pattern.test('This is not a comment')).to.be.false;
+                expect(pattern.test('// This is a single-line comment')).to.be.false;
+                expect(pattern.test('*/ This is a block comment end')).to.be.false;
+            });
+    
+            test('blockCommentEndPattern matches block comment ends', () => {
+                const pattern = fixGenerator.blockCommentEndPattern;
+    
+                // Matching cases
+                expect(pattern.test('*/')).to.be.true;
+                expect(pattern.test('    */ This is an indented block comment end')).to.be.true;
+    
+                // Non-matching cases
+                expect(pattern.test('This is not a comment')).to.be.false;
+                expect(pattern.test('// This is a single-line comment')).to.be.false;
+                expect(pattern.test('/* This is a block comment start')).to.be.false;
+            });
+    
+            test('classDeclarationPattern matches class declarations', () => {
+                const pattern = fixGenerator.classDeclarationPattern;
+    
+                // Matching cases
+                expect(pattern.test('public class MyClass')).to.be.true;
+                expect(pattern.test('final public class MyClass')).to.be.true;
+                expect(pattern.test('   private static class MyClass')).to.be.true;
+    
+                // Non-matching cases
+                expect(pattern.test('class="MyClass"')).to.be.false; // HTML-like attribute
+                expect(pattern.test('String myClass = "some value"')).to.be.false;
+            });
+    
+            test('suppressionRegex matches @SuppressWarnings annotations', () => {
+                const pattern = fixGenerator.suppressionRegex;
+    
+                // Matching cases
+                expect(pattern.test("@SuppressWarnings('PMD.Rule')")).to.be.true;
+                expect(pattern.test("@suppresswarnings('pmd.rule')")).to.be.true;
+                expect(pattern.test("@suppresswarnings('PMD.Rule')")).to.be.true;
+                expect(pattern.test('@SuppressWarnings("PMD.Rule")')).to.be.true;
+    
+                // Non-matching cases
+                expect(pattern.test('This is not a suppression annotation')).to.be.false;
+                expect(pattern.test('@SuppressWarnings')).to.be.false;
+                expect(pattern.test('SuppressWarnings("PMD.Rule")')).to.be.false; // Missing '@'
+            });
+        });    
     });
 });

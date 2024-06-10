@@ -22,4 +22,8 @@ public class MyClass2 {
         public static String someString = 'this string has class MyClass2 { ';
         return true;
     }
+    
+    private class MyInnerClass {
+        // Some inner class
+    }
 }
