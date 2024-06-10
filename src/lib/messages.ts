@@ -33,7 +33,7 @@ export const messages = {
     },
     fixer: {
         supressOnLine: "Suppress violations on this line.",
-        supressOnClass: "***Suppress violations on this class.***"
+        supressOnClass: "Suppress violations on this class."
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
