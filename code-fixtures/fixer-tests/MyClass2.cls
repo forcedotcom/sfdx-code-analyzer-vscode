@@ -19,7 +19,7 @@ public class MyClass2 {
     }
 
     public static boolean someOtherMethod() {
-        public static String someString = 'this string has class MyClass2 { ';
+        public static String someString = 'this string has \' class MyClass2 { ';
         return true;
     }
     
