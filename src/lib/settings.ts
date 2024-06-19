@@ -14,6 +14,10 @@ export class SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('customConfigFile');
     }
 
+    public static getPmdDisabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('disable');
+    }
+
     public static getGraphEngineDisableWarningViolations(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('disableWarningViolations');
     }
@@ -36,5 +40,17 @@ export class SettingsManager {
 
     public static getAnalyzeOnOpen(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnOpen').get('enabled');
+    }
+
+    public static getEslintEngine(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer.eslint').get('engine');
+    }
+
+    public static getNormalizeSeverityEnabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.normalizeSeverity').get('enabled');
+    }
+
+    public static getRulesCategory(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer.rules').get('category');
     }
 }
