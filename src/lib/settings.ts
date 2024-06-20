@@ -14,10 +14,6 @@ export class SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('customConfigFile');
     }
 
-    public static getPmdDisabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('disable');
-    }
-
     public static getGraphEngineDisableWarningViolations(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('disableWarningViolations');
     }

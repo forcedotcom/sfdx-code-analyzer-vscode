@@ -103,11 +103,6 @@
                     "default": "",
                     "description": "Replace Code Analyzer's default PMD config file, choose a custom file."
                 },
-                "codeAnalyzer.pMD.disable": {
-                    "type": "boolean",
-                    "default": "false",
-                    "description": "***Exclude PMD engine while scanning.***"
-                },
                 "codeAnalyzer.graphEngine.disableWarningViolations": {
                     "type": "boolean",
                     "default": false,
