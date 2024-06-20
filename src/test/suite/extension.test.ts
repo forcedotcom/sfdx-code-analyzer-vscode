@@ -40,6 +40,9 @@ suite('Extension Test Suite', () => {
 			for (const [uri, diagnostics] of diagnosticsArrays) {
 				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.be.empty;
 			}
+			// Set custom settings
+			const configuration = vscode.workspace.getConfiguration();
+			configuration.update('codeAnalyzer.scanner.engines', 'pmd,retire-js,eslint-lwc', vscode.ConfigurationTarget.Global);
 		});
 
 		teardown(async () => {

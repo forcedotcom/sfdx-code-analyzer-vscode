@@ -37,4 +37,16 @@ export class SettingsManager {
     public static getAnalyzeOnOpen(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnOpen').get('enabled');
     }
+
+    public static getEnginesToRun(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer.scanner').get('engines');
+    }
+
+    public static getNormalizeSeverityEnabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.normalizeSeverity').get('enabled');
+    }
+
+    public static getRulesCategory(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer.rules').get('category');
+    }
 }

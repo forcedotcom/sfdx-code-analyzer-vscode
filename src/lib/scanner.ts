@@ -101,10 +101,16 @@ export class ScanRunner {
      * @param targets The files to be scanned.
      */
     private async createPathlessArgArray(targets: string[]): Promise<string[]> {
+        const engines = SettingsManager.getEnginesToRun();
+    
+        if (!engines || engines.length === 0) {
+            throw new Error('***Engines cannot be empty. Please set one or more engines in the VS Code Settings***');
+        }
+
         const args: string[] = [
             'scanner', 'run',
             '--target', `${targets.join(',')}`,
-            '--engine', 'pmd,retire-js',
+            '--engine', engines,
             '--json'
         ];
         const customPmdConfig: string = SettingsManager.getPmdCustomConfigFile();
@@ -114,6 +120,15 @@ export class ScanRunner {
                 throw new Error(messages.error.pmdConfigNotFoundGenerator(customPmdConfig));
             }
             args.push('--pmdconfig', customPmdConfig);
+        }
+
+        const rulesCategory = SettingsManager.getRulesCategory();
+        if (rulesCategory) {
+            args.push('--category', rulesCategory);
+        }
+
+        if (SettingsManager.getNormalizeSeverityEnabled()) {
+            args.push('--normalize-severity')
         }
         return args;
     }
