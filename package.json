@@ -132,10 +132,10 @@
                     "default": false,
                     "description": "Scan files on open automatically."
                 },
-                "codeAnalyzer.eslint.engine": {
+                "codeAnalyzer.scanner.engines": {
                     "type": "string",
-                    "default": "eslint-lwc",
-                    "description": "***Specifies one or more variants of eslint engines to run. Submit multiple values as a comma-separated list. Possible values are eslint, eslint-lwc and eslint-typescript***"
+                    "default": "pmd,retire-js,eslint-lwc",
+                    "description": "***Specifies the engines to run. Submit multiple values as a comma-separated list. Possible values are pmd, retire-js, eslint, eslint-lwc and eslint-typescript***"
                 },
                 "codeAnalyzer.normalizeSeverity.enabled": {
                     "type": "boolean",

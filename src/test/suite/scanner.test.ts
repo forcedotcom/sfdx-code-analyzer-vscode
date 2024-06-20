@@ -45,7 +45,7 @@ suite('ScanRunner', () => {
             test('Creates array-ified sfdx-scanner command', async () => {
                 // ===== SETUP =====
                 // Stub out the appropriate SettingsManager methods.
-                Sinon.stub(SettingsManager, 'getEslintEngine').returns("");
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns("retire-js,pmd");
                 Sinon.stub(SettingsManager, 'getRulesCategory').returns("");
                 Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(false);
                 
@@ -62,30 +62,6 @@ suite('ScanRunner', () => {
                 expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
                 expect(args[4]).to.equal('--engine', 'Wrong arg');
                 expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
-            });
-
-            test('Includes eslintEngine in the --engine parameter if provided', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager methods.
-                const eslintEngine = 'eslint';
-                Sinon.stub(SettingsManager, 'getEslintEngine').returns(eslintEngine);
-                Sinon.stub(SettingsManager, 'getRulesCategory').returns("");
-                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(false);
-    
-                // ===== TEST =====
-                // Call the test method helper.
-                const args: string[] = await invokeTestedMethod();
-    
-                // ===== ASSERTIONS =====
-                // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(7, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-                expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('retire-js,pmd,eslint', 'Wrong arg');
                 expect(args[6]).to.equal('--json', 'Wrong arg');
             });
 
@@ -118,8 +94,43 @@ suite('ScanRunner', () => {
     
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
-                // expect(args).to.have.lengthOf(9, 'Wrong number of args');
                 expect(args[7]).to.equal('--normalize-severity', 'Wrong arg');
+            });
+
+            test('Error thrown when codeAnalyzer.scanner.engines is empty', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('');
+    
+                // ===== TEST =====
+                let err:Error = null;
+                try {
+                    await invokeTestedMethod();
+                } catch (e) {
+                    err = e;
+                }
+    
+                // ===== ASSERTIONS =====
+                expect(err).to.exist;
+                expect(err.message).to.equal('***Engines cannot be empty. Please set one or more engines in the VS Code Settings***');
+            });
+
+            test('Error thrown when codeAnalyzer.scanner.engines is undefined', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns(undefined);
+    
+                // ===== TEST =====
+                let err:Error = null;
+                try {
+                    await invokeTestedMethod();
+                } catch (e) {
+                    err = e;
+                }
+    
+                // ===== ASSERTIONS =====
+                expect(err).to.exist;
+                expect(err.message).to.equal('***Engines cannot be empty. Please set one or more engines in the VS Code Settings***');
             });
         });
 
@@ -136,7 +147,7 @@ suite('ScanRunner', () => {
                 const dummyConfigPath: string = '/Users/me/someconfig.xml';
                 Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns(dummyConfigPath);
                 Sinon.stub(File, 'exists').resolves(true);
-                Sinon.stub(SettingsManager, 'getEslintEngine').returns('');
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('retire-js,pmd');
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -183,7 +194,7 @@ suite('ScanRunner', () => {
                 // ===== SETUP =====
                 // Stub out the appropriate SettingsManager method to return an empty string.
                 Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns("");
-                Sinon.stub(SettingsManager, 'getEslintEngine').returns('');
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('retire-js,pmd');
 
                 // ===== TEST =====
                 // Call the test method helper.

@@ -38,8 +38,8 @@ export class SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnOpen').get('enabled');
     }
 
-    public static getEslintEngine(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer.eslint').get('engine');
+    public static getEnginesToRun(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer.scanner').get('engines');
     }
 
     public static getNormalizeSeverityEnabled(): boolean {
