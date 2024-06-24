@@ -135,16 +135,16 @@
                 "codeAnalyzer.scanner.engines": {
                     "type": "string",
                     "default": "pmd,retire-js,eslint-lwc",
-                    "description": "***Specifies the engines to run. Submit multiple values as a comma-separated list. Possible values are pmd, retire-js, eslint, eslint-lwc and eslint-typescript***"
+                    "description": "The engines to run. Specify multiple values as a comma-separated list. Possible values are pmd, retire-js, eslint, eslint-lwc, and eslint-typescript."
                 },
                 "codeAnalyzer.normalizeSeverity.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "***Enable this flag to output normalized severity and engine-specific severity across all engines.***"
+                    "description": "Output normalized severity (high, moderate, low) and engine-specific severity across all engines."
                 },
                 "codeAnalyzer.rules.category": {
                     "type": "string",
-                    "description": "***One or more categories of rules to run. Specify multiple values as a comma-separated list.***"
+                    "description": "The categories of rules to run. Specify multiple values as a comma-separated list. Run 'sf scanner rule list -e' in the terminal for the list of categories associated with a specific engine."
                 }
             }
         },
