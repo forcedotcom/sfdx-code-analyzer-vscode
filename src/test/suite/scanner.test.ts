@@ -112,7 +112,7 @@ suite('ScanRunner', () => {
     
                 // ===== ASSERTIONS =====
                 expect(err).to.exist;
-                expect(err.message).to.equal('***Engines cannot be empty. Please set one or more engines in the VS Code Settings***');
+                expect(err.message).to.equal('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
             });
 
             test('Error thrown when codeAnalyzer.scanner.engines is undefined', async () => {
@@ -130,7 +130,7 @@ suite('ScanRunner', () => {
     
                 // ===== ASSERTIONS =====
                 expect(err).to.exist;
-                expect(err.message).to.equal('***Engines cannot be empty. Please set one or more engines in the VS Code Settings***');
+                expect(err.message).to.equal('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
             });
         });
 
