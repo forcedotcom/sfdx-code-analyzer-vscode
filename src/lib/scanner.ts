@@ -104,7 +104,7 @@ export class ScanRunner {
         const engines = SettingsManager.getEnginesToRun();
     
         if (!engines || engines.length === 0) {
-            throw new Error('***Engines cannot be empty. Please set one or more engines in the VS Code Settings***');
+            throw new Error('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
         }
 
         const args: string[] = [
