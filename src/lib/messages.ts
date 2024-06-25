@@ -32,7 +32,8 @@ export const messages = {
         existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
-        supressOnLine: "Suppress violations on this line."
+        supressOnLine: "Suppress violations on this line.",
+        supressOnClass: "Suppress violations on this class."
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,

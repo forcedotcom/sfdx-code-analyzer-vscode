@@ -9,10 +9,11 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
+import * as targeting from '../../lib/targeting';
 
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
@@ -39,6 +40,9 @@ suite('Extension Test Suite', () => {
 			for (const [uri, diagnostics] of diagnosticsArrays) {
 				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.be.empty;
 			}
+			// Set custom settings
+			const configuration = vscode.workspace.getConfiguration();
+			configuration.update('codeAnalyzer.scanner.engines', 'pmd,retire-js,eslint-lwc', vscode.ConfigurationTarget.Global);
 		});
 
 		teardown(async () => {
@@ -409,4 +413,197 @@ suite('Extension Test Suite', () => {
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file"))).to.equal(false);
 		});
 	});
+
+	suite('_clearDiagnosticsForSelectedFiles Test Suite', () => {
+		let diagnosticCollection: vscode.DiagnosticCollection;
+		let runInfo: RunInfo;
+		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+		let getTargetsStub: Sinon.SinonStub;
+	
+		suiteSetup(() => {
+			// Create a diagnostic collection before the test suite starts.
+			diagnosticCollection = vscode.languages.createDiagnosticCollection();
+			runInfo = {
+				commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
+				diagnosticCollection,
+				outputChannel
+			};
+			getTargetsStub = Sinon.stub(targeting, 'getTargets');
+		});
+	
+		setup(() => {
+			// Ensure the diagnostic collection is clear before each test.
+			diagnosticCollection.clear();
+		});
+	
+		teardown(() => {
+			// Clear the diagnostic collection after each test.
+			diagnosticCollection.clear();
+			getTargetsStub.reset();
+		});
+	
+		test('Should clear diagnostics for a single file', async () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file1.cls');
+			const diagnostics = [
+				new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic', vscode.DiagnosticSeverity.Warning)
+			];
+			runInfo.diagnosticCollection.set(uri, diagnostics);
+			getTargetsStub.returns(['/some/path/file1.cls']);
+	
+			expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+	
+			// ===== TEST =====
+			await _clearDiagnosticsForSelectedFiles([uri], runInfo);
+
+			// ===== ASSERTIONS =====
+			expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
+		});
+	
+		test('Should clear diagnostics for multiple files', async () => {
+			// ===== SETUP =====
+			const uri1 = vscode.Uri.file('/some/path/file2.cls');
+			const uri2 = vscode.Uri.file('/some/path/file3.cls');
+			const diagnostics = [
+				new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic', vscode.DiagnosticSeverity.Warning)
+			];
+			diagnosticCollection.set(uri1, diagnostics);
+			diagnosticCollection.set(uri2, diagnostics);
+			getTargetsStub.returns(['/some/path/file2.cls', '/some/path/file3.cls']);
+	
+			expect(diagnosticCollection.get(uri1)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+			expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+	
+			// ===== TEST =====
+			await _clearDiagnosticsForSelectedFiles([uri1, uri2], runInfo);
+
+			// ===== ASSERTIONS =====
+			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
+			expect(runInfo.diagnosticCollection.get(uri2)).to.be.empty;
+		});
+	
+		test('Should handle case with no diagnostics to clear', async () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file4.cls');
+	
+			// ===== TEST =====
+			await _clearDiagnosticsForSelectedFiles([uri], runInfo);
+	
+			// ===== ASSERTIONS =====
+			expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
+		});
+	
+		test('Should handle case with an empty URI array', async () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file5.cls');
+			const diagnostics = [
+				new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic', vscode.DiagnosticSeverity.Warning)
+			];
+			diagnosticCollection.set(uri, diagnostics);
+			getTargetsStub.returns([]);
+
+			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+	
+			// ===== TEST =====
+			await _clearDiagnosticsForSelectedFiles([], runInfo);
+	
+			// ===== ASSERTIONS =====
+			expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
+		});
+	
+		test('Should not affect other diagnostics not in the selected list', async () => {
+			// ===== SETUP =====
+			const uri1 = vscode.Uri.file('/some/path/file6.cls');
+			const uri2 = vscode.Uri.file('/some/path/file7.cls');
+			const diagnostics1 = [
+				new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic', vscode.DiagnosticSeverity.Warning)
+			];
+			const diagnostics2 = [
+				new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Another test diagnostic', vscode.DiagnosticSeverity.Error)
+			];
+			diagnosticCollection.set(uri1, diagnostics1);
+			diagnosticCollection.set(uri2, diagnostics2);
+			getTargetsStub.returns(['/some/path/file6.cls']);
+	
+			expect(diagnosticCollection.get(uri1)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+			expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+	
+			// ===== TEST =====
+			await _clearDiagnosticsForSelectedFiles([uri1], runInfo);
+	
+			// ===== ASSERTIONS =====
+			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
+			expect(runInfo.diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
+		});
+	});
+
+	suite('_removeSingleDiagnostic Test Suite', () => {
+		let diagnosticCollection: vscode.DiagnosticCollection;
+	
+		setup(() => {
+			// Create a new diagnostic collection for each test
+			diagnosticCollection = vscode.languages.createDiagnosticCollection();
+		});
+	
+		teardown(() => {
+			// Clear the diagnostic collection after each test
+			diagnosticCollection.clear();
+		});
+	
+		test('Should remove a single diagnostic from the collection', () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file1.cls');
+			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
+			const anotherDiagnostic = new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Another diagnostic', vscode.DiagnosticSeverity.Error);
+	
+			// Set initial diagnostics
+			diagnosticCollection.set(uri, [diagnosticToRemove, anotherDiagnostic]);
+	
+			expect(diagnosticCollection.get(uri)).to.have.lengthOf(2, 'Expected two diagnostics to be present before removal');
+	
+			// ===== TEST =====
+			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
+	
+			// ===== ASSERTIONS =====
+			const remainingDiagnostics = diagnosticCollection.get(uri);
+			expect(remainingDiagnostics).to.have.lengthOf(1, 'Expected one diagnostic to remain after removal');
+			expect(remainingDiagnostics[0].message).to.equal('Another diagnostic', 'Expected the remaining diagnostic to be the one not removed');
+		});
+	
+		test('Should handle removing a diagnostic from an empty collection', () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file2.cls');
+			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
+	
+			expect(diagnosticCollection.get(uri)).to.be.empty;
+	
+			// ===== TEST =====
+			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
+	
+			// ===== ASSERTIONS =====
+			const remainingDiagnostics = diagnosticCollection.get(uri);
+			expect(remainingDiagnostics).to.be.empty;
+		});
+	
+		test('Should handle case where diagnostic is not found', () => {
+			// ===== SETUP =====
+			const uri = vscode.Uri.file('/some/path/file3.cls');
+			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
+			const existingDiagnostic = new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Existing diagnostic', vscode.DiagnosticSeverity.Error);
+	
+			// Set initial diagnostics
+			diagnosticCollection.set(uri, [existingDiagnostic]);
+	
+			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected one diagnostic to be present before attempting removal');
+	
+			// ===== TEST =====
+			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
+	
+			// ===== ASSERTIONS =====
+			const remainingDiagnostics = diagnosticCollection.get(uri);
+			expect(remainingDiagnostics).to.have.lengthOf(1, 'Expected the diagnostic collection to remain unchanged');
+			expect(remainingDiagnostics[0].message).to.equal('Existing diagnostic', 'Expected the existing diagnostic to remain unchanged');
+		});
+	});
+	
 });

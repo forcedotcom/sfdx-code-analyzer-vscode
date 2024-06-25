@@ -36,8 +36,19 @@ suite('ScanRunner', () => {
             return (scanner as any).createPathlessArgArray(targets);
         }
 
-        suite('Simple cases', () => {
+        suite('Non Custom PMD Config, with various parameter options', () => {
+            teardown(() => {
+                // Revert any stubbing we did with Sinon.
+                Sinon.restore();
+            });
+
             test('Creates array-ified sfdx-scanner command', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns("retire-js,pmd");
+                Sinon.stub(SettingsManager, 'getRulesCategory').returns("");
+                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(false);
+                
                 // ===== TEST =====
                 // Call the test method helper.
                 const args: string[] = await invokeTestedMethod();
@@ -50,8 +61,76 @@ suite('ScanRunner', () => {
                 expect(args[2]).to.equal('--target', 'Wrong arg');
                 expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
                 expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
                 expect(args[6]).to.equal('--json', 'Wrong arg');
+            });
+
+            test('Includes rulesCategory in the --category parameter if provided', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                const ruleCategory = 'security';
+                Sinon.stub(SettingsManager, 'getRulesCategory').returns(ruleCategory);
+                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(false);
+    
+                // ===== TEST =====
+                // Call the test method helper.
+                const args: string[] = await invokeTestedMethod();
+    
+                // ===== ASSERTIONS =====
+                // Verify that the right arguments were created.
+                // expect(args).to.have.lengthOf(9, 'Wrong number of args');
+                expect(args[7]).to.equal('--category', 'Wrong arg');
+                expect(args[8]).to.equal(ruleCategory, 'Wrong arg');
+            });
+
+            test('Includes --normalize-severity parameter if flag enabled', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(true);
+    
+                // ===== TEST =====
+                // Call the test method helper.
+                const args: string[] = await invokeTestedMethod();
+    
+                // ===== ASSERTIONS =====
+                // Verify that the right arguments were created.
+                expect(args[7]).to.equal('--normalize-severity', 'Wrong arg');
+            });
+
+            test('Error thrown when codeAnalyzer.scanner.engines is empty', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('');
+    
+                // ===== TEST =====
+                let err:Error = null;
+                try {
+                    await invokeTestedMethod();
+                } catch (e) {
+                    err = e;
+                }
+    
+                // ===== ASSERTIONS =====
+                expect(err).to.exist;
+                expect(err.message).to.equal('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
+            });
+
+            test('Error thrown when codeAnalyzer.scanner.engines is undefined', async () => {
+                // ===== SETUP =====
+                // Stub out the appropriate SettingsManager methods.
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns(undefined);
+    
+                // ===== TEST =====
+                let err:Error = null;
+                try {
+                    await invokeTestedMethod();
+                } catch (e) {
+                    err = e;
+                }
+    
+                // ===== ASSERTIONS =====
+                expect(err).to.exist;
+                expect(err.message).to.equal('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
             });
         });
 
@@ -68,6 +147,7 @@ suite('ScanRunner', () => {
                 const dummyConfigPath: string = '/Users/me/someconfig.xml';
                 Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns(dummyConfigPath);
                 Sinon.stub(File, 'exists').resolves(true);
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('retire-js,pmd');
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -81,7 +161,7 @@ suite('ScanRunner', () => {
                 expect(args[2]).to.equal('--target', 'Wrong arg');
                 expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
                 expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
                 expect(args[6]).to.equal('--json', 'Wrong arg');
                 expect(args[7]).to.equal('--pmdconfig', 'Wrong arg');
                 expect(args[8]).to.equal(dummyConfigPath, 'Wrong arg');
@@ -114,6 +194,7 @@ suite('ScanRunner', () => {
                 // ===== SETUP =====
                 // Stub out the appropriate SettingsManager method to return an empty string.
                 Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns("");
+                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('retire-js,pmd');
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -127,7 +208,7 @@ suite('ScanRunner', () => {
                 expect(args[2]).to.equal('--target', 'Wrong arg');
                 expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
                 expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('pmd,retire-js', 'Wrong arg');
+                expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
                 expect(args[6]).to.equal('--json', 'Wrong arg');
             });
         });

@@ -13,7 +13,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "0.6.0",
+    "version": "0.7.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
@@ -76,15 +76,23 @@
         "commands": [
             {
                 "command": "sfca.runOnActiveFile",
-                "title": "SF: Scan current file with Code Analyzer"
+                "title": "SFDX: Scan current file with Code Analyzer"
             },
             {
                 "command": "sfca.runOnSelected",
-                "title": "SF: Scan selected files or folders with Code Analyzer"
+                "title": "SFDX: Scan selected files or folders with Code Analyzer"
             },
             {
                 "command": "sfca.runDfaOnSelectedMethod",
-                "title": "SF: Scan selected method with Graph Engine path-based analysis"
+                "title": "SFDX: Scan selected method with Graph Engine path-based analysis"
+            },
+            {
+                "command": "sfca.removeDiagnosticsOnActiveFile",
+                "title": "SFDX: Clear Code Analyzer violations from current file"
+            },
+            {
+                "command": "sfca.removeDiagnosticsOnSelectedFile",
+                "title": "SFDX: Clear Code Analyzer violations from selected files or folders"
             }
         ],
         "configuration": {
@@ -123,6 +131,20 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Scan files on open automatically."
+                },
+                "codeAnalyzer.scanner.engines": {
+                    "type": "string",
+                    "default": "pmd,retire-js,eslint-lwc",
+                    "description": "The engines to run. Specify multiple values as a comma-separated list. Possible values are pmd, retire-js, eslint, eslint-lwc, and eslint-typescript."
+                },
+                "codeAnalyzer.normalizeSeverity.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Output normalized severity (high, moderate, low) and engine-specific severity across all engines."
+                },
+                "codeAnalyzer.rules.category": {
+                    "type": "string",
+                    "description": "The categories of rules to run. Specify multiple values as a comma-separated list. Run 'sf scanner rule list -e' in the terminal for the list of categories associated with a specific engine."
                 }
             }
         },
@@ -139,6 +161,14 @@
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
                     "when": "false"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnActiveFile",
+                    "when": "true"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnSelectedFile",
+                    "when": "false"
                 }
             ],
             "editor/context": [
@@ -147,11 +177,18 @@
                 },
                 {
                     "command": "sfca.runDfaOnSelectedMethod"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnActiveFile"
                 }
             ],
             "explorer/context": [
                 {
                     "command": "sfca.runOnSelected"
+                },
+                {
+                    "command": "sfca.removeDiagnosticsOnSelectedFile",
+                    "when": "true"
                 }
             ]
         },
