@@ -103,13 +103,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	// It is possible that the cache was not cleared when VS Code exited the last time. Just to be on the safe side, we clear the DFA process cache at activation.
 	void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
-	const runDfaOnSelectedMethod = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
+	const runDfaOnSelectedMethodCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
 		if (await _shouldProceedWithDfaRun(context)) {
 			await vscode.window.withProgress({
 				location: vscode.ProgressLocation.Window,
 				title: messages.graphEngine.spinnerText,
 				cancellable: true
-			}, (progress, token) => {
+			}, async (progress, token) => {
 				token.onCancellationRequested(async () => {
 					await _stopExistingDfaRun(context, outputChannel);
 				});
@@ -120,17 +120,88 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 					await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
 					return;
 				});
+				const methodLevelTarget: string = await targeting.getSelectedMethod();
+				// Pull out the file from the target and use it to identify the project directory.
+				const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
+				const projectDir: string = targeting.getProjectDir(currentFile);
+
 				return _runAndDisplayDfa(context, {
 					commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
 					outputChannel
-				}, customCancellationToken);
+				}, customCancellationToken, methodLevelTarget, projectDir);
 			});
 		}
 	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
+
+	const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
+		await _runDfa(context, outputChannel);
+	});
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, runDfaOnWorkspaceCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+async function _runDfa(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel) {
+	const choice = await vscode.window.showQuickPick(
+		["***Yes***", "***No***"],
+		{
+			placeHolder: "***Re-run previously failed violations only?***",
+			canPickMany: false,
+			ignoreFocusOut: true
+		}
+	);
+
+	// Default to "Yes" if no choice is made
+	const rerunFailedOnly = choice !== "Yes";
+
+	if (!rerunFailedOnly) {
+		void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background. You can cancel this by clicking on the status progress.***');
+		await runDfaOnWorkspace(context, outputChannel);
+	} else if (!violationsCacheExists()) {
+		void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background since no existing cache found. You can cancel this by clicking on the status progress.***');
+		await runDfaOnWorkspace(context, outputChannel);
+	} else {
+		// Do nothing for now. This will be implemented as part of W-15639759
+	}
+}
+
+async function runDfaOnWorkspace(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel) {
+	await vscode.window.withProgress({
+		location: vscode.ProgressLocation.Window,
+		title: messages.graphEngine.spinnerText,
+		cancellable: true
+	}, async (progress, token) => {
+		token.onCancellationRequested(async () => {
+			await _stopExistingDfaRun(context, outputChannel);
+		});
+		customCancellationToken = new vscode.CancellationTokenSource();
+		customCancellationToken.token.onCancellationRequested(async () => {
+			customCancellationToken?.dispose();
+			customCancellationToken = null;
+			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+			return;
+		});
+		// Pull out the file from the target and use it to identify the project directory.
+		const projectDir: string[] = vscode.workspace.workspaceFolders?.map(folder => folder.uri.path);
+
+		if (projectDir.length === 0) {
+			void vscode.window.showWarningMessage('***No project directory could be identified. Not proceeding with DFA run.***');
+			return; 
+		}
+
+		// We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
+		// the root directory of that project as the projectDir argument to run DFA.
+		return _runAndDisplayDfa(context, {
+			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
+			outputChannel,
+		}, customCancellationToken, null, projectDir[0]);
+	});
+}
+
+function violationsCacheExists() {
+	// Returns false for now. Actual cache check will be performed as part of W-15639759.
+	return false;
 }
 
 export function _removeDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
@@ -273,7 +344,7 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: 
  * @param runInfo.outputChannel The output channel where information should be logged as needed
  * @param runInfo.commandName The specific command being run
  */
-export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo, cancelToken: vscode.CancellationTokenSource): Promise<void> {
+export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo, cancelToken: vscode.CancellationTokenSource, methodLevelTarget: string, projectDir: string): Promise<void> {
 	const {
 		outputChannel,
 		commandName
@@ -281,12 +352,7 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
-		// Get the targeted method.
-		const methodLevelTarget: string = await targeting.getSelectedMethod();
-		// Pull out the file from the target and use it to identify the project directory.
-		const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
-		const projectDir: string = targeting.getProjectDir(currentFile);
-		const results: string = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
+		const results = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
 		if (results.length > 0) {
 			const panel = vscode.window.createWebviewPanel(
 				'dfaResults',

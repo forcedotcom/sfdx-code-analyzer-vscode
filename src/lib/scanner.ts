@@ -58,7 +58,6 @@ export class ScanRunner {
     private createDfaArgArray(targets: string[], projectDir: string): string[] {
         const args: string[] = [
             'scanner', 'run', 'dfa',
-            '--target', `${targets.join(',')}`,
             `--projectdir`, projectDir,
             // NOTE: For now, we're using HTML output since it's the easiest to display to the user.
             //       This is exceedingly likely to change as we refine and polish the extension.
@@ -69,6 +68,11 @@ export class ScanRunner {
             //       implementation, but we may wish to rethink this in the future as we polish things.
             `--json`
         ];
+
+        if (targets && targets.filter(target => target != null).length > 0) {
+            args.push('--target', `${targets.join(',')}`);
+        }
+
         // There are a number of custom settings that we need to check too.
         // First we should check whether warning violations are disabled.
         if (SettingsManager.getGraphEngineDisableWarningViolations()) {

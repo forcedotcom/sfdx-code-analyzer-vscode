@@ -246,7 +246,7 @@ suite('Extension Test Suite', () => {
 				await _runAndDisplayDfa(null, {
 					commandName: fakeTelemetryName,
 					outputChannel
-				}, null);
+				}, null, 'someMethod', 'some/project/dir');
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
@@ -272,7 +272,7 @@ suite('Extension Test Suite', () => {
 					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName,
 						outputChannel
-					}, null);
+					}, null, 'someMethod', 'some/project/dir');
 				} catch (e) {
 					err = e;
 				}

@@ -93,6 +93,10 @@
             {
                 "command": "sfca.removeDiagnosticsOnSelectedFile",
                 "title": "SFDX: Clear Code Analyzer violations from selected files or folders"
+            },
+            {
+                "command": "sfca.runDfa",
+                "title": "***SFDX: Run Graph-Engine Based Analysis***"
             }
         ],
         "configuration": {
@@ -160,6 +164,10 @@
                 },
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
+                    "when": "false"
+                },
+                {
+                    "command": "sfca.runDfa",
                     "when": "false"
                 },
                 {
