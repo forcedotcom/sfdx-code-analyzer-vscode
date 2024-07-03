@@ -182,9 +182,8 @@ async function runDfaOnWorkspace(context: vscode.ExtensionContext, outputChannel
 			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
 			return;
 		});
-		// Pull out the file from the target and use it to identify the project directory.
-		const projectDir: string[] = vscode.workspace.workspaceFolders?.map(folder => folder.uri.path);
 
+		const projectDir: string[] = vscode.workspace.workspaceFolders?.map(folder => folder.uri.path);
 		if (projectDir.length === 0) {
 			void vscode.window.showWarningMessage('***No project directory could be identified. Not proceeding with DFA run.***');
 			return; 
