@@ -143,26 +143,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 }
 
 async function _runDfa(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel) {
-	const choice = await vscode.window.showQuickPick(
-		["***Yes***", "***No***"],
-		{
-			placeHolder: "***Re-run previously failed violations only?***",
-			canPickMany: false,
-			ignoreFocusOut: true
+	if (violationsCacheExists()) {
+		const choice = await vscode.window.showQuickPick(
+			['***Yes***', '***No***'],
+			{
+				placeHolder: '***We identified a previous Salesforce Graph Engine run. Do you want to only run the previously failed violations from that run?***',
+				canPickMany: false,
+				ignoreFocusOut: true
+			}
+		);
+
+		// Default to "Yes" if no choice is made
+		const rerunFailedOnly = choice == '***Yes***';
+		if (rerunFailedOnly) {
+			// Do nothing for now. This will be implemented as part of W-15639759
+			return;
+		} else {
+			void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background. You can cancel this by clicking on the status progress.***');
+			await runDfaOnWorkspace(context, outputChannel);
 		}
-	);
-
-	// Default to "Yes" if no choice is made
-	const rerunFailedOnly = choice !== "Yes";
-
-	if (!rerunFailedOnly) {
-		void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background. You can cancel this by clicking on the status progress.***');
-		await runDfaOnWorkspace(context, outputChannel);
-	} else if (!violationsCacheExists()) {
-		void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background since no existing cache found. You can cancel this by clicking on the status progress.***');
-		await runDfaOnWorkspace(context, outputChannel);
 	} else {
-		// Do nothing for now. This will be implemented as part of W-15639759
+		await runDfaOnWorkspace(context, outputChannel);
 	}
 }
 
@@ -183,24 +184,18 @@ async function runDfaOnWorkspace(context: vscode.ExtensionContext, outputChannel
 			return;
 		});
 
-		const projectDir: string[] = vscode.workspace.workspaceFolders?.map(folder => folder.uri.path);
-		if (projectDir.length === 0) {
-			void vscode.window.showWarningMessage('***No project directory could be identified. Not proceeding with DFA run.***');
-			return; 
-		}
-
 		// We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
 		// the root directory of that project as the projectDir argument to run DFA.
 		return _runAndDisplayDfa(context, {
 			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
 			outputChannel,
-		}, customCancellationToken, null, projectDir[0]);
+		}, customCancellationToken, null, targeting.getProjectDir());
 	});
 }
 
 function violationsCacheExists() {
-	// Returns false for now. Actual cache check will be performed as part of W-15639759.
-	return false;
+	// Returns true for now. Actual cache check will be performed as part of W-15639759.
+	return true;
 }
 
 export function _removeDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
