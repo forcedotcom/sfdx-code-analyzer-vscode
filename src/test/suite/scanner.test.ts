@@ -240,13 +240,14 @@ suite('ScanRunner', () => {
             expect(args[0]).to.equal('scanner', 'Wrong arg');
 			expect(args[1]).to.equal('run', 'Wrong arg');
 			expect(args[2]).to.equal('dfa', 'Wrong arg');
-            expect(args[3]).to.equal('--target', 'Wrong arg');
-            expect(args[4]).to.equal(targets.join(','), 'Wrong arg');
-            expect(args[5]).to.equal('--projectdir', 'Wrong arg');
-            expect(args[6]).to.equal(projectDir, 'Wrong arg');
-            expect(args[7]).to.equal('--format', 'Wrong arg');
-            expect(args[8]).to.equal('html', 'Wrong arg');
-            expect(args[9]).to.equal('--json', 'Wrong arg');
+            expect(args[3]).to.equal('--projectdir', 'Wrong arg');
+            expect(args[4]).to.equal(projectDir, 'Wrong arg');
+            expect(args[5]).to.equal('--format', 'Wrong arg');
+            expect(args[6]).to.equal('html', 'Wrong arg');
+            expect(args[7]).to.equal('--json', 'Wrong arg');
+            expect(args[8]).to.equal('--target', 'Wrong arg');
+            expect(args[9]).to.equal(targets.join(','), 'Wrong arg');
+
 
             return args;
         }
@@ -279,6 +280,42 @@ suite('ScanRunner', () => {
             teardown(() => {
                 // Revert any stubbing we did with Sinon.
                 Sinon.restore();
+            });
+
+            test('Ignore target when it is empty', () => {
+                // ===== SETUP =====
+                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
+                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
+                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
+                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+                const emptyTargets = [];
+
+                // ===== TEST =====
+                // Call the test method helper.
+                const scanner: ScanRunner = new ScanRunner();
+                const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
+
+                // ===== ASSERTIONS =====
+                // Verify that the right arguments were created.
+                expect(args).to.not.include('--target', '--target should be ignored when empty');
+            });
+
+            test('Ignore target when it contains only null entries', () => {
+                // ===== SETUP =====
+                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
+                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
+                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
+                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+                const emptyTargets = [null];
+
+                // ===== TEST =====
+                // Call the test method helper.
+                const scanner: ScanRunner = new ScanRunner();
+                const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
+
+                // ===== ASSERTIONS =====
+                // Verify that the right arguments were created.
+                expect(args).to.not.include('--target', '--target should be ignored when it contains null entry');
             });
 
             test('Disable Warning Violations', () => {
