@@ -8,3 +8,10 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
+CODEOWNERS
+code-fixtures/**
+coverage/**
+github-actions/**
+templates/**
+.git2gus/**
+.github/**
