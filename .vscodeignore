@@ -13,3 +13,5 @@ code-fixtures/**
 coverage/**
 github-actions/**
 templates/**
+.git2gus/**
+.github/**
