@@ -9,7 +9,7 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 CODEOWNERS
-code-fixtires/**
+code-fixtures/**
 coverage/**
 github-actions/**
 templates/**
