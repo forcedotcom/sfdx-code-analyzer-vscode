@@ -35,6 +35,10 @@ let diagnosticCollection: vscode.DiagnosticCollection = null;
 
 let customCancellationToken: vscode.CancellationTokenSource | null = null;
 
+// TODO: Make this a setting once Apex Guru integration is released. Until that point, this would be controlled by
+// this feature flag in code
+const apexGuruFeatureFlagEnabled = false;
+
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
  * The activation trigger can be changed by changing activationEvents in package.json
@@ -47,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	await CoreExtensionService.loadDependencies(context);
 
 	// Set the necessary flags to control showing the command
-	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', await _isApexGuruEnabledInOrg());
+	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', apexGuruFeatureFlagEnabled && await _isApexGuruEnabledInOrg());
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
@@ -145,14 +149,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	return Promise.resolve(context);
 }
 
-async function _isApexGuruEnabledInOrg(): Promise<boolean> {
-	const connection = await CoreExtensionService.getConnection();
-	const response:ApexGuruAuthResponse = await connection.request({
-		method: 'GET',
-		url: Constants.APEX_GURU_AUTH_ENDPOINT,
-		body: ''
-	});
-	return response.status == 'Success';
+export async function _isApexGuruEnabledInOrg(): Promise<boolean> {
+	try {
+		const connection = await CoreExtensionService.getConnection();
+		const response:ApexGuruAuthResponse = await connection.request({
+			method: 'GET',
+			url: Constants.APEX_GURU_AUTH_ENDPOINT,
+			body: ''
+		});
+		return response.status == 'Success';
+	} catch(e) {
+		// This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
+		// In all of these scenarios, we return false.
+		return false;
+	}
 }
 
 async function _runDfa(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel) {
