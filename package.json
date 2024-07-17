@@ -204,7 +204,7 @@
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                    "when": "false && sfca.apexGuruEnabled"
+                    "when": "sfca.apexGuruEnabled"
                 }
             ]
         },
