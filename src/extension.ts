@@ -12,7 +12,7 @@ import {ScanRunner} from './lib/scanner';
 import {SettingsManager} from './lib/settings';
 import {SfCli} from './lib/sf-cli';
 
-import {RuleResult} from './types';
+import {RuleResult, ApexGuruAuthResponse} from './types';
 import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
@@ -45,6 +45,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context);
+
+	// Set the necessary flags to control showing the command
+	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', await _isApexGuruEnabledInOrg());
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
@@ -140,6 +143,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+async function _isApexGuruEnabledInOrg(): Promise<boolean> {
+	const connection = await CoreExtensionService.getConnection();
+	const response:ApexGuruAuthResponse = await connection.request({
+		method: 'GET',
+		url: Constants.APEX_GURU_AUTH_ENDPOINT,
+		body: ''
+	});
+	return response.status == 'Success';
 }
 
 async function _runDfa(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel) {

@@ -97,6 +97,10 @@
             {
                 "command": "sfca.runDfa",
                 "title": "***SFDX: Run Graph-Engine Based Analysis***"
+            },
+            {
+                "command": "sfca.runApexGuruAnalysisOnSelectedFile",
+                "title": "***SFDX: Run Apex Guru Analysis***"
             }
         ],
         "configuration": {
@@ -197,6 +201,10 @@
                 {
                     "command": "sfca.removeDiagnosticsOnSelectedFile",
                     "when": "true"
+                },
+                {
+                    "command": "sfca.runApexGuruAnalysisOnSelectedFile",
+                    "when": "false && sfca.apexGuruEnabled"
                 }
             ]
         },

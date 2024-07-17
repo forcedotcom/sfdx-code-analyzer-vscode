@@ -5,8 +5,10 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
+import { Event } from 'vscode';
 import { satisfies } from 'semver';
-import {messages} from './messages';
+import { messages } from './messages';
+import { AuthFields } from '../types';
 
 import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
 
@@ -17,12 +19,14 @@ import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './co
 export class CoreExtensionService {
 	private static initialized = false;
 	private static telemetryService: CoreTelemetryService;
+	private static workspaceContext: WorkspaceContext;
 
 	public static async loadDependencies(context: vscode.ExtensionContext): Promise<void> {
 		if (!CoreExtensionService.initialized) {
 			const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
 			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context);
+			CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext);
 			CoreExtensionService.initialized = true;
 		}
 	}
@@ -75,6 +79,13 @@ export class CoreExtensionService {
 		}
 	}
 
+	private static initializeWorkspaceContext(workspaceContext: WorkspaceContext | undefined) {
+		if (!workspaceContext) {
+			throw new Error('***workspace context not found***');
+		}
+		CoreExtensionService.workspaceContext = workspaceContext.getInstance(false);
+	}
+
 	/**
 	 *
 	 * @returns The {@link TelemetryService} object exported by the Core Extension if available, else null.
@@ -84,6 +95,19 @@ export class CoreExtensionService {
 			return CoreExtensionService.telemetryService;
 		}
 		throw new Error(messages.error.coreExtensionServiceUninitialized);
+	}
+
+	static async getWorkspaceOrgId(): Promise<string | undefined> {
+		if (CoreExtensionService.initialized) {
+			const connection = await CoreExtensionService.workspaceContext.getConnection();
+			return connection.getAuthInfoFields().orgId ?? '';
+		}
+		throw new Error('***Org not initialized***');
+	}
+
+	static async getConnection(): Promise<Connection> {
+		const connection = await CoreExtensionService.workspaceContext.getConnection();
+		return connection;
 	}
 }
 
@@ -139,5 +163,27 @@ interface CoreTelemetryService {
 interface CoreExtensionApi {
 	services: {
 		TelemetryService: CoreTelemetryService;
+		WorkspaceContext: WorkspaceContext;
 	}
 }
+
+interface WorkspaceContext {
+	readonly onOrgChange: Event<{
+	username?: string;
+	alias?: string;
+	}>;
+	getInstance(forceNew: boolean): WorkspaceContext;
+	getConnection(): Promise<Connection>;
+	username(): string | undefined;
+	alias(): string | undefined;
+}
+
+interface Connection {
+	instanceUrl: string;
+	getApiVersion(): string;
+	getUsername(): string | undefined;
+	getAuthInfoFields(): AuthFields;
+	request<T>(options: { method: string; url: string; body: string; headers?: Record<string, string> }): Promise<T>;
+}
+  
+  
