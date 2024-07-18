@@ -153,8 +153,6 @@ suite('Extension Test Suite', () => {
 
 	suite('#_runAndDisplayPathless()', () => {
 		suite('Error handling', () => {
-			const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
-			outputChannel.clear();
 			let commandTelemStub: Sinon.SinonStub;
 			let exceptionTelemStub: Sinon.SinonStub;
 			setup(() => {
@@ -177,8 +175,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command.
 				// The arguments do not matter.
 				await _runAndDisplayPathless(null, {
-					commandName: fakeTelemetryName,
-					outputChannel
+					commandName: fakeTelemetryName
 				});
 
 				// ===== ASSERTIONS =====
@@ -202,8 +199,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command.
 				// The arguments do not matter.
 				await _runAndDisplayPathless(null, {
-					commandName: fakeTelemetryName,
-					outputChannel
+					commandName: fakeTelemetryName
 				});
 
 				// ===== ASSERTIONS =====
@@ -219,9 +215,6 @@ suite('Extension Test Suite', () => {
 
 	suite('#_runAndDisplayDfa()', () => {
 		suite('Error handling', () => {
-			const statusBar: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-			const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
-			outputChannel.clear();
 			let commandTelemStub: Sinon.SinonStub;
 			let exceptionTelemStub: Sinon.SinonStub;
 
@@ -244,8 +237,7 @@ suite('Extension Test Suite', () => {
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
 				await _runAndDisplayDfa(null, {
-					commandName: fakeTelemetryName,
-					outputChannel
+					commandName: fakeTelemetryName
 				}, null, 'someMethod', 'some/project/dir');
 
 				// ===== ASSERTIONS =====
@@ -270,8 +262,7 @@ suite('Extension Test Suite', () => {
 				let err: Error = null;
 				try {
 					await _runAndDisplayDfa(null, {
-						commandName: fakeTelemetryName,
-						outputChannel
+						commandName: fakeTelemetryName
 					}, null, 'someMethod', 'some/project/dir');
 				} catch (e) {
 					err = e;
@@ -335,7 +326,6 @@ suite('Extension Test Suite', () => {
 	suite('#_shouldProceedWithDfaRun()', () => {
 		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
-		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 
 		suiteSetup(async function () {
 			this.timeout(10000);
@@ -371,7 +361,6 @@ suite('Extension Test Suite', () => {
 	suite('#_stopExistingDfaRun()', () => {
         let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
-        const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 
         suiteSetup(async function () {
             this.timeout(10000);
@@ -386,13 +375,13 @@ suite('Extension Test Suite', () => {
 
         test('Cache cleared as part of stopping the existing DFA run', async() => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-            _stopExistingDfaRun(context, outputChannel);
+			_stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
         test('Cache stays cleared when there are no existing DFA runs', async() => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            _stopExistingDfaRun(context, outputChannel);
+            _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
@@ -491,7 +480,6 @@ suite('Extension Test Suite', () => {
 	suite('_clearDiagnosticsForSelectedFiles Test Suite', () => {
 		let diagnosticCollection: vscode.DiagnosticCollection;
 		let runInfo: RunInfo;
-		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 		let getTargetsStub: Sinon.SinonStub;
 	
 		suiteSetup(() => {
@@ -499,8 +487,7 @@ suite('Extension Test Suite', () => {
 			diagnosticCollection = vscode.languages.createDiagnosticCollection();
 			runInfo = {
 				commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
-				diagnosticCollection,
-				outputChannel
+				diagnosticCollection
 			};
 			getTargetsStub = Sinon.stub(targeting, 'getTargets');
 		});
