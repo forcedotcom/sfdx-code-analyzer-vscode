@@ -9,9 +9,9 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, _isApexGuruEnabledInOrg, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
-import {TelemetryService} from '../../lib/core-extension-service';
+import {CoreExtensionService, TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
 
@@ -153,8 +153,6 @@ suite('Extension Test Suite', () => {
 
 	suite('#_runAndDisplayPathless()', () => {
 		suite('Error handling', () => {
-			const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
-			outputChannel.clear();
 			let commandTelemStub: Sinon.SinonStub;
 			let exceptionTelemStub: Sinon.SinonStub;
 			setup(() => {
@@ -177,8 +175,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command.
 				// The arguments do not matter.
 				await _runAndDisplayPathless(null, {
-					commandName: fakeTelemetryName,
-					outputChannel
+					commandName: fakeTelemetryName
 				});
 
 				// ===== ASSERTIONS =====
@@ -202,8 +199,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command.
 				// The arguments do not matter.
 				await _runAndDisplayPathless(null, {
-					commandName: fakeTelemetryName,
-					outputChannel
+					commandName: fakeTelemetryName
 				});
 
 				// ===== ASSERTIONS =====
@@ -219,9 +215,6 @@ suite('Extension Test Suite', () => {
 
 	suite('#_runAndDisplayDfa()', () => {
 		suite('Error handling', () => {
-			const statusBar: vscode.StatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-			const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
-			outputChannel.clear();
 			let commandTelemStub: Sinon.SinonStub;
 			let exceptionTelemStub: Sinon.SinonStub;
 
@@ -244,8 +237,7 @@ suite('Extension Test Suite', () => {
 				// ===== TEST =====
 				// Attempt to run the appropriate extension command.
 				await _runAndDisplayDfa(null, {
-					commandName: fakeTelemetryName,
-					outputChannel
+					commandName: fakeTelemetryName
 				}, null, 'someMethod', 'some/project/dir');
 
 				// ===== ASSERTIONS =====
@@ -270,8 +262,7 @@ suite('Extension Test Suite', () => {
 				let err: Error = null;
 				try {
 					await _runAndDisplayDfa(null, {
-						commandName: fakeTelemetryName,
-						outputChannel
+						commandName: fakeTelemetryName
 					}, null, 'someMethod', 'some/project/dir');
 				} catch (e) {
 					err = e;
@@ -335,7 +326,6 @@ suite('Extension Test Suite', () => {
 	suite('#_shouldProceedWithDfaRun()', () => {
 		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
-		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 
 		suiteSetup(async function () {
 			this.timeout(10000);
@@ -371,7 +361,6 @@ suite('Extension Test Suite', () => {
 	suite('#_stopExistingDfaRun()', () => {
         let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
-        const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 
         suiteSetup(async function () {
             this.timeout(10000);
@@ -386,16 +375,90 @@ suite('Extension Test Suite', () => {
 
         test('Cache cleared as part of stopping the existing DFA run', async() => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-            _stopExistingDfaRun(context, outputChannel);
+			_stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
         test('Cache stays cleared when there are no existing DFA runs', async() => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            _stopExistingDfaRun(context, outputChannel);
+            _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
+
+	suite('#_isApexGuruEnabledInOrg', () => {
+		let getConnectionStub: Sinon.SinonStub;
+		let requestStub: Sinon.SinonStub;
+	  
+		setup(() => {
+		  getConnectionStub = Sinon.stub(CoreExtensionService, 'getConnection');
+		  requestStub = Sinon.stub();
+		});
+	  
+		teardown(() => {
+		  Sinon.restore();
+		});
+	  
+		test('Returns true if response status is Success', async () => {
+		  // ===== SETUP =====
+		  getConnectionStub.resolves({
+			request: requestStub.resolves({ status: 'Success' })
+		  });
+	  
+		  // ===== TEST =====
+		  const result = await _isApexGuruEnabledInOrg();
+	  
+		  // ===== ASSERTIONS =====
+		  expect(result).to.be.true;
+		  Sinon.assert.calledOnce(getConnectionStub);
+		  Sinon.assert.calledOnce(requestStub);
+		  Sinon.assert.calledWith(requestStub, {
+			method: 'GET',
+			url: Constants.APEX_GURU_AUTH_ENDPOINT,
+			body: ''
+		  });
+		});
+	  
+		test('Returns false if response status is not Success', async () => {
+		  // ===== SETUP =====
+		  getConnectionStub.resolves({
+			request: requestStub.resolves({ status: 'Failure' })
+		  });
+	  
+		  // ===== TEST =====
+		  const result = await _isApexGuruEnabledInOrg();
+	  
+		  // ===== ASSERTIONS =====
+		  expect(result).to.be.false;
+		  Sinon.assert.calledOnce(getConnectionStub);
+		  Sinon.assert.calledOnce(requestStub);
+		  Sinon.assert.calledWith(requestStub, {
+			method: 'GET',
+			url: Constants.APEX_GURU_AUTH_ENDPOINT,
+			body: ''
+		  });
+		});
+	  
+		test('Returns false if an error is thrown', async () => {
+		  // ===== SETUP =====
+		  getConnectionStub.resolves({
+			request: requestStub.rejects(new Error('Resource not found'))
+		  });
+	  
+		  // ===== TEST =====
+		  const result = await _isApexGuruEnabledInOrg();
+	  
+		  // ===== ASSERTIONS =====
+		  expect(result).to.be.false;
+		  Sinon.assert.calledOnce(getConnectionStub);
+		  Sinon.assert.calledOnce(requestStub);
+		  Sinon.assert.calledWith(requestStub, {
+			method: 'GET',
+			url: Constants.APEX_GURU_AUTH_ENDPOINT,
+			body: ''
+		  });
+		});
+	  });
 
 	suite('#isValidFileForAnalysis', () => {
 		test('Returns true for valid files', async() => {
@@ -417,7 +480,6 @@ suite('Extension Test Suite', () => {
 	suite('_clearDiagnosticsForSelectedFiles Test Suite', () => {
 		let diagnosticCollection: vscode.DiagnosticCollection;
 		let runInfo: RunInfo;
-		const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
 		let getTargetsStub: Sinon.SinonStub;
 	
 		suiteSetup(() => {
@@ -425,8 +487,7 @@ suite('Extension Test Suite', () => {
 			diagnosticCollection = vscode.languages.createDiagnosticCollection();
 			runInfo = {
 				commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
-				diagnosticCollection,
-				outputChannel
+				diagnosticCollection
 			};
 			getTargetsStub = Sinon.stub(targeting, 'getTargets');
 		});
