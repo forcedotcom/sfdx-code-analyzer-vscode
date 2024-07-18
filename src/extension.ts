@@ -34,10 +34,6 @@ let diagnosticCollection: vscode.DiagnosticCollection = null;
 
 let customCancellationToken: vscode.CancellationTokenSource | null = null;
 
-// TODO: Make this a setting once Apex Guru integration is released. Until that point, this would be controlled by
-// this feature flag in code
-const apexGuruFeatureFlagEnabled = true;
-
 let outputChannel: vscode.LogOutputChannel;
 
 /**
@@ -54,10 +50,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	outputChannel.show();	
 
 	// We need to do this first in case any other services need access to those provided by the core extension.
-	await CoreExtensionService.loadDependencies(context);
+	await CoreExtensionService.loadDependencies(context, outputChannel);
 
 	// Set the necessary flags to control showing the command
-	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', apexGuruFeatureFlagEnabled && await _isApexGuruEnabledInOrg());
+	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await _isApexGuruEnabledInOrg());
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');

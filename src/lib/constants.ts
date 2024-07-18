@@ -34,3 +34,6 @@ export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
 
 // apex guru APIS
 export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
+
+// feature gates
+export const APEX_GURU_FEATURE_FLAG_ENABLED = false;

@@ -10,8 +10,7 @@ import { satisfies } from 'semver';
 import { messages } from './messages';
 import { AuthFields } from '../types';
 
-import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
-
+import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, APEX_GURU_FEATURE_FLAG_ENABLED } from './constants';
 /**
  * Manages access to the services exported by the Salesforce VSCode Extension Pack's core extension.
  * If the extension pack isn't installed, only performs no-ops.
@@ -21,12 +20,14 @@ export class CoreExtensionService {
 	private static telemetryService: CoreTelemetryService;
 	private static workspaceContext: WorkspaceContext;
 
-	public static async loadDependencies(context: vscode.ExtensionContext): Promise<void> {
+	public static async loadDependencies(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
 		if (!CoreExtensionService.initialized) {
 			const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
-			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context);
-			CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext);
+			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context, outputChannel);
+			if (APEX_GURU_FEATURE_FLAG_ENABLED) {
+				CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
+			}
 			CoreExtensionService.initialized = true;
 		}
 	}
@@ -69,9 +70,10 @@ export class CoreExtensionService {
 	 * @param telemetryService
 	 * @param context
 	 */
-	private static async initializeTelemetryService(telemetryService: CoreTelemetryService | undefined, context: vscode.ExtensionContext): Promise<void> {
+	private static async initializeTelemetryService(telemetryService: CoreTelemetryService | undefined, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
 		if (!telemetryService) {
-			console.log(`Telemetry service not present in core dependency API. Using null instead.`);
+			outputChannel.warn(`Telemetry service not present in core dependency API. Using null instead.`);
+			outputChannel.show();
 			CoreExtensionService.telemetryService = null;
 		} else {
 			CoreExtensionService.telemetryService = telemetryService.getInstance();
@@ -79,9 +81,10 @@ export class CoreExtensionService {
 		}
 	}
 
-	private static initializeWorkspaceContext(workspaceContext: WorkspaceContext | undefined) {
+	private static initializeWorkspaceContext(workspaceContext: WorkspaceContext | undefined, outputChannel: vscode.LogOutputChannel) {
 		if (!workspaceContext) {
-			throw new Error('***workspace context not found***');
+			outputChannel.warn('***Workspace Context not present in core dependency API. Check if the Core Extension installed.***');
+			outputChannel.show();
 		}
 		CoreExtensionService.workspaceContext = workspaceContext.getInstance(false);
 	}
