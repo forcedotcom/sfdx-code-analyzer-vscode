@@ -72,7 +72,7 @@ export class CoreExtensionService {
 	 */
 	private static async initializeTelemetryService(telemetryService: CoreTelemetryService | undefined, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
 		if (!telemetryService) {
-			outputChannel.warn(`Telemetry service not present in core dependency API. Using null instead.`);
+			outputChannel.append(`Telemetry service not present in core dependency API. Using null instead.`);
 			outputChannel.show();
 			CoreExtensionService.telemetryService = null;
 		} else {
