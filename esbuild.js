@@ -10,7 +10,7 @@ const { build } = require('esbuild');
 const production = process.argv.includes('--production');
 
 build({
-  entryPoints: ['src/extension.ts'],
+  entryPoints: ['out/extension.js'],
   bundle: true,
   platform: 'node',
   target: 'es2020',
