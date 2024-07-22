@@ -15,3 +15,5 @@ github-actions/**
 templates/**
 .git2gus/**
 .github/**
+out/**
+node_modules/
