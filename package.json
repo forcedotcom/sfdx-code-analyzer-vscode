@@ -76,7 +76,7 @@
     "activationEvents": [
         "workspaceContains:sfdx-project.json"
     ],
-    "main": "./dist/extension.js",
+    "main": "./out/extension.js",
     "contributes": {
         "commands": [
             {

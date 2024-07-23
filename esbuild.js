@@ -14,11 +14,12 @@ build({
   bundle: true,
   platform: 'node',
   target: 'es2020',
-  outdir: 'dist',
+  outfile: 'out/extension.js',
   format: 'cjs',
   external: ['vscode'],
   sourcemap: !production,
-  minify: production
+  minify: production,
+  allowOverwrite: true
 }).catch((e) => {
   console.error(e);
   NodeJS.process.exit(1);
