@@ -9,6 +9,11 @@ const { build } = require('esbuild');
 
 const production = process.argv.includes('--production');
 
+/**
+ * TODO: We have entryPoints and outfile to be the same since runTests looks for the extension's main to be at
+ * 'out/' as defined in package.json.We should refactor the tests not to rely on package.json and until then,
+ * the entryPoints and outfile will be the same with allowOverwrite set ti true.
+ */
 build({
   entryPoints: ['out/extension.js'],
   bundle: true,
