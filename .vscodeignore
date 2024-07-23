@@ -3,6 +3,7 @@
 src/**
 .gitignore
 .yarnrc
+.sfdx
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/.eslintrc.json
@@ -15,3 +16,6 @@ github-actions/**
 templates/**
 .git2gus/**
 .github/**
+!out/extension.js
+out/**
+node_modules/
