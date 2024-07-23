@@ -71,12 +71,14 @@ export class CoreExtensionService {
 	 * @param context
 	 */
 	private static async initializeTelemetryService(telemetryService: CoreTelemetryService | undefined, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
+		const { name } = context.extension.packageJSON as { name: string };
+
 		if (!telemetryService) {
 			outputChannel.append(`Telemetry service not present in core dependency API. Using null instead.`);
 			outputChannel.show();
 			CoreExtensionService.telemetryService = null;
 		} else {
-			CoreExtensionService.telemetryService = telemetryService.getInstance();
+			CoreExtensionService.telemetryService = telemetryService.getInstance(name);
 			await CoreExtensionService.telemetryService.initializeService(context);
 		}
 	}
@@ -149,7 +151,7 @@ export interface Properties {
 interface CoreTelemetryService {
 	extensionName: string;
 	isTelemetryEnabled(): boolean;
-	getInstance(): CoreTelemetryService;
+	getInstance(extensionName: string): CoreTelemetryService;
 	initializeService(extensionContext: vscode.ExtensionContext): Promise<void>;
 	sendExtensionActivationEvent(hrstart: [number, number]): void;
 	sendExtensionDeactivationEvent(): void;
