@@ -1,7 +1,7 @@
-# Salesforce Code Analyzer Extension for Visual Studio Code (Beta)
+# Salesforce Code Analyzer Extension for Visual Studio Code
 Scan your code against multiple rule engines to produce lists of violations and improve your code.
 
-The Salesforce Code Analyzer Extension (beta) enables Visual Studio (VS) Code to use Salesforce Code Analyzer to interact with your code.
+The Salesforce Code Analyzer Extension enables Visual Studio (VS) Code to use Salesforce Code Analyzer to interact with your code.
 
 # Documentation
 For documentation, visit the [Salesforce Code Analyzer VS Code Extension](https://forcedotcom.github.io/sfdx-scanner/en/v3.x/code-analyzer-vs-code-extension/) documentation.
@@ -22,11 +22,11 @@ Currently, Visual Studio Code extensions aren't signed or verified on the Micros
 
 ---
 
-**Terms of Use for the Code Analyzer VS Code Extension (Beta)**
+**Terms of Use for the Code Analyzer VS Code Extension**
 
 Copyright 2023 Salesforce, Inc. All rights reserved.
 
-These Terms of Use govern the download, installation, and/or use of the beta Code Analyzer VS Code Extension provided by Salesforce, Inc. (“Salesforce”) (the “Extension”).
+These Terms of Use govern the download, installation, and/or use of the Code Analyzer VS Code Extension provided by Salesforce, Inc. (“Salesforce”) (the “Extension”).
 
 **License**: Salesforce grants you a non-transferable, non-sublicensable, non-exclusive license to use the Extension, at no charge, subject to these Terms. Salesforce reserves all rights, title, and interest in and to the Extension.
 
