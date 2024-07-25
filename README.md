@@ -4,7 +4,7 @@ Scan your code against multiple rule engines to produce lists of violations and 
 The Salesforce Code Analyzer Extension enables Visual Studio (VS) Code to use Salesforce Code Analyzer to interact with your code.
 
 # Documentation
-For documentation, visit the [Salesforce Code Analyzer VS Code Extension](https://forcedotcom.github.io/sfdx-scanner/en/v3.x/code-analyzer-vs-code-extension/) documentation.
+For documentation, visit the [Salesforce Code Analyzer VS Code Extension](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer-vs-code-extension.html) documentation.
 
 # Bugs and Feedback
 To report issues with the Salesforce Code Analyzer VS Code Extension, create a [bug on Github](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues/new?assignees=&labels=&projects=&template=bug_report.md&title=%5BBUG%5D). To suggest a feature enhancement, create a [request on Github](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues/new?assignees=&labels=&projects=&template=feature_request.md&title=%5BFeature+Request%5D).
