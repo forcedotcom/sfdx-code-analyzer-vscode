@@ -63,12 +63,17 @@ export class DiagnosticManager {
             // appear in response to developer error, not user error.
             throw new Error('Diagnostics cannot be created from DFA violations');
         }
+
+        // Handle case where line or column is 0 by setting them to a default value (1-based index).
+        const line = violation.line > 0 ? violation.line : 1;
+        const column = violation.column > 0 ? violation.column : 1;
+
         // We always have the information we need to create the starting position.
-        const startPosition: vscode.Position = new vscode.Position(violation.line - 1, violation.column - 1);
+        const startPosition: vscode.Position = new vscode.Position(line - 1, column - 1);
         // We may or may not have the information for an end position.
         const endPosition: vscode.Position = new vscode.Position(
             // If we're missing an explicit end line, use the starting line.
-            (violation.endLine || violation.line) - 1,
+            (violation.endLine || line) - 1,
             // If we're missing an explicit end column, just highlight everything through the end of the line.
             violation.endColumn || Number.MAX_SAFE_INTEGER
         );

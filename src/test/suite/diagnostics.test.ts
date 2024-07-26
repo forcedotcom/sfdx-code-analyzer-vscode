@@ -209,6 +209,25 @@ suite('diagnostics.ts', () => {
                 expect(endingPosition.line).to.equal(spoofedViolation.line - 1, 'Wrong end line');
                 expect(endingPosition.character).to.equal(Number.MAX_SAFE_INTEGER, 'Wrong end column');
             });
+
+            test('Handles violation with line and column as 0', () => {
+                // ===== SETUP =====
+                const spoofedViolation: PathlessRuleViolation = JSON.parse(JSON.stringify(baseSpoofedViolation)) as PathlessRuleViolation;
+                spoofedViolation.line = 0;
+                spoofedViolation.column = 0;
+                const diagnosticManager: DiagnosticManager = new DiagnosticManager();
+            
+                // ===== TEST =====
+                const diagnostic: vscode.Diagnostic = (diagnosticManager as any).createDiagnostic("pmd", spoofedViolation);
+            
+                // ===== ASSERTIONS =====
+                const startingPosition: vscode.Position = diagnostic.range.start;
+                const endingPosition: vscode.Position = diagnostic.range.end;
+                expect(startingPosition.line).to.equal(0, 'Wrong starting line');
+                expect(startingPosition.character).to.equal(0, 'Wrong starting column');
+                expect(endingPosition.line).to.equal(0, 'Wrong end line');
+                expect(endingPosition.character).to.equal(Number.MAX_SAFE_INTEGER, 'Wrong end column');
+            });
         });
 
         suite('DFA violations', () => {
