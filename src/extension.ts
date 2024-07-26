@@ -45,7 +45,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	const extensionHrStart = process.hrtime();
 
 	// Define a log output channel that we can use, and clear it so it's fresh.
-	outputChannel = vscode.window.createOutputChannel('sfca', {log: true});
+	outputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
 	outputChannel.clear();
 	outputChannel.show();	
 
