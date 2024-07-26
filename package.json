@@ -81,23 +81,23 @@
         "commands": [
             {
                 "command": "sfca.runOnActiveFile",
-                "title": "SFDX: Scan current file with Code Analyzer"
+                "title": "SFDX: Scan Current File with Code Analyzer"
             },
             {
                 "command": "sfca.runOnSelected",
-                "title": "SFDX: Scan selected files or folders with Code Analyzer"
+                "title": "SFDX: Scan Selected Files or Folders with Code Analyzer"
             },
             {
                 "command": "sfca.runDfaOnSelectedMethod",
-                "title": "SFDX: Scan selected method with Graph Engine path-based analysis"
+                "title": "SFDX: Scan Selected Method with Graph Engine Path-Based Analysis"
             },
             {
                 "command": "sfca.removeDiagnosticsOnActiveFile",
-                "title": "SFDX: Clear Code Analyzer violations from current file"
+                "title": "SFDX: Clear Code Analyzer Violations from Current File"
             },
             {
                 "command": "sfca.removeDiagnosticsOnSelectedFile",
-                "title": "SFDX: Clear Code Analyzer violations from selected files or folders"
+                "title": "SFDX: Clear Code Analyzer Violations from Selected Files or Folders"
             },
             {
                 "command": "sfca.runDfa",
