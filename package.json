@@ -186,6 +186,10 @@
                 {
                     "command": "sfca.removeDiagnosticsOnSelectedFile",
                     "when": "false"
+                },
+                {
+                    "command": "sfca.runApexGuruAnalysisOnSelectedFile",
+                    "when": "false"
                 }
             ],
             "editor/context": [
