@@ -13,6 +13,7 @@ export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
 export const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
 export const COMMAND_RUN_ON_SELECTED = 'sfca.runOnSelected';
 export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
+export const COMMAND_RUN_DFA = 'sfca.runDfa';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE = 'sfca.removeDiagnosticsOnActiveFile';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE = 'sfca.removeDiagnosticsOnSelectedFile';
 export const COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange'
@@ -30,3 +31,9 @@ export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
 
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
+
+// apex guru APIS
+export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
+
+// feature gates
+export const APEX_GURU_FEATURE_FLAG_ENABLED = false;

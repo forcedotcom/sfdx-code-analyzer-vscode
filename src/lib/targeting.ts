@@ -138,7 +138,14 @@ function getNearestMethodSymbol(symbols: GenericSymbol[], cursorPosition: vscode
 /**
  * Get the project containing the specified file.
  */
-export function getProjectDir(targetFile: string): string {
+export function getProjectDir(targetFile?: string): string | undefined {
+    if (!targetFile) {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+            return workspaceFolders[0].uri.fsPath;
+        }
+        return undefined;
+    }
     const uri = vscode.Uri.file(targetFile);
     return vscode.workspace.getWorkspaceFolder(uri).uri.fsPath;
 }

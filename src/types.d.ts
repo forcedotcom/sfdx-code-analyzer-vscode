@@ -46,3 +46,36 @@ export type ExecutionResult = {
     warnings?: string[];
 	message?: string;
 };
+
+export type AuthFields = {
+	accessToken?: string;
+	alias?: string;
+	authCode?: string;
+	clientId?: string;
+	clientSecret?: string;
+	created?: string;
+	createdOrgInstance?: string;
+	devHubUsername?: string;
+	instanceUrl?: string;
+	instanceApiVersion?: string;
+	instanceApiVersionLastRetrieved?: string;
+	isDevHub?: boolean;
+	loginUrl?: string;
+	orgId?: string;
+	password?: string;
+	privateKey?: string;
+	refreshToken?: string;
+	scratchAdminUsername?: string;
+	snapshot?: string;
+	userId?: string;
+	username?: string;
+	usernames?: string[];
+	userProfileName?: string;
+	expirationDate?: string;
+	tracksSource?: boolean;
+};
+
+export type ApexGuruAuthResponse = {
+    status: string;
+}
+

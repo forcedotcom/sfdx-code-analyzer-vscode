@@ -18,6 +18,7 @@
         "out",
         "dist",
         "**/*.d.ts",
-        "src/test"
+        "src/test",
+        "esbuild.js"
     ]
 }

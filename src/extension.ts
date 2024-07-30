@@ -12,7 +12,7 @@ import {ScanRunner} from './lib/scanner';
 import {SettingsManager} from './lib/settings';
 import {SfCli} from './lib/sf-cli';
 
-import {RuleResult} from './types';
+import {RuleResult, ApexGuruAuthResponse} from './types';
 import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
@@ -23,7 +23,6 @@ import { SIGKILL } from 'constants';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
-	outputChannel: vscode.LogOutputChannel;
 	commandName: string;
 }
 
@@ -35,6 +34,8 @@ let diagnosticCollection: vscode.DiagnosticCollection = null;
 
 let customCancellationToken: vscode.CancellationTokenSource | null = null;
 
+let outputChannel: vscode.LogOutputChannel;
+
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
  * The activation trigger can be changed by changing activationEvents in package.json
@@ -43,8 +44,16 @@ let customCancellationToken: vscode.CancellationTokenSource | null = null;
 export async function activate(context: vscode.ExtensionContext): Promise<vscode.ExtensionContext> {
 	const extensionHrStart = process.hrtime();
 
+	// Define a log output channel that we can use, and clear it so it's fresh.
+	outputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
+	outputChannel.clear();
+	outputChannel.show();	
+
 	// We need to do this first in case any other services need access to those provided by the core extension.
-	await CoreExtensionService.loadDependencies(context);
+	await CoreExtensionService.loadDependencies(context, outputChannel);
+
+	// Set the necessary flags to control showing the command
+	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await _isApexGuruEnabledInOrg());
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
@@ -58,60 +67,51 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		})
 	);
 
-	// Define a log output channel that we can use, and clear it so it's fresh.
-	const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('sfca', {log: true});
-	outputChannel.clear();
-	outputChannel.show();
-
 	// Declare our commands.
 	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
 		return _runAndDisplayPathless([], {
 			commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
-			diagnosticCollection,
-			outputChannel
+			diagnosticCollection
 		});
 	});
 	const runOnSelected = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
 		return _runAndDisplayPathless(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], {
 			commandName: Constants.COMMAND_RUN_ON_SELECTED,
-			diagnosticCollection,
-			outputChannel
+			diagnosticCollection
 		});
 	});
 	const removeDiagnosticsOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE, async () => {
 		return _clearDiagnosticsForSelectedFiles([], {
 			commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
-			diagnosticCollection,
-			outputChannel
+			diagnosticCollection
 		});
 	});
 	const removeDiagnosticsOnSelectedFile = vscode.commands.registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
 		return _clearDiagnosticsForSelectedFiles(multiSelect && multiSelect.length > 0 ? multiSelect : [selection], {
 			commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE,
-			diagnosticCollection,
-			outputChannel
+			diagnosticCollection
 		});
 	});
 	const removeDiagnosticsInRange = vscode.commands.registerCommand(Constants.COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) => {
 		_removeDiagnosticsInRange(uri, range, diagnosticCollection);
 	});
 	outputChannel.appendLine(`Registered command as part of sfdx-code-analyzer-vscode activation.`);
-	registerScanOnSave(outputChannel);
-	registerScanOnOpen(outputChannel);
+	registerScanOnSave();
+	registerScanOnOpen();
 	outputChannel.appendLine('Registered scanOnSave as part of sfdx-code-analyzer-vscode activation.');
 
 	// It is possible that the cache was not cleared when VS Code exited the last time. Just to be on the safe side, we clear the DFA process cache at activation.
 	void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
-	const runDfaOnSelectedMethod = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
+	const runDfaOnSelectedMethodCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
 		if (await _shouldProceedWithDfaRun(context)) {
 			await vscode.window.withProgress({
 				location: vscode.ProgressLocation.Window,
 				title: messages.graphEngine.spinnerText,
 				cancellable: true
-			}, (progress, token) => {
+			}, async (progress, token) => {
 				token.onCancellationRequested(async () => {
-					await _stopExistingDfaRun(context, outputChannel);
+					await _stopExistingDfaRun(context);
 				});
 				customCancellationToken = new vscode.CancellationTokenSource();
 				customCancellationToken.token.onCancellationRequested(async () => {
@@ -120,17 +120,99 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 					await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
 					return;
 				});
+				const methodLevelTarget: string = await targeting.getSelectedMethod();
+				// Pull out the file from the target and use it to identify the project directory.
+				const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
+				const projectDir: string = targeting.getProjectDir(currentFile);
+
 				return _runAndDisplayDfa(context, {
-					commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD,
-					outputChannel
-				}, customCancellationToken);
+					commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD
+				}, customCancellationToken, methodLevelTarget, projectDir);
 			});
 		}
 	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethod, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
+
+	const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
+		await _runDfa(context);
+	});
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, runDfaOnWorkspaceCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+export async function _isApexGuruEnabledInOrg(): Promise<boolean> {
+	try {
+		const connection = await CoreExtensionService.getConnection();
+		const response:ApexGuruAuthResponse = await connection.request({
+			method: 'GET',
+			url: Constants.APEX_GURU_AUTH_ENDPOINT,
+			body: ''
+		});
+		return response.status == 'Success';
+	} catch(e) {
+		// This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
+		// In all of these scenarios, we return false.
+		const errMsg = e instanceof Error ? e.message : e as string;
+		outputChannel.error('***ApexGuru perm check failed with error:***' + errMsg);
+		outputChannel.show();
+		return false;
+	}
+}
+
+async function _runDfa(context: vscode.ExtensionContext) {
+	if (violationsCacheExists()) {
+		const choice = await vscode.window.showQuickPick(
+			['***Yes***', '***No***'],
+			{
+				placeHolder: '***We identified a previous Salesforce Graph Engine run. Do you want to only run the previously failed violations from that run?***',
+				canPickMany: false,
+				ignoreFocusOut: true
+			}
+		);
+
+		// Default to "Yes" if no choice is made
+		const rerunFailedOnly = choice == '***Yes***';
+		if (rerunFailedOnly) {
+			// Do nothing for now. This will be implemented as part of W-15639759
+			return;
+		} else {
+			void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background. You can cancel this by clicking on the status progress.***');
+			await runDfaOnWorkspace(context);
+		}
+	} else {
+		await runDfaOnWorkspace(context);
+	}
+}
+
+async function runDfaOnWorkspace(context: vscode.ExtensionContext) {
+	await vscode.window.withProgress({
+		location: vscode.ProgressLocation.Window,
+		title: messages.graphEngine.spinnerText,
+		cancellable: true
+	}, async (progress, token) => {
+		token.onCancellationRequested(async () => {
+			await _stopExistingDfaRun(context);
+		});
+		customCancellationToken = new vscode.CancellationTokenSource();
+		customCancellationToken.token.onCancellationRequested(async () => {
+			customCancellationToken?.dispose();
+			customCancellationToken = null;
+			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+			return;
+		});
+
+		// We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
+		// the root directory of that project as the projectDir argument to run DFA.
+		return _runAndDisplayDfa(context, {
+			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD
+		}, customCancellationToken, null, targeting.getProjectDir());
+	});
+}
+
+function violationsCacheExists() {
+	// Returns true for now. Actual cache check will be performed as part of W-15639759.
+	return true;
 }
 
 export function _removeDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
@@ -143,7 +225,7 @@ function filterOutDiagnosticsInRange(currentDiagnostics: readonly vscode.Diagnos
 	return currentDiagnostics.filter(diagnostic => (diagnostic.range.start.line != range.start.line && diagnostic.range.end.line != range.end.line));
 }
 
-export async function _stopExistingDfaRun(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
+export async function _stopExistingDfaRun(context: vscode.ExtensionContext): Promise<void> {
 	const pid = context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS);
 	if (pid) {
 		try {
@@ -174,7 +256,7 @@ export async function verifyPluginInstallation(): Promise<void> {
 	}
 }
 
-export function registerScanOnSave(outputChannel: vscode.LogOutputChannel) {
+export function registerScanOnSave() {
 	vscode.workspace.onDidSaveTextDocument(
 		async (textDocument: vscode.TextDocument) => {
 			const documentUri = textDocument.uri;
@@ -183,15 +265,14 @@ export function registerScanOnSave(outputChannel: vscode.LogOutputChannel) {
 			) {
 				await _runAndDisplayPathless([documentUri], {
 					commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
-					diagnosticCollection,
-					outputChannel
+					diagnosticCollection
 				});
 			}
 		}
 	);
 }
 
-export function registerScanOnOpen(outputChannel: vscode.LogOutputChannel) {
+export function registerScanOnOpen() {
 	vscode.workspace.onDidOpenTextDocument(
 		async (textDocument: vscode.TextDocument) => {
 			const documentUri = textDocument.uri;
@@ -201,8 +282,7 @@ export function registerScanOnOpen(outputChannel: vscode.LogOutputChannel) {
 				if (_isValidFileForAnalysis(documentUri)) {
 					await _runAndDisplayPathless([documentUri], {
 						commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
-						diagnosticCollection,
-						outputChannel
+						diagnosticCollection
 					});
 				}
 			}
@@ -215,14 +295,12 @@ export function registerScanOnOpen(outputChannel: vscode.LogOutputChannel) {
  * @param selections The files/directories manually selected by the user.
  * @param runInfo A collection of services and information used to properly run the command.
  * @param runInfo.diagnosticCollection The collection to which diagnostics representing violations should be added.
- * @param runInfo.outputChannel The output channel where information should be logged as needed.
  * @param runinfo.commandName The specific command being executed
  * @returns
  */
 export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: RunInfo): Promise<void> {
 	const {
 		diagnosticCollection,
-		outputChannel,
 		commandName
 	} = runInfo;
 	const startTime = Date.now();
@@ -270,23 +348,16 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: 
  * Run Path-based rules against the method the user has clicked on.
  * @param statusBarItem The item to use in the status bar for displaying progress
  * @param runInfo A collection of services and information used to properly run the command
- * @param runInfo.outputChannel The output channel where information should be logged as needed
  * @param runInfo.commandName The specific command being run
  */
-export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo, cancelToken: vscode.CancellationTokenSource): Promise<void> {
+export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo, cancelToken: vscode.CancellationTokenSource, methodLevelTarget: string, projectDir: string): Promise<void> {
 	const {
-		outputChannel,
 		commandName
 	} = runInfo;
 	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
-		// Get the targeted method.
-		const methodLevelTarget: string = await targeting.getSelectedMethod();
-		// Pull out the file from the target and use it to identify the project directory.
-		const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
-		const projectDir: string = targeting.getProjectDir(currentFile);
-		const results: string = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
+		const results = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
 		if (results.length > 0) {
 			const panel = vscode.window.createWebviewPanel(
 				'dfaResults',
@@ -343,7 +414,6 @@ export function _clearDiagnostics(): void {
 export async function _clearDiagnosticsForSelectedFiles(selections: vscode.Uri[], runInfo: RunInfo): Promise<void> {
 	const {
 		diagnosticCollection,
-		outputChannel,
 		commandName
 	} = runInfo;
 	const startTime = Date.now();
