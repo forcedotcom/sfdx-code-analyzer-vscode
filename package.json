@@ -13,7 +13,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "0.7.0",
+    "version": "1.0.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
@@ -185,6 +185,10 @@
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnSelectedFile",
+                    "when": "false"
+                },
+                {
+                    "command": "sfca.runApexGuruAnalysisOnSelectedFile",
                     "when": "false"
                 }
             ],
