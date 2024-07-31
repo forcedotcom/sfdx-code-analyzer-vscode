@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
-import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, _isApexGuruEnabledInOrg, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
+import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
 import {CoreExtensionService, TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
@@ -385,80 +385,6 @@ suite('Extension Test Suite', () => {
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
-
-	suite('#_isApexGuruEnabledInOrg', () => {
-		let getConnectionStub: Sinon.SinonStub;
-		let requestStub: Sinon.SinonStub;
-	  
-		setup(() => {
-		  getConnectionStub = Sinon.stub(CoreExtensionService, 'getConnection');
-		  requestStub = Sinon.stub();
-		});
-	  
-		teardown(() => {
-		  Sinon.restore();
-		});
-	  
-		test('Returns true if response status is Success', async () => {
-		  // ===== SETUP =====
-		  getConnectionStub.resolves({
-			request: requestStub.resolves({ status: 'Success' })
-		  });
-	  
-		  // ===== TEST =====
-		  const result = await _isApexGuruEnabledInOrg();
-	  
-		  // ===== ASSERTIONS =====
-		  expect(result).to.be.true;
-		  Sinon.assert.calledOnce(getConnectionStub);
-		  Sinon.assert.calledOnce(requestStub);
-		  Sinon.assert.calledWith(requestStub, {
-			method: 'GET',
-			url: Constants.APEX_GURU_AUTH_ENDPOINT,
-			body: ''
-		  });
-		});
-	  
-		test('Returns false if response status is not Success', async () => {
-		  // ===== SETUP =====
-		  getConnectionStub.resolves({
-			request: requestStub.resolves({ status: 'Failure' })
-		  });
-	  
-		  // ===== TEST =====
-		  const result = await _isApexGuruEnabledInOrg();
-	  
-		  // ===== ASSERTIONS =====
-		  expect(result).to.be.false;
-		  Sinon.assert.calledOnce(getConnectionStub);
-		  Sinon.assert.calledOnce(requestStub);
-		  Sinon.assert.calledWith(requestStub, {
-			method: 'GET',
-			url: Constants.APEX_GURU_AUTH_ENDPOINT,
-			body: ''
-		  });
-		});
-	  
-		test('Returns false if an error is thrown', async () => {
-		  // ===== SETUP =====
-		  getConnectionStub.resolves({
-			request: requestStub.rejects(new Error('Resource not found'))
-		  });
-	  
-		  // ===== TEST =====
-		  const result = await _isApexGuruEnabledInOrg();
-	  
-		  // ===== ASSERTIONS =====
-		  expect(result).to.be.false;
-		  Sinon.assert.calledOnce(getConnectionStub);
-		  Sinon.assert.calledOnce(requestStub);
-		  Sinon.assert.calledWith(requestStub, {
-			method: 'GET',
-			url: Constants.APEX_GURU_AUTH_ENDPOINT,
-			body: ''
-		  });
-		});
-	  });
 
 	suite('#isValidFileForAnalysis', () => {
 		test('Returns true for valid files', async() => {

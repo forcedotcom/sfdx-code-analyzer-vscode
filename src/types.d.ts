@@ -79,3 +79,26 @@ export type ApexGuruAuthResponse = {
     status: string;
 }
 
+export type ApexGuruInitialResponse = {
+    status: string;
+	requestId: string;
+	message: string;
+}
+
+export type ApexGuruQueryResponse = {
+	status: string;
+	message: string;
+	report: string;
+}
+
+export type ApexGuruProperty = {
+    name: string;
+    value: string;
+};
+
+export type ApexGuruReport = {
+	id: string;
+    type: string;
+    value: string;
+    properties: ApexGuruProperty[];
+}

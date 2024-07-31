@@ -12,7 +12,7 @@ import {ScanRunner} from './lib/scanner';
 import {SettingsManager} from './lib/settings';
 import {SfCli} from './lib/sf-cli';
 
-import {RuleResult, ApexGuruAuthResponse} from './types';
+import {RuleResult} from './types';
 import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
@@ -20,6 +20,7 @@ import { CoreExtensionService, TelemetryService } from './lib/core-extension-ser
 import * as Constants from './lib/constants';
 import * as path from 'path';
 import { SIGKILL } from 'constants';
+import * as ApexGuruFunctions from './apexguru/apex-guru-service'
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -53,7 +54,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	await CoreExtensionService.loadDependencies(context, outputChannel);
 
 	// Set the necessary flags to control showing the command
-	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await _isApexGuruEnabledInOrg());
+	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel));
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
@@ -139,25 +140,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
-}
-
-export async function _isApexGuruEnabledInOrg(): Promise<boolean> {
-	try {
-		const connection = await CoreExtensionService.getConnection();
-		const response:ApexGuruAuthResponse = await connection.request({
-			method: 'GET',
-			url: Constants.APEX_GURU_AUTH_ENDPOINT,
-			body: ''
-		});
-		return response.status == 'Success';
-	} catch(e) {
-		// This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
-		// In all of these scenarios, we return false.
-		const errMsg = e instanceof Error ? e.message : e as string;
-		outputChannel.error('***ApexGuru perm check failed with error:***' + errMsg);
-		outputChannel.show();
-		return false;
-	}
 }
 
 async function _runDfa(context: vscode.ExtensionContext) {
