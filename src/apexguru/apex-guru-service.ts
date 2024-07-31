@@ -33,6 +33,7 @@ export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChan
 export async function runApexGuruOnFile(selection: vscode.Uri, outputChannel: vscode.LogOutputChannel) {
 	try {
         const requestId = await initiateApexGuruRequest(selection, outputChannel);
+		// TODO: Logging the request Id for easy QA. Future stories will use this requestId to poll and retrieve the Apex Guru report.
         outputChannel.appendLine('***Apex Guru request Id:***' + requestId);
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
