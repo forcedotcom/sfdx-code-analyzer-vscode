@@ -8,7 +8,6 @@
 import * as vscode from 'vscode';
 import * as fspromises from 'fs/promises';
 import { CoreExtensionService } from '../lib/core-extension-service';
-import { ApexGuruAuthResponse, ApexGuruInitialResponse } from '../types';
 import * as Constants from '../lib/constants';
 
 export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChannel): Promise<boolean> {
@@ -42,7 +41,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, outputChannel: vs
     }
 }
 
-export async function initiateApexGuruRequest(selection: vscode.Uri, outputChannel: vscode.LogOutputChannel) {
+export async function initiateApexGuruRequest(selection: vscode.Uri, outputChannel: vscode.LogOutputChannel): Promise<string> {
 	const fileContent = await fileSystem.readFile(selection.fsPath);
 	const base64EncodedContent = Buffer.from(fileContent).toString('base64');
 	const connection = await CoreExtensionService.getConnection();
@@ -56,7 +55,7 @@ export async function initiateApexGuruRequest(selection: vscode.Uri, outputChann
 
 	if (response.status != 'new' && response.status != 'success') {
 		outputChannel.warn('***Apex Guru returned unexpected response:***' + response.status);
-		return '';
+		throw Error('***Apex Guru returned unexpected response:***' + response.status);
 	}
 
 	const requestId = response.requestId;
@@ -67,3 +66,30 @@ export const fileSystem = {
 	readFile: (path: string) => fspromises.readFile(path, 'utf8')
 };
 
+export type ApexGuruAuthResponse = {
+    status: string;
+}
+
+export type ApexGuruInitialResponse = {
+    status: string;
+	requestId: string;
+	message: string;
+}
+
+export type ApexGuruQueryResponse = {
+	status: string;
+	message: string;
+	report: string;
+}
+
+export type ApexGuruProperty = {
+    name: string;
+    value: string;
+};
+
+export type ApexGuruReport = {
+	id: string;
+    type: string;
+    value: string;
+    properties: ApexGuruProperty[];
+}
