@@ -74,8 +74,3 @@ export type AuthFields = {
 	expirationDate?: string;
 	tracksSource?: boolean;
 };
-
-export type ApexGuruAuthResponse = {
-    status: string;
-}
-
