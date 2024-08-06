@@ -38,3 +38,5 @@ export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
 
 // feature gates
 export const APEX_GURU_FEATURE_FLAG_ENABLED = true;
+export const APEX_GURU_RETRY_COUNT = 10;
+export const APEX_GURU_RETRY_INTERVAL = 1000;

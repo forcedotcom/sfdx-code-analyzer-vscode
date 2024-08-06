@@ -70,10 +70,10 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 
 export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string) {
 	let queryResponse: ApexGuruQueryResponse;
-	let isPolling = true;
-	const retryInterval = 1000;
+	const retryInterval = Constants.APEX_GURU_RETRY_INTERVAL;
+	let retryCount = Constants.APEX_GURU_RETRY_COUNT;
 
-	while (isPolling) {
+	while (retryCount > 0) {
 		queryResponse = await connection.request({
 			method: 'GET',
 			url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
@@ -81,9 +81,10 @@ export async function pollAndGetApexGuruResponse(connection: Connection, request
 		});
 
 		if (queryResponse.status == 'success') {
-			isPolling = false;
+			return queryResponse;
 		} else {
 			// Add a delay between requests
+			retryCount--;
 			await new Promise(resolve => setTimeout(resolve, retryInterval));
 		}
 	}
