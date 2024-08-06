@@ -212,7 +212,7 @@ suite('Apex Guru Test Suite', () => {
 
             connectionStub.request.resolves(queryResponse);
 
-            const result = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as Connection, requestId);
+            const result = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as Connection, requestId, 3, 10);
 
             expect(result).to.deep.equal(queryResponse);
             Sinon.assert.calledOnce(connectionStub.request);
@@ -232,7 +232,7 @@ suite('Apex Guru Test Suite', () => {
                 .onFirstCall().resolves(pendingResponse)
                 .onSecondCall().resolves(successResponse);
 
-            const result = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId);
+            const result = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, 3, 10);
 
             expect(result).to.deep.equal(successResponse);
             Sinon.assert.calledTwice(connectionStub.request);
@@ -248,11 +248,11 @@ suite('Apex Guru Test Suite', () => {
             connectionStub.request.rejects(new Error('Request failed'));
 
             try {
-                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId);
+                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, 1, 10);
                 expect.fail('Expected function to throw an error');
             } catch (error) {
                 expect(error).to.be.an.instanceOf(Error);
-                expect((error as Error).message).to.equal('Request failed');
+                expect((error as Error).message).to.equal('Failed to get a successful response from Apex Guru after maximum retries');
             }
 
             Sinon.assert.calledOnce(connectionStub.request);
@@ -261,6 +261,24 @@ suite('Apex Guru Test Suite', () => {
                 url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
                 body: ''
             });
+        });
+
+        test('Retries the correct number of times', async () => {
+            const retryCount = 3;
+            const retryInterval = 10;
+
+            // Stub the connection.request method to always return a non-success status
+            connectionStub.request.resolves({ status: 'new' } as ApexGuruFunctions.ApexGuruQueryResponse);
+
+            try {
+                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, 'dummyRequestId', retryCount, retryInterval);
+            } catch (e) {
+                // The function should throw an error after exhausting retries
+                expect(e.message).to.equal('Failed to get a successful response from Apex Guru after maximum retries');
+            }
+
+            // Assert that the request method was called exactly retryCount times
+            expect(connectionStub.request.callCount).to.equal(retryCount);
         });
     });
 });

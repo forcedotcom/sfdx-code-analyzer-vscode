@@ -41,7 +41,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 	} = runInfo;
 	const startTime = Date.now();
 	try {
-		return await vscode.window.withProgress({
+		await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification
 		}, async (progress) => {
 			progress.report(messages.apexGuru.progress);
@@ -49,10 +49,10 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 			const requestId = await initiateApexGuruRequest(selection, outputChannel, connection);
 			outputChannel.appendLine('***Apex Guru request Id:***' + requestId);
 
-			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId);
+			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_RETRY_COUNT, Constants.APEX_GURU_RETRY_INTERVAL);
 
 			const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
-			outputChannel.appendLine('***Retrieved analysis report from ApexGuru***');
+			outputChannel.appendLine('***Retrieved analysis report from ApexGuru***:' + decodedReport);
 
 			const ruleResult = transformStringToRuleResult(selection.fsPath, decodedReport);
 			new DiagnosticManager().displayDiagnostics([selection.fsPath], [ruleResult], diagnosticCollection);
@@ -68,27 +68,34 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
     }
 }
 
-export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string) {
+export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, retryCount: number, retryInterval: number) {
 	let queryResponse: ApexGuruQueryResponse;
-	const retryInterval = Constants.APEX_GURU_RETRY_INTERVAL;
-	let retryCount = Constants.APEX_GURU_RETRY_COUNT;
-
 	while (retryCount > 0) {
-		queryResponse = await connection.request({
-			method: 'GET',
-			url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
-			body: ''
-		});
+		try {
+			queryResponse = await connection.request({
+				method: 'GET',
+				url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
+				body: ''
+			});
 
-		if (queryResponse.status == 'success') {
-			return queryResponse;
-		} else {
-			// Add a delay between requests
-			retryCount--;
-			await new Promise(resolve => setTimeout(resolve, retryInterval));
-		}
+			if (queryResponse.status == 'success') {
+				return queryResponse;
+			} else {
+				// Add a delay between requests
+				retryCount--;
+				await new Promise(resolve => setTimeout(resolve, retryInterval));
+			}
+		} catch (error) {
+            retryCount--;
+            await new Promise(resolve => setTimeout(resolve, retryInterval));
+        }
 	}
-	return queryResponse;
+
+	if (queryResponse) {
+        return queryResponse;
+    } else {
+        throw new Error('Failed to get a successful response from Apex Guru after maximum retries');
+    }
 }
 
 export async function initiateApexGuruRequest(selection: vscode.Uri, outputChannel: vscode.LogOutputChannel, connection: Connection): Promise<string> {
