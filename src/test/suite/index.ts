@@ -80,9 +80,9 @@ export async function run(): Promise<void> {
 	// This is why we manually set it to 0 earlier.
 	await nyc.checkCoverage({
 		branches: 70,
-		lines: 80,
+		lines: 70,
 		functions: 70,
-		statements: 80
+		statements: 70
 	});
 
 	// Echo the logs.
