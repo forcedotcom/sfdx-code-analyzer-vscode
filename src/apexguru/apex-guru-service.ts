@@ -49,7 +49,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 			const requestId = await initiateApexGuruRequest(selection, outputChannel, connection);
 			outputChannel.appendLine('***Apex Guru request Id:***' + requestId);
 
-			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_RETRY_COUNT, Constants.APEX_GURU_RETRY_INTERVAL);
+			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_MAX_TIMEOUT_SECONDS, Constants.APEX_GURU_RETRY_INTERVAL_MILLIS);
 
 			const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
 			outputChannel.appendLine('***Retrieved analysis report from ApexGuru***:' + decodedReport);
@@ -68,9 +68,10 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
     }
 }
 
-export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, retryCount: number, retryInterval: number) {
+export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number) {
 	let queryResponse: ApexGuruQueryResponse;
-	while (retryCount > 0) {
+	const startTime = Date.now();
+	while ((Date.now() - startTime) < maxWaitTimeInSeconds * 1000) {
 		try {
 			queryResponse = await connection.request({
 				method: 'GET',
@@ -82,12 +83,10 @@ export async function pollAndGetApexGuruResponse(connection: Connection, request
 				return queryResponse;
 			} else {
 				// Add a delay between requests
-				retryCount--;
-				await new Promise(resolve => setTimeout(resolve, retryInterval));
+				await new Promise(resolve => setTimeout(resolve, retryIntervalInMillis));
 			}
 		} catch (error) {
-            retryCount--;
-            await new Promise(resolve => setTimeout(resolve, retryInterval));
+            await new Promise(resolve => setTimeout(resolve, retryIntervalInMillis));
         }
 	}
 

@@ -21,7 +21,7 @@ export const messages = {
     },
     apexGuru: {
         progress: {
-            message: "Apex Guru analysis in progress."
+            message: "Code Analyzer running ApexGuru analysis."
         }
     },
     info: {

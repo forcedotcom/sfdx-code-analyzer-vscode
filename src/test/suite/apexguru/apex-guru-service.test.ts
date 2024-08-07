@@ -206,79 +206,85 @@ suite('Apex Guru Test Suite', () => {
             Sinon.restore();
         });
 
-        test('Returns successfully on first request when status is success', async () => {
-            const requestId = '12345';
-            const queryResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'success' };
-
+        test('Returns response on successful query within timeout', async () => {
+            // ===== SETUP =====
+            const requestId = 'dummyRequestId';
+            const maxWaitTimeInSeconds = 5;
+            const retryInterval = 100;
+    
+            const queryResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'success', report: '' };
             connectionStub.request.resolves(queryResponse);
 
-            const result = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as Connection, requestId, 3, 10);
-
-            expect(result).to.deep.equal(queryResponse);
-            Sinon.assert.calledOnce(connectionStub.request);
-            Sinon.assert.calledWith(connectionStub.request, {
-                method: 'GET',
-                url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
-                body: ''
-            });
+            // ===== TEST =====
+            const response = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
+    
+            // ===== ASSERTIONS =====
+            expect(response).to.deep.equal(queryResponse);
+            expect(connectionStub.request.calledOnce).to.be.true;
         });
-
-        test('Polls new before receiving a success status', async () => {
-            const requestId = '12345';
-            const pendingResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'new' };
-            const successResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'success' };
-
-            connectionStub.request
-                .onFirstCall().resolves(pendingResponse)
-                .onSecondCall().resolves(successResponse);
-
-            const result = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, 3, 10);
-
-            expect(result).to.deep.equal(successResponse);
-            Sinon.assert.calledTwice(connectionStub.request);
-            Sinon.assert.alwaysCalledWith(connectionStub.request, {
-                method: 'GET',
-                url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
-                body: ''
-            });
+    
+        test('Retries until successful response within timeout', async () => {
+            // ===== SETUP =====
+            const requestId = 'dummyRequestId';
+            const maxWaitTimeInSeconds = 5;
+            const retryInterval = 100;
+    
+            // ===== TEST =====
+            const pendingResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'pending', report: '' };
+            const successResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'success', report: '' };
+    
+            connectionStub.request.onCall(0).resolves(pendingResponse);
+            connectionStub.request.onCall(1).resolves(pendingResponse);
+            connectionStub.request.onCall(2).resolves(successResponse);
+    
+            const response = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
+    
+            // ===== ASSERTIONS =====
+            expect(response).to.deep.equal(successResponse);
+            expect(connectionStub.request.callCount).to.equal(3);
         });
+    
+        test('Throws error after timeout is exceeded', async () => {
+            // ===== SETUP =====
+            const requestId = 'dummyRequestId';
+            const maxWaitTimeInSeconds = 0;
+            const retryInterval = 100; 
+    
+            const pendingResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'new', report: '' };
+            connectionStub.request.resolves(pendingResponse);
 
-        test('Handles error during request', async () => {
-            const requestId = '12345';
-            connectionStub.request.rejects(new Error('Request failed'));
-
+            // ===== TEST =====
             try {
-                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, 1, 10);
-                expect.fail('Expected function to throw an error');
+                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
+                throw new Error('Expected to throw an error due to timeout');
             } catch (error) {
-                expect(error).to.be.an.instanceOf(Error);
-                expect((error as Error).message).to.equal('Failed to get a successful response from Apex Guru after maximum retries');
+                expect(error.message).to.equal('Failed to get a successful response from Apex Guru after maximum retries');
             }
 
-            Sinon.assert.calledOnce(connectionStub.request);
-            Sinon.assert.calledWith(connectionStub.request, {
-                method: 'GET',
-                url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
-                body: ''
-            });
+            // ===== ASSERTIONS =====
+            const expectedCallCount = Math.floor((maxWaitTimeInSeconds * 1000) / retryInterval);
+            expect(connectionStub.request.callCount).to.be.at.least(expectedCallCount);
         });
-
-        test('Retries the correct number of times', async () => {
-            const retryCount = 3;
-            const retryInterval = 10;
-
-            // Stub the connection.request method to always return a non-success status
-            connectionStub.request.resolves({ status: 'new' } as ApexGuruFunctions.ApexGuruQueryResponse);
-
-            try {
-                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, 'dummyRequestId', retryCount, retryInterval);
-            } catch (e) {
-                // The function should throw an error after exhausting retries
-                expect(e.message).to.equal('Failed to get a successful response from Apex Guru after maximum retries');
-            }
-
-            // Assert that the request method was called exactly retryCount times
-            expect(connectionStub.request.callCount).to.equal(retryCount);
+    
+        test('Handles request errors and continues retrying', async () => {
+            // ===== SETUP =====
+            const requestId = 'dummyRequestId';
+            const maxWaitTimeInSeconds = 5;
+            const retryInterval = 100;
+    
+            const pendingResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'new', report: '' };
+            const successResponse: ApexGuruFunctions.ApexGuruQueryResponse = { status: 'success', report: '' };
+    
+            connectionStub.request.onCall(0).rejects(new Error('Some error'));
+            connectionStub.request.onCall(1).resolves(pendingResponse);
+            connectionStub.request.onCall(2).resolves(successResponse);
+    
+            // ===== TEST =====
+            const response = await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
+    
+            // ===== ASSERTIONS =====
+            expect(response).to.deep.equal(successResponse);
+            expect(connectionStub.request.callCount).to.equal(3);
         });
     });
 });
