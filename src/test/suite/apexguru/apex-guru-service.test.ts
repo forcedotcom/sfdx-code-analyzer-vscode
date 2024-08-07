@@ -258,7 +258,7 @@ suite('Apex Guru Test Suite', () => {
                 await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
                 throw new Error('Expected to throw an error due to timeout');
             } catch (error) {
-                expect(error.message).to.equal('Failed to get a successful response from Apex Guru after maximum retries');
+                expect(error.message).to.equal('Failed to get a successful response from Apex Guru after maximum retries.');
             }
 
             // ===== ASSERTIONS =====
@@ -285,6 +285,28 @@ suite('Apex Guru Test Suite', () => {
             // ===== ASSERTIONS =====
             expect(response).to.deep.equal(successResponse);
             expect(connectionStub.request.callCount).to.equal(3);
+        });
+
+        test('Throws last error if maximum retries are exhausted', async () => {
+            // ===== SETUP =====
+            const requestId = 'dummyRequestId';
+            const maxWaitTimeInSeconds = 1; // Set to 1 second for quick test
+            const retryInterval = 500;
+    
+            const errorResponse: Error = new Error('Some dummy error');
+    
+            connectionStub.request.rejects(errorResponse);
+    
+            // ===== TEST =====
+            try {
+                await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
+                expect.fail('Expected function to throw an error');
+            } catch (error) {
+                // ===== ASSERTIONS =====
+                expect((error as Error).message).to.contain('Failed to get a successful response from Apex Guru after maximum retries.Some dummy error');
+            }
+    
+            expect(connectionStub.request.callCount).to.be.greaterThan(0);
         });
     });
 });

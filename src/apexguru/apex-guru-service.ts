@@ -68,8 +68,9 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
     }
 }
 
-export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number) {
+export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number): Promise<ApexGuruQueryResponse> {
 	let queryResponse: ApexGuruQueryResponse;
+	let lastErrorMessage = '';
 	const startTime = Date.now();
 	while ((Date.now() - startTime) < maxWaitTimeInSeconds * 1000) {
 		try {
@@ -78,23 +79,19 @@ export async function pollAndGetApexGuruResponse(connection: Connection, request
 				url: `${Constants.APEX_GURU_REQUEST}/${requestId}`,
 				body: ''
 			});
-
 			if (queryResponse.status == 'success') {
 				return queryResponse;
-			} else {
-				// Add a delay between requests
-				await new Promise(resolve => setTimeout(resolve, retryIntervalInMillis));
-			}
+			} 
 		} catch (error) {
-            await new Promise(resolve => setTimeout(resolve, retryIntervalInMillis));
+			lastErrorMessage = (error as Error).message;
         }
-	}
+		await new Promise(resolve => setTimeout(resolve, retryIntervalInMillis));
 
+	}
 	if (queryResponse) {
         return queryResponse;
-    } else {
-        throw new Error('Failed to get a successful response from Apex Guru after maximum retries');
     }
+	throw new Error(`Failed to get a successful response from Apex Guru after maximum retries.${lastErrorMessage}`);
 }
 
 export async function initiateApexGuruRequest(selection: vscode.Uri, outputChannel: vscode.LogOutputChannel, connection: Connection): Promise<string> {
