@@ -183,7 +183,7 @@ interface WorkspaceContext {
 	alias(): string | undefined;
 }
 
-interface Connection {
+export interface Connection {
 	instanceUrl: string;
 	getApiVersion(): string;
 	getUsername(): string | undefined;

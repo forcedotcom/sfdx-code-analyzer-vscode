@@ -25,6 +25,7 @@ import * as ApexGuruFunctions from './apexguru/apex-guru-service'
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
 	commandName: string;
+	outputChannel?: vscode.LogOutputChannel;
 }
 
 /**
@@ -53,8 +54,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context, outputChannel);
 
+	const apexGuruEnabled = Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
 	// Set the necessary flags to control showing the command
-	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel));
+	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', apexGuruEnabled);
 
 	// Define a diagnostic collection in the `activate()` scope so it can be used repeatedly.
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
@@ -137,6 +139,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		await _runDfa(context);
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, runDfaOnWorkspaceCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
+	
+	if (apexGuruEnabled) {
+		const runApexGuruOnSelectedFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
+			return await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection, 
+				{
+					commandName: Constants.COMMAND_RUN_APEX_GURU_ON_FILE,
+					diagnosticCollection,
+					outputChannel: outputChannel
+				});
+		});
+		context.subscriptions.push(runApexGuruOnSelectedFile);
+	}
+	
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
