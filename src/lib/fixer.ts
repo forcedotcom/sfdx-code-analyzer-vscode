@@ -5,11 +5,8 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import * as path from 'path';
 import {messages} from './messages';
 import * as Constants from './constants';
-import * as fs from 'fs';
-import * as os from 'os';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.

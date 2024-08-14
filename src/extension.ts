@@ -150,14 +150,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 				});
 		});
 
-		const apexGuruReplaceCode = vscode.commands.registerCommand('applyApexGuruSuggestion', async (documentUri: vscode.Uri, range: vscode.Range, suggestedCode: string) => {
-			await vscode.workspace.openTextDocument(documentUri);
-			const edit = new vscode.WorkspaceEdit();
-			edit.replace(documentUri, range, suggestedCode);
-			await vscode.workspace.applyEdit(edit);
-		});
-
-		context.subscriptions.push(runApexGuruOnSelectedFile, apexGuruReplaceCode);
+		context.subscriptions.push(runApexGuruOnSelectedFile);
 	}
 	
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
