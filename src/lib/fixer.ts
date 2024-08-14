@@ -110,7 +110,6 @@ export class _ApexGuruFixGenerator extends FixGenerator {
     }
 
     public generateApexGuruSuppresssion(document: vscode.TextDocument): vscode.CodeAction {
-        const existingCode = this.diagnostic.relatedInformation[0].message;
         const suggestedCode = this.diagnostic.relatedInformation[1].message;
     
         const action = new vscode.CodeAction(messages.fixer.fixWithApexGuruSuggestions, vscode.CodeActionKind.QuickFix);
@@ -118,7 +117,7 @@ export class _ApexGuruFixGenerator extends FixGenerator {
 
         const edit = new vscode.WorkspaceEdit();
         const range = this.diagnostic.range;  // Assuming the range is the location of the existing code in the document
-        edit.replace(document.uri, range, suggestedCode);
+        edit.insert(document.uri, range.start, suggestedCode + '\n');
         
         // Assign the edit to the action
         action.edit = edit;

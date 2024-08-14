@@ -39,7 +39,7 @@ export const messages = {
     fixer: {
         supressOnLine: "Suppress violations on this line.",
         supressOnClass: "Suppress violations on this class.",
-        fixWithApexGuruSuggestions: "***Fix violations with suggestions from Apex Guru***"
+        fixWithApexGuruSuggestions: "***Insert code suggestions from Apex Guru***"
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
