@@ -7,9 +7,7 @@
 import * as vscode from 'vscode';
 import {expect} from 'chai';
 import path = require('path');
-import Sinon = require('sinon');
-import {messages} from '../../lib/messages';
-import {_NoOpFixGenerator, _PmdFixGenerator} from '../../lib/fixer';
+import {_NoOpFixGenerator, _PmdFixGenerator, _ApexGuruFixGenerator} from '../../lib/fixer';
 
 suite('fixer.ts', () => {
     // Note: __dirname is used here because it's consistent across file systems.
@@ -488,5 +486,127 @@ suite('fixer.ts', () => {
                 expect(pattern.test('SuppressWarnings("PMD.Rule")')).to.be.false; // Missing '@'
             });
         });    
+    });
+    suite('_ApexGuruFixGenerator', () => {
+        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+        suite('#generateFixes()', () => {
+            const processedLines = new Set<number>();
+            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+    
+            let doc: vscode.TextDocument;
+            // Load the document and store its starting contents.
+            setup(async () => {
+                doc = await vscode.workspace.openTextDocument(fileUri);
+                await vscode.window.showTextDocument(doc);
+            });
+    
+            test('Should generate a suppression fix if line is not processed', async () => {
+                // Create a fake diagnostic.
+                const diag = new vscode.Diagnostic(
+                    new vscode.Range(
+                        new vscode.Position(7, 4),
+                        new vscode.Position(7, 10)
+                    ),
+                    'some message',
+                    vscode.DiagnosticSeverity.Warning
+                );
+                diag.relatedInformation = [
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(fileUri, new vscode.Position(0, 0)),
+                        'current code'
+                    ),
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(fileUri, new vscode.Position(0, 0)),
+                        'apex guru suggested code'
+                    )
+                ];
+    
+                // Instantiate the fixer.
+                const fixGenerator: _ApexGuruFixGenerator = new _ApexGuruFixGenerator(doc, diag);
+    
+                // Generate fixes.
+                const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(processedLines, doc, diag);
+    
+                // Validate results.
+                expect(fixes).to.have.lengthOf(1, 'One fix should be offered');
+                const fix = fixes[0].edit.get(fileUri)[0];
+                expect(fix.newText).to.equal('apex guru suggested code\n', 'The suppression code should match the suggestion');
+                expect(fix.range.start.line).to.equal(6, 'The suppression should be added one line above the diagnostic line');
+            });
+    
+            test('Should not generate a suppression fix if line is already processed', async () => {
+                processedLines.add(7);
+    
+                // Create a fake diagnostic.
+                const diag = new vscode.Diagnostic(
+                    new vscode.Range(
+                        new vscode.Position(7, 4),
+                        new vscode.Position(7, 10)
+                    ),
+                    'This message is unimportant',
+                    vscode.DiagnosticSeverity.Warning
+                );
+                diag.relatedInformation = [
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(fileUri, new vscode.Position(0, 0)),
+                        'current code'
+                    ),
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(fileUri, new vscode.Position(0, 0)),
+                        'apex guru suggested code'
+                    )
+                ];
+    
+                // Instantiate the fixer.
+                const fixGenerator: _ApexGuruFixGenerator = new _ApexGuruFixGenerator(doc, diag);
+    
+                // Generate fixes.
+                const fixes: vscode.CodeAction[] = fixGenerator.generateFixes(processedLines, doc, diag);
+    
+                // Validate results.
+                expect(fixes).to.have.lengthOf(0, 'No fix should be offered if the line is already processed');
+            });
+        });
+    
+        suite('#generateApexGuruSuppresssion()', () => {
+            let doc: vscode.TextDocument;
+            // Load the document and store its starting contents.
+            setup(async () => {
+                doc = await vscode.workspace.openTextDocument(fileUri);
+                await vscode.window.showTextDocument(doc);
+            });
+
+            test('Should generate the correct ApexGuru suppression code action', async () => {
+                // Create a fake diagnostic.
+                const diag = new vscode.Diagnostic(
+                    new vscode.Range(
+                        new vscode.Position(7, 4),
+                        new vscode.Position(7, 10)
+                    ),
+                    'Some message',
+                    vscode.DiagnosticSeverity.Warning
+                );
+                diag.relatedInformation = [
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(fileUri, new vscode.Position(0, 0)),
+                        'Some other information'
+                    ),
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(fileUri, new vscode.Position(0, 0)),
+                        'apex guru suggested code'
+                    )
+                ];
+    
+                // Instantiate the fixer.
+                const fixGenerator: _ApexGuruFixGenerator = new _ApexGuruFixGenerator(doc, diag);
+    
+                // Generate the suppression code action.
+                const fix = fixGenerator.generateApexGuruSuppresssion(doc);
+    
+                // Validate results.
+                expect(fix.edit.get(fileUri)[0].newText).to.equal('apex guru suggested code\n', 'The suppression code should match the suggestion');
+                expect(fix.edit.get(fileUri)[0].range.start.line).to.equal(6, 'The suppression should be added one line above the diagnostic line');
+            });
+        });
     });
 });
