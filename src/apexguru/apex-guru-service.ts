@@ -128,7 +128,8 @@ export function transformStringToRuleResult(fileName: string, jsonString: string
     };
 
 	reports.forEach(parsed => {
-		const encodedClassAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value;
+		const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value;
+		const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value;
 
 		const violation: ApexGuruViolation = {
 			ruleName: parsed.type,
@@ -137,7 +138,8 @@ export function transformStringToRuleResult(fileName: string, jsonString: string
 			category: parsed.type, // Replace with actual category if available
 			line: parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value),
 			column: 1,
-			suggestedCode: Buffer.from(encodedClassAfter, 'base64').toString('utf8')
+			currentCode: Buffer.from(encodedCodeBefore, 'base64').toString('utf8'),
+			suggestedCode: Buffer.from(encodedCodeAfter, 'base64').toString('utf8'),
 		};
 	
 		ruleResult.violations.push(violation);

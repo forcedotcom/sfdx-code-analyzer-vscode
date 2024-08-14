@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import { PathlessRuleViolation, RuleResult, RuleViolation } from '../types';
+import { ApexGuruViolation, PathlessRuleViolation, RuleResult, RuleViolation } from '../types';
 import {messages} from './messages';
 import * as vscode from 'vscode';
 
@@ -89,6 +89,23 @@ export class DiagnosticManager {
             target: vscode.Uri.parse(violation.url),
             value: violation.ruleName
         } : violation.ruleName;
+        if (engine === 'apexguru') {
+            const apexGuruViolation = violation as ApexGuruViolation;
+        
+            if (apexGuruViolation.suggestedCode?.trim()) {
+                diagnostic.relatedInformation = [
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(vscode.Uri.parse('Code Before'), range),
+                        `Code before: ${apexGuruViolation.currentCode}`
+                    ),
+                    new vscode.DiagnosticRelatedInformation(
+                        new vscode.Location(vscode.Uri.parse('Code After'), range),
+                        `Code after: ${apexGuruViolation.suggestedCode}`
+                    )
+                ];
+            }
+
+        }
         return diagnostic;
     }
 

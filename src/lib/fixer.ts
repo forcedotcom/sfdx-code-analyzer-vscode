@@ -5,8 +5,11 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
+import * as path from 'path';
 import {messages} from './messages';
 import * as Constants from './constants';
+import * as fs from 'fs';
+import * as os from 'os';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -26,7 +29,7 @@ export class Fixer implements vscode.CodeActionProvider {
             // Throw out diagnostics that aren't ours, or are for the wrong line.
             .filter(diagnostic => messages.diagnostics.source && messages.diagnostics.source.isSource(diagnostic.source) && diagnostic.range.isEqual(range))
             // Get and use the appropriate fix generator.
-            .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines))
+            .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.
             .reduce((acc, next) => [...acc, ...next], []);
     }
@@ -45,6 +48,8 @@ export class Fixer implements vscode.CodeActionProvider {
             case 'pmd':
             case 'pmd-custom':
                 return new _PmdFixGenerator(document, diagnostic);
+            case 'apexguru':
+                return new _ApexGuruFixGenerator(document, diagnostic);
             default:
                 return new _NoOpFixGenerator(document, diagnostic);
         }
@@ -73,7 +78,7 @@ abstract class FixGenerator {
      * Abstract template method for generating fixes.
      * @abstract
      */
-    public abstract generateFixes(processedLines: Set<number>): vscode.CodeAction[];
+    public abstract generateFixes(processedLines: Set<number>, document?: vscode.TextDocument, diagnostic?: vscode.Diagnostic): vscode.CodeAction[];
 }
 
 /**
@@ -85,6 +90,42 @@ export class _NoOpFixGenerator extends FixGenerator {
     public generateFixes(processedLines: Set<number>): vscode.CodeAction[] {
         return [];
     }
+}
+
+export class _ApexGuruFixGenerator extends FixGenerator {
+    /**
+     * Generate an array of fixes, if possible.
+     * @returns
+     */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    public generateFixes(processedLines: Set<number>, document: vscode.TextDocument, diagnostic: vscode.Diagnostic): vscode.CodeAction[] {
+        console.log(diagnostic);
+        const fixes: vscode.CodeAction[] = [];
+        const lineNumber = this.diagnostic.range.start.line;
+        if (!processedLines.has(lineNumber)) {
+            fixes.push(this.generateApexGuruSuppresssion(document))
+            processedLines.add(lineNumber);
+        }
+        return fixes;
+    }
+
+    public generateApexGuruSuppresssion(document: vscode.TextDocument): vscode.CodeAction {
+        const existingCode = this.diagnostic.relatedInformation[0].message;
+        const suggestedCode = this.diagnostic.relatedInformation[1].message;
+    
+        const action = new vscode.CodeAction(messages.fixer.fixWithApexGuruSuggestions, vscode.CodeActionKind.QuickFix);
+        action.diagnostics = [this.diagnostic];
+
+        const edit = new vscode.WorkspaceEdit();
+        const range = this.diagnostic.range;  // Assuming the range is the location of the existing code in the document
+        edit.replace(document.uri, range, suggestedCode);
+        
+        // Assign the edit to the action
+        action.edit = edit;
+        
+        return action;
+    }
+    
 }
 
 /**
