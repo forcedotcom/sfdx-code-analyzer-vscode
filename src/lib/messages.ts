@@ -22,7 +22,8 @@ export const messages = {
     apexGuru: {
         progress: {
             message: "Code Analyzer running ApexGuru analysis."
-        }
+        },
+        finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
     },
     info: {
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
