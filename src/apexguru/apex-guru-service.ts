@@ -59,6 +59,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 				executedCommand: commandName,
 				duration: (Date.now() - startTime).toString()
 			});
+			void vscode.window.showInformationMessage(messages.apexGuru.finishedScan(ruleResult.violations.length));
 		});
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
