@@ -105,7 +105,7 @@
             },
             {
                 "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                "title": "***SFDX: Scan for Performance Issues with ApexGuru***"
+                "title": "SFDX: Scan for Performance Issues with ApexGuru on Selected File"
             }
         ],
         "configuration": {

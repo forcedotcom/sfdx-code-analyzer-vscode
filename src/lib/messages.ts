@@ -21,7 +21,7 @@ export const messages = {
     },
     apexGuru: {
         progress: {
-            message: "Code Analyzer running ApexGuru analysis."
+            message: "Code Analyzer is running ApexGuru analysis."
         }
     },
     info: {
@@ -39,7 +39,7 @@ export const messages = {
     fixer: {
         supressOnLine: "Suppress violations on this line.",
         supressOnClass: "Suppress violations on this class.",
-        fixWithApexGuruSuggestions: "***Insert code suggestions from Apex Guru***"
+        fixWithApexGuruSuggestions: "Insert ApexGuru suggestions."
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,

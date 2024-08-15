@@ -47,12 +47,11 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 			progress.report(messages.apexGuru.progress);
 			const connection = await CoreExtensionService.getConnection();
 			const requestId = await initiateApexGuruRequest(selection, outputChannel, connection);
-			outputChannel.appendLine('***Apex Guru request Id:***' + requestId);
+			outputChannel.appendLine('Code Analyzer with ApexGuru request Id:' + requestId);
 
 			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_MAX_TIMEOUT_SECONDS, Constants.APEX_GURU_RETRY_INTERVAL_MILLIS);
 
 			const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
-			outputChannel.appendLine('***Retrieved analysis report from ApexGuru***:' + decodedReport);
 
 			const ruleResult = transformStringToRuleResult(selection.fsPath, decodedReport);
 			new DiagnosticManager().displayDiagnostics([selection.fsPath], [ruleResult], diagnosticCollection);
@@ -63,7 +62,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 		});
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
-        outputChannel.appendLine('***Apex Guru initiate request failed***');
+        outputChannel.error('Initial Code Analyzer with ApexGuru request failed.');
         outputChannel.appendLine(errMsg);
     }
 }
