@@ -27,7 +27,7 @@ export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChan
 		// This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
 		// In all of these scenarios, we return false.
 		const errMsg = e instanceof Error ? e.message : e as string;
-		outputChannel.error('***ApexGuru perm check failed with error:***' + errMsg);
+		outputChannel.error('Apex Guru perm check failed with error:' + errMsg);
 		outputChannel.show();
 		return false;
 	}
@@ -106,8 +106,8 @@ export async function initiateApexGuruRequest(selection: vscode.Uri, outputChann
 	});
 
 	if (response.status != 'new' && response.status != 'success') {
-		outputChannel.warn('***Apex Guru returned unexpected response:***' + response.status);
-		throw Error('***Apex Guru returned unexpected response:***' + response.status);
+		outputChannel.warn('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
+		throw Error('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
 	}
 
 	const requestId = response.requestId;
