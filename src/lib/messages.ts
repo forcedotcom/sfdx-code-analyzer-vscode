@@ -19,6 +19,12 @@ export const messages = {
             increment: 60
         }
     },
+    apexGuru: {
+        progress: {
+            message: "Code Analyzer running ApexGuru analysis."
+        },
+        finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
+    },
     info: {
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
     },
@@ -33,7 +39,8 @@ export const messages = {
     },
     fixer: {
         supressOnLine: "Suppress violations on this line.",
-        supressOnClass: "Suppress violations on this class."
+        supressOnClass: "Suppress violations on this class.",
+        fixWithApexGuruSuggestions: "***Fix violations with suggestions from Apex Guru***"
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,

@@ -105,7 +105,7 @@
             },
             {
                 "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                "title": "***SFDX: Run Apex Guru Analysis***"
+                "title": "***SFDX: Scan for Performance Issues with ApexGuru***"
             }
         ],
         "configuration": {
@@ -213,7 +213,7 @@
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                    "when": "sfca.apexGuruEnabled"
+                    "when": "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
         },
