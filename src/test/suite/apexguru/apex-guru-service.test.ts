@@ -176,7 +176,7 @@ suite('Apex Guru Test Suite', () => {
                   category: 'BestPractices',
                   line: 10,
                   column: 1,
-                  currentCode: '',
+                  currentCode: undefined,
                   suggestedCode: 'System.out.println("Hello World");'
               }]
           });
