@@ -92,7 +92,7 @@ export class DiagnosticManager {
         if (engine === 'apexguru') {
             const apexGuruViolation = violation as ApexGuruViolation;
         
-            if (apexGuruViolation.suggestedCode !== undefined) {
+            if (apexGuruViolation.suggestedCode) {
                 diagnostic.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(vscode.Uri.parse('Current Code'), range),
