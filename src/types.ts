@@ -35,6 +35,7 @@ export type DfaRuleViolation = BaseViolation & {
 export type ApexGuruViolation = BaseViolation & {
 	line: number;
 	column: number;
+	currentCode: string;
 	suggestedCode: string;
 }
 

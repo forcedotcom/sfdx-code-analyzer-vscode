@@ -149,6 +149,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 					outputChannel: outputChannel
 				});
 		});
+
 		context.subscriptions.push(runApexGuruOnSelectedFile);
 	}
 	
