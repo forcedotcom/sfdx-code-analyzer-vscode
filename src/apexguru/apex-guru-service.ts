@@ -27,7 +27,7 @@ export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChan
 		// This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
 		// In all of these scenarios, we return false.
 		const errMsg = e instanceof Error ? e.message : e as string;
-		outputChannel.error('***ApexGuru perm check failed with error:***' + errMsg);
+		outputChannel.error('Apex Guru perm check failed with error:' + errMsg);
 		outputChannel.show();
 		return false;
 	}
@@ -47,12 +47,11 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 			progress.report(messages.apexGuru.progress);
 			const connection = await CoreExtensionService.getConnection();
 			const requestId = await initiateApexGuruRequest(selection, outputChannel, connection);
-			outputChannel.appendLine('***Apex Guru request Id:***' + requestId);
+			outputChannel.appendLine('Code Analyzer with ApexGuru request Id:' + requestId);
 
 			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_MAX_TIMEOUT_SECONDS, Constants.APEX_GURU_RETRY_INTERVAL_MILLIS);
 
 			const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
-			outputChannel.appendLine('***Retrieved analysis report from ApexGuru***:' + decodedReport);
 
 			const ruleResult = transformStringToRuleResult(selection.fsPath, decodedReport);
 			new DiagnosticManager().displayDiagnostics([selection.fsPath], [ruleResult], diagnosticCollection);
@@ -64,7 +63,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 		});
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
-        outputChannel.appendLine('***Apex Guru initiate request failed***');
+        outputChannel.error('Initial Code Analyzer with ApexGuru request failed.');
         outputChannel.appendLine(errMsg);
     }
 }
@@ -107,8 +106,8 @@ export async function initiateApexGuruRequest(selection: vscode.Uri, outputChann
 	});
 
 	if (response.status != 'new' && response.status != 'success') {
-		outputChannel.warn('***Apex Guru returned unexpected response:***' + response.status);
-		throw Error('***Apex Guru returned unexpected response:***' + response.status);
+		outputChannel.warn('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
+		throw Error('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
 	}
 
 	const requestId = response.requestId;
@@ -129,16 +128,19 @@ export function transformStringToRuleResult(fileName: string, jsonString: string
     };
 
 	reports.forEach(parsed => {
-		const encodedClassAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value;
+		const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value;
+		const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value;
+		const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
 
 		const violation: ApexGuruViolation = {
 			ruleName: parsed.type,
 			message: parsed.value,
 			severity: 1,
 			category: parsed.type, // Replace with actual category if available
-			line: parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value),
+			line: lineNumber,
 			column: 1,
-			suggestedCode: Buffer.from(encodedClassAfter, 'base64').toString('utf8')
+			currentCode: encodedCodeBefore ? Buffer.from(encodedCodeBefore, 'base64').toString('utf8') : encodedCodeBefore,
+			suggestedCode: encodedCodeAfter ? Buffer.from(encodedCodeAfter, 'base64').toString('utf8') : encodedCodeAfter,
 		};
 	
 		ruleResult.violations.push(violation);
