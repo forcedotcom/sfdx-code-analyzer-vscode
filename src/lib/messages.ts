@@ -46,8 +46,13 @@ export const messages = {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
             generator: (engine: string) => `${engine} via Code Analyzer`,
-            isSource: (source: string) => source.endsWith(' via Code Analyzer'),
-            extractEngine: (source: string) => source.split(' ')[0]
+            isSource: (source: string) => {
+                if (!source) {
+                    return false;
+                }
+                return source && source.endsWith(' via Code Analyzer');
+            },
+            extractEngine: (source: string) => source?.split(' ')[0]
         }
     },
     targeting: {
