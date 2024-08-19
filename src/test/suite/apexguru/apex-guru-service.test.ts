@@ -177,7 +177,8 @@ suite('Apex Guru Test Suite', () => {
                   line: 10,
                   column: 1,
                   currentCode: '',
-                  suggestedCode: 'System.out.println("Hello World");'
+                  suggestedCode: 'System.out.println("Hello World");',
+                  url: "TestFile.cls"
               }]
           });
       });

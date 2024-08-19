@@ -141,6 +141,7 @@ export function transformStringToRuleResult(fileName: string, jsonString: string
 			column: 1,
 			currentCode: Buffer.from(encodedCodeBefore, 'base64').toString('utf8'),
 			suggestedCode: Buffer.from(encodedCodeAfter, 'base64').toString('utf8'),
+			url: fileName
 		};
 	
 		ruleResult.violations.push(violation);

@@ -95,12 +95,12 @@ export class DiagnosticManager {
             if (apexGuruViolation.suggestedCode) {
                 diagnostic.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
-                        new vscode.Location(vscode.Uri.parse('Current Code'), range),
-                        `${apexGuruViolation.currentCode}`
+                        new vscode.Location(vscode.Uri.parse(violation.url), range),
+                        `Current Code: ${apexGuruViolation.currentCode}`
                     ),
                     new vscode.DiagnosticRelatedInformation(
-                        new vscode.Location(vscode.Uri.parse('ApexGuru Suggestions'), range),
-                        `${apexGuruViolation.suggestedCode}`
+                        new vscode.Location(vscode.Uri.parse(violation.url), range),
+                        `ApexGuru Suggestions: ${apexGuruViolation.suggestedCode}`
                     )
                 ];
             }
