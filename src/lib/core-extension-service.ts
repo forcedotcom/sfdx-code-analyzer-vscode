@@ -9,8 +9,9 @@ import { Event } from 'vscode';
 import { satisfies } from 'semver';
 import { messages } from './messages';
 import { AuthFields } from '../types';
+import {SettingsManager} from '../lib/settings';
 
-import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, APEX_GURU_FEATURE_FLAG_ENABLED } from './constants';
+import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
 /**
  * Manages access to the services exported by the Salesforce VSCode Extension Pack's core extension.
  * If the extension pack isn't installed, only performs no-ops.
@@ -25,7 +26,7 @@ export class CoreExtensionService {
 			const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
 			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context, outputChannel);
-			if (APEX_GURU_FEATURE_FLAG_ENABLED) {
+			if (SettingsManager.getApexGuruEnabled()) {
 				CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
 			}
 			CoreExtensionService.initialized = true;

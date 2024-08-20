@@ -16,8 +16,9 @@ export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
 export const COMMAND_RUN_DFA = 'sfca.runDfa';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE = 'sfca.removeDiagnosticsOnActiveFile';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE = 'sfca.removeDiagnosticsOnSelectedFile';
-export const COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange'
-export const COMMAND_RUN_APEX_GURU_ON_FILE = 'sfca.runApexGuruAnalysisOnSelectedFile'
+export const COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
+export const COMMAND_RUN_APEX_GURU_ON_FILE = 'sfca.runApexGuruAnalysisOnSelectedFile';
+export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnCurrentFile';
 
 // telemetry event keys
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
@@ -37,6 +38,5 @@ export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
 export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
 
 // feature gates
-export const APEX_GURU_FEATURE_FLAG_ENABLED = false;
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;

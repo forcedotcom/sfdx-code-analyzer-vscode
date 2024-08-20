@@ -105,7 +105,11 @@
             },
             {
                 "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                "title": "SFDX: Scan for Performance Issues with ApexGuru on Selected File"
+                "title": "SFDX: Scan Selected File for Performance Issues with ApexGuru"
+            },
+            {
+                "command": "sfca.runApexGuruAnalysisOnCurrentFile",
+                "title": "SFDX: Scan Current File for Performance Issues with ApexGuru"
             }
         ],
         "configuration": {
@@ -158,6 +162,11 @@
                 "codeAnalyzer.rules.category": {
                     "type": "string",
                     "description": "The categories of rules to run. Specify multiple values as a comma-separated list. Run 'sf scanner rule list -e' in the terminal for the list of categories associated with a specific engine."
+                },
+                "codeAnalyzer.apexGuru.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Detect critical anti-patterns and performance hotspots in your Apex code by analyzing your Apex files with ApexGuru. This feature is a closed pilot; contact your account representative."
                 }
             }
         },
@@ -190,6 +199,10 @@
                 {
                     "command": "sfca.runApexGuruAnalysisOnSelectedFile",
                     "when": "false"
+                },
+                {
+                    "command": "sfca.runApexGuruAnalysisOnCurrentFile",
+                    "when": "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ],
             "editor/context": [
@@ -201,6 +214,10 @@
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile"
+                },
+                {
+                    "command": "sfca.runApexGuruAnalysisOnCurrentFile",
+                    "when": "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ],
             "explorer/context": [
