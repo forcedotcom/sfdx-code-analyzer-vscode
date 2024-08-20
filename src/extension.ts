@@ -54,7 +54,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context, outputChannel);
 
-	// const apexGuruFeatureFlag = vscode.workspace.getConfiguration().get<boolean>('sfca.apexGuruFeatureEnabled', false);
 	const apexGuruFeatureFlag = SettingsManager.getApexGuruEnabled();
 	const apexGuruEnabled = apexGuruFeatureFlag && await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
 	// Set the necessary flags to control showing the command
