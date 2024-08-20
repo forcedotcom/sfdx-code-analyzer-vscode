@@ -96,11 +96,11 @@ export class DiagnosticManager {
                 diagnostic.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(vscode.Uri.parse(violation.url), range),
-                        `\n// Current Code: \n ${apexGuruViolation.currentCode}`
+                        `\n// Current Code: \n${apexGuruViolation.currentCode}`
                     ),
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(vscode.Uri.parse(violation.url), range),
-                        `\n// ApexGuru Suggestions: \n ${apexGuruViolation.suggestedCode}`
+                        `\n// ApexGuru Suggestions: \n${apexGuruViolation.suggestedCode}`
                     )
                 ];
             }
