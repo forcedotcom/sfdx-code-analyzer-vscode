@@ -54,7 +54,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context, outputChannel);
 
-	const apexGuruEnabled = Constants.APEX_GURU_FEATURE_FLAG_ENABLED && await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
+	const apexGuruFeatureFlag = SettingsManager.getApexGuruEnabled();
+	const apexGuruEnabled = apexGuruFeatureFlag && await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
 	// Set the necessary flags to control showing the command
 	await vscode.commands.executeCommand('setContext', 'sfca.apexGuruEnabled', apexGuruEnabled);
 
@@ -149,8 +150,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 					outputChannel: outputChannel
 				});
 		});
-
-		context.subscriptions.push(runApexGuruOnSelectedFile);
+		const runApexGuruOnCurrentFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
+			const targets: string[] = await targeting.getTargets([]);
+			return await ApexGuruFunctions.runApexGuruOnFile(vscode.Uri.file(targets[0]), 
+				{
+					commandName: Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE,
+					diagnosticCollection,
+					outputChannel: outputChannel
+				});
+		});
+		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile);
 	}
 	
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);

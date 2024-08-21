@@ -170,4 +170,19 @@ suite('SettingsManager Test Suite', () => {
         expect(result).to.equal(mockRulesCategory);
         expect(getConfigurationStub.calledOnceWith('codeAnalyzer.rules')).to.be.true;
     });
+
+    test('getApexGuruEnabled should return the apexGuru enabled setting', () => {
+        // ===== SETUP =====
+        const mockAnalyzeOnSaveEnabled = true;
+        getConfigurationStub.withArgs('codeAnalyzer.apexGuru').returns({
+            get: Sinon.stub().returns(mockAnalyzeOnSaveEnabled)
+        });
+
+        // ===== TEST =====
+        const result = SettingsManager.getApexGuruEnabled();
+
+        // ===== ASSERTIONS =====
+        expect(result).to.equal(mockAnalyzeOnSaveEnabled);
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.apexGuru')).to.be.true;
+    });
 });
