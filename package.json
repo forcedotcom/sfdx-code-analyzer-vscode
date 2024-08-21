@@ -166,7 +166,7 @@
                 "codeAnalyzer.apexGuru.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Detect critical anti-patterns and performance hotspots in your Apex code by analyzing your Apex files with ApexGuru. This feature is a closed pilot; contact your account representative."
+                    "description": "Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
                 }
             }
         },
