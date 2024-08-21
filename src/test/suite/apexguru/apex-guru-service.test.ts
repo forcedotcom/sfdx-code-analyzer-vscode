@@ -153,14 +153,15 @@ suite('Apex Guru Test Suite', () => {
     });
 
     suite('#transformStringToRuleResult', () => {
-      test('Transforms valid JSON string to RuleResult', () => {
+      test('Transforms valid JSON string to RuleResult for soql violations', () => {
           const fileName = 'TestFile.cls';
           const jsonString = JSON.stringify([{
               type: 'BestPractices',
               value: 'Avoid using System.debug',
               properties: [
                   { name: 'line_number', value: '10' },
-                  { name: 'code_after', value: Buffer.from('System.out.println("Hello World");').toString('base64') }
+                  { name: 'code_after', value: Buffer.from('System.out.println("New Hello World");').toString('base64') },
+                  { name: 'code_before', value: Buffer.from('System.out.println("Old Hello World");').toString('base64') }
               ]
           }]);
 
@@ -176,12 +177,71 @@ suite('Apex Guru Test Suite', () => {
                   category: 'BestPractices',
                   line: 10,
                   column: 1,
-                  currentCode: '',
-                  suggestedCode: 'System.out.println("Hello World");',
+                  currentCode: 'System.out.println("Old Hello World");',
+                  suggestedCode: 'System.out.println("New Hello World");',
                   url: "TestFile.cls"
               }]
           });
       });
+
+      test('Transforms valid JSON string to RuleResult for code violations', () => {
+        const fileName = 'TestFile.cls';
+        const jsonString = JSON.stringify([{
+            type: 'BestPractices',
+            value: 'Avoid using System.debug',
+            properties: [
+                { name: 'line_number', value: '10' },
+                { name: 'class_after', value: Buffer.from('System.out.println("New Hello World");').toString('base64') },
+                { name: 'class_before', value: Buffer.from('System.out.println("Old Hello World");').toString('base64') }
+            ]
+        }]);
+
+        const result: RuleResult = ApexGuruFunctions.transformStringToRuleResult(fileName, jsonString);
+
+        expect(result).to.deep.equal({
+            engine: 'apexguru',
+            fileName: fileName,
+            violations: [{
+                ruleName: 'BestPractices',
+                message: 'Avoid using System.debug',
+                severity: 1,
+                category: 'BestPractices',
+                line: 10,
+                column: 1,
+                currentCode: 'System.out.println("Old Hello World");',
+                suggestedCode: 'System.out.println("New Hello World");',
+                url: "TestFile.cls"
+            }]
+        });
+    });
+
+    test('Transforms valid JSON string to RuleResult for violations with no suggestions', () => {
+        const fileName = 'TestFile.cls';
+        const jsonString = JSON.stringify([{
+            type: 'BestPractices',
+            value: 'Avoid using System.debug',
+            properties: [
+                { name: 'line_number', value: '10' }            ]
+        }]);
+
+        const result: RuleResult = ApexGuruFunctions.transformStringToRuleResult(fileName, jsonString);
+
+        expect(result).to.deep.equal({
+            engine: 'apexguru',
+            fileName: fileName,
+            violations: [{
+                ruleName: 'BestPractices',
+                message: 'Avoid using System.debug',
+                severity: 1,
+                category: 'BestPractices',
+                line: 10,
+                column: 1,
+                url: "TestFile.cls",
+                currentCode: '',
+                suggestedCode: '',
+            }]
+        });
+    });
 
       test('Handles empty JSON string', () => {
           const fileName = 'TestFile.cls';

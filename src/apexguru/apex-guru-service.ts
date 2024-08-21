@@ -128,8 +128,14 @@ export function transformStringToRuleResult(fileName: string, jsonString: string
     };
 
 	reports.forEach(parsed => {
-		const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value ?? '';
-		const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value ?? '';
+		const encodedCodeBefore = 
+		parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value 
+		?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value 
+		?? '';
+		const encodedCodeAfter = 
+		parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value 
+		?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value 
+		?? '';
 		const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
 
 		const violation: ApexGuruViolation = {
