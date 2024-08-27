@@ -49,4 +49,8 @@ export class SettingsManager {
     public static getRulesCategory(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer.rules').get('category');
     }
+
+    public static getApexGuruEnabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
+    }
 }

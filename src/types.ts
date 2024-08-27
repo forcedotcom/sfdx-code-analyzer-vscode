@@ -32,7 +32,14 @@ export type DfaRuleViolation = BaseViolation & {
 	sinkFileName: string|null;
 };
 
-export type RuleViolation = PathlessRuleViolation | DfaRuleViolation;
+export type ApexGuruViolation = BaseViolation & {
+	line: number;
+	column: number;
+	currentCode: string;
+	suggestedCode: string;
+}
+
+export type RuleViolation = PathlessRuleViolation | DfaRuleViolation | ApexGuruViolation;
 
 export type RuleResult = {
     engine: string;
@@ -74,8 +81,3 @@ export type AuthFields = {
 	expirationDate?: string;
 	tracksSource?: boolean;
 };
-
-export type ApexGuruAuthResponse = {
-    status: string;
-}
-
