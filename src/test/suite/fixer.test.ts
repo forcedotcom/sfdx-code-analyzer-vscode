@@ -531,7 +531,7 @@ suite('fixer.ts', () => {
                 expect(fixes).to.have.lengthOf(1, 'One fix should be offered');
                 const fix = fixes[0].edit.get(fileUri)[0];
                 expect(fix.newText).to.equal('apex guru suggested code\n', 'The suppression code should match the suggestion');
-                expect(fix.range.start.line).to.equal(6, 'The suppression should be added one line above the diagnostic line');
+                expect(fix.range.start.line).to.equal(7, 'The suppression should be added at the diagnostic line');
             });
     
             test('Should not generate a suppression fix if line is already processed', async () => {
@@ -605,7 +605,7 @@ suite('fixer.ts', () => {
     
                 // Validate results.
                 expect(fix.edit.get(fileUri)[0].newText).to.equal('apex guru suggested code\n', 'The suppression code should match the suggestion');
-                expect(fix.edit.get(fileUri)[0].range.start.line).to.equal(6, 'The suppression should be added one line above the diagnostic line');
+                expect(fix.edit.get(fileUri)[0].range.start.line).to.equal(7, 'The suppression should be added at the diagnostic line');
             });
         });
     });
