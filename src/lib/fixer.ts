@@ -114,8 +114,8 @@ export class _ApexGuruFixGenerator extends FixGenerator {
 
         const edit = new vscode.WorkspaceEdit();
         const range = this.diagnostic.range;  // Assuming the range is the location of the existing code in the document
-        const oneLineAbove = new vscode.Position(range.start.line > 1 ? range.start.line - 1 : 0, range.start.character);
-        edit.insert(document.uri, oneLineAbove, suggestedCode + '\n');
+        const diagnosticStartLine = new vscode.Position(range.start.line, range.start.character);
+        edit.insert(document.uri, diagnosticStartLine, suggestedCode + '\n');
         
         // Assign the edit to the action
         action.edit = edit;
