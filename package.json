@@ -186,7 +186,7 @@
                 },
                 {
                     "command": "sfca.runDfa",
-                    "when": "false"
+                    "when": "true"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",

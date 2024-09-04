@@ -11,6 +11,9 @@ import {exists} from './file';
 import {messages} from './messages';
 import * as Constants from './constants';
 import cspawn = require('cross-spawn');
+import * as os from 'os';
+import * as fs from 'fs';
+import path from 'path';
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
@@ -21,6 +24,7 @@ export class ScanRunner {
      * @param targets A list of files to be targeted by the scan
      * @returns The results of the scan
      */
+    
     public async run(targets: string[]): Promise<RuleResult[]> {
         // Create the arg array.
         const args: string[] = await this.createPathlessArgArray(targets);
@@ -44,7 +48,8 @@ export class ScanRunner {
         const args: string[] = this.createDfaArgArray(targets, projectDir);
 
         // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context);
+        const sfgeResultsJson = path.join(this.createTempDirectory(), 'sfca-graph-engine-cache.json');
+        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context, sfgeResultsJson);
 
         // Process the results.
         return this.processDfaResults(executionResult);
@@ -162,9 +167,10 @@ export class ScanRunner {
      * Uses the provided arguments to run a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
      */
-    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
+    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext, sfgeResultsJson: string): Promise<ExecutionResult> {
+        return new Promise( (res) => {
+            const env = { ...process.env, SCANNER_INTERNAL_OUTFILE: sfgeResultsJson};
+            const cp = cspawn.spawn('sf', args, {env});
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, cp.pid);
 
             let stdout = '';
@@ -180,6 +186,16 @@ export class ScanRunner {
             });
             
         });
+    }
+
+    private createTempDirectory(): string {
+        const tempFolderPrefix = path.join(os.tmpdir(), Constants.EXTENSION_PACK_ID);
+        try {
+            const folder = fs.mkdtempSync(tempFolderPrefix);
+            return folder;
+        } catch (err) {
+            throw new Error('Failed to create temporary directory');
+        }
     }
 
     /**
