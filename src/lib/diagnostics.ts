@@ -100,7 +100,7 @@ export class DiagnosticManager {
                     ),
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(vscode.Uri.parse(violation.url), range),
-                        `/*\nApexGuru Suggestions: \n${apexGuruViolation.suggestedCode}\nEnd of ApexGuru Suggestions.\n*/`
+                        `/*\n//ApexGuru Suggestions: \n${apexGuruViolation.suggestedCode}\n*/`
                     )
                 ];
             }
