@@ -187,7 +187,7 @@ async function _runDfa(context: vscode.ExtensionContext) {
 		const choice = await vscode.window.showQuickPick(
 			['***Yes***', '***No***'],
 			{
-				placeHolder: '***We identified a previous Salesforce Graph Engine run.\n Do you want to only run the previously failed violations from that run?***',
+				placeHolder: '***We identified a previous Salesforce Graph Engine run. Do you want to only run the previously failed violations from that run?***',
 				canPickMany: false,
 				ignoreFocusOut: true
 			}
