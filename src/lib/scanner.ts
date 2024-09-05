@@ -11,9 +11,6 @@ import {exists} from './file';
 import {messages} from './messages';
 import * as Constants from './constants';
 import cspawn = require('cross-spawn');
-import * as os from 'os';
-import * as fs from 'fs';
-import path from 'path';
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
@@ -43,13 +40,12 @@ export class ScanRunner {
      * @param projectDir The directory containing all files in the project to be scanned.
      * @returns The HTML-formatted scan results, or an empty string if no violations were found.
      */
-    public async runDfa(targets: string[], projectDir: string, context: vscode.ExtensionContext): Promise<string> {
+    public async runDfa(targets: string[], projectDir: string, context: vscode.ExtensionContext, cacheFilePath?: string): Promise<string> {
         // Create the arg array.
-        const args: string[] = this.createDfaArgArray(targets, projectDir);
+        const args: string[] = this.createDfaArgArray(targets, projectDir, cacheFilePath);
 
         // Invoke the scanner.
-        const sfgeResultsJson = path.join(this.createTempDirectory(), 'sfca-graph-engine-cache.json');
-        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context, sfgeResultsJson);
+        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context);
 
         // Process the results.
         return this.processDfaResults(executionResult);
@@ -60,7 +56,7 @@ export class ScanRunner {
      * @param targets The files/methods to be targeted.
      * @param projectDir The root of the project to be scanned.
      */
-    private createDfaArgArray(targets: string[], projectDir: string): string[] {
+    private createDfaArgArray(targets: string[], projectDir: string, cacheFilePath?: string): string[] {
         const args: string[] = [
             'scanner', 'run', 'dfa',
             `--projectdir`, projectDir,
@@ -76,6 +72,11 @@ export class ScanRunner {
 
         if (targets && targets.filter(target => target != null).length > 0) {
             args.push('--target', `${targets.join(',')}`);
+        }
+
+        if (cacheFilePath) {
+            args.push('--cachepath', cacheFilePath);
+            args.push('--enablecaching');
         }
 
         // There are a number of custom settings that we need to check too.
@@ -167,10 +168,9 @@ export class ScanRunner {
      * Uses the provided arguments to run a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
      */
-    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext, sfgeResultsJson: string): Promise<ExecutionResult> {
+    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
         return new Promise( (res) => {
-            const env = { ...process.env, SCANNER_INTERNAL_OUTFILE: sfgeResultsJson};
-            const cp = cspawn.spawn('sf', args, {env});
+            const cp = cspawn.spawn('sf', args);
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, cp.pid);
 
             let stdout = '';
@@ -186,16 +186,6 @@ export class ScanRunner {
             });
             
         });
-    }
-
-    private createTempDirectory(): string {
-        const tempFolderPrefix = path.join(os.tmpdir(), Constants.EXTENSION_PACK_ID);
-        try {
-            const folder = fs.mkdtempSync(tempFolderPrefix);
-            return folder;
-        } catch (err) {
-            throw new Error('Failed to create temporary directory');
-        }
     }
 
     /**

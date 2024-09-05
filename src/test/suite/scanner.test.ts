@@ -399,6 +399,27 @@ suite('ScanRunner', () => {
                 expect(args[10]).to.equal('--sfgejvmargs', 'Wrong arg');
                 expect(args[11]).to.equal(jvmArgs, 'Wrong arg');
             });
+            
+            test('Enable caching and include cache path', () => {
+                // ===== SETUP =====
+                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
+                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
+                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
+                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+                const emptyTargets = [];
+
+                // ===== TEST =====
+                // Call the test method helper.
+                const scanner: ScanRunner = new ScanRunner();
+                const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir, 'some/path/file.json');
+
+                // ===== ASSERTIONS =====
+                // Verify that the right arguments were created.
+                expect(args).to.have.lengthOf(11, 'Wrong number of args');
+                expect(args[8]).to.equal('--cachepath', 'Wrong arg');
+                expect(args[9]).to.equal('some/path/file.json', 'Wrong arg');
+                expect(args[10]).to.equal('--enablecaching', 'Wrong arg');
+            });
         });
     });
 
