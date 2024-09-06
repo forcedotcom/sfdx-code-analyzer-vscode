@@ -169,7 +169,7 @@ export class ScanRunner {
      * @param args The arguments to be supplied
      */
     private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
-        return new Promise( (res) => {
+        return new Promise((res) => {
             const cp = cspawn.spawn('sf', args);
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, cp.pid);
 
