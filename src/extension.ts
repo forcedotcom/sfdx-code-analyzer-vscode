@@ -20,7 +20,8 @@ import { CoreExtensionService, TelemetryService } from './lib/core-extension-ser
 import * as Constants from './lib/constants';
 import * as path from 'path';
 import { SIGKILL } from 'constants';
-import * as ApexGuruFunctions from './apexguru/apex-guru-service'
+import * as ApexGuruFunctions from './apexguru/apex-guru-service';
+import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
 
@@ -41,6 +42,9 @@ let customCancellationToken: vscode.CancellationTokenSource | null = null;
 let outputChannel: vscode.LogOutputChannel;
 
 let sfgeCachePath: string = null;
+
+// Create a Set to store saved file paths
+const savedFilesCache: Set<string> = new Set();
 
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
@@ -113,36 +117,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 	const runDfaOnSelectedMethodCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
 		if (await _shouldProceedWithDfaRun(context)) {
-			await vscode.window.withProgress({
-				location: vscode.ProgressLocation.Window,
-				title: messages.graphEngine.spinnerText,
-				cancellable: true
-			}, async (progress, token) => {
-				token.onCancellationRequested(async () => {
-					await _stopExistingDfaRun(context);
-				});
-				customCancellationToken = new vscode.CancellationTokenSource();
-				customCancellationToken.token.onCancellationRequested(async () => {
-					customCancellationToken?.dispose();
-					customCancellationToken = null;
-					await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
-					return;
-				});
-				const methodLevelTarget: string = await targeting.getSelectedMethod();
-				// Pull out the file from the target and use it to identify the project directory.
-				const currentFile: string = methodLevelTarget.substring(0, methodLevelTarget.lastIndexOf('#'));
-				const projectDir: string = targeting.getProjectDir(currentFile);
-
-				return _runAndDisplayDfa(context, {
-					commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD
-				}, customCancellationToken, methodLevelTarget, projectDir);
-			});
+			const methodLevelTarget: string[] = [await targeting.getSelectedMethod()];
+			await runMethodLevelDfa(context, methodLevelTarget);
 		}
 	});
 
 	sfgeCachePath = path.join(createTempDirectory(), 'sfca-graph-engine-cache.json');
 	const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
 		await _runDfa(context);
+		savedFilesCache.clear();
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, runDfaOnWorkspaceCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
 	
@@ -166,10 +149,42 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		});
 		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile);
 	}
+
+	const documentSaveListener = vscode.workspace.onDidSaveTextDocument(document => {
+        const filePath = document.uri.fsPath;
+        savedFilesCache.add(filePath);
+    });
+	context.subscriptions.push(documentSaveListener);
 	
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+async function runMethodLevelDfa(context: vscode.ExtensionContext, methodLevelTarget: string[]) {
+	await vscode.window.withProgress({
+		location: vscode.ProgressLocation.Window,
+		title: messages.graphEngine.spinnerText,
+		cancellable: true
+	}, async (progress, token) => {
+		token.onCancellationRequested(async () => {
+			await _stopExistingDfaRun(context);
+		});
+		customCancellationToken = new vscode.CancellationTokenSource();
+		customCancellationToken.token.onCancellationRequested(async () => {
+			customCancellationToken?.dispose();
+			customCancellationToken = null;
+			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+			return;
+		});
+		// Pull out the file from the target and use it to identify the project directory.
+		const currentFile: string = methodLevelTarget[0].substring(0, methodLevelTarget.lastIndexOf('#'));
+		const projectDir: string = targeting.getProjectDir(currentFile);
+
+		return _runAndDisplayDfa(context, {
+			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD
+		}, customCancellationToken, methodLevelTarget, projectDir);
+	});
 }
 
 export function createTempDirectory(): string {
@@ -194,10 +209,15 @@ async function _runDfa(context: vscode.ExtensionContext) {
 		);
 
 		// Default to "Yes" if no choice is made
-		const rerunFailedOnly = choice == '***Yes***';
-		if (rerunFailedOnly) {
+		const rerunChangedOnly = choice == '***Yes***';
+		if (rerunChangedOnly) {
 			// Do nothing for now. This will be implemented as part of W-15639759
-			return;
+			const deltaRunTargets = DeltaRunFunctions.getDeltaRunTarget(sfgeCachePath, savedFilesCache);
+			if (deltaRunTargets.length == 0) {
+				void vscode.window.showInformationMessage('***No local changes found that would change the outcome of previous SFGE full run.***');
+				return
+			}
+			await runDfaOnSelectMethods(context, deltaRunTargets);
 		} else {
 			void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background. You can cancel this by clicking on the status progress.***');
 			await runDfaOnWorkspace(context);
@@ -205,6 +225,31 @@ async function _runDfa(context: vscode.ExtensionContext) {
 	} else {
 		await runDfaOnWorkspace(context);
 	}
+}
+
+async function runDfaOnSelectMethods(context: vscode.ExtensionContext, selectedMethods: string[]) {
+	await vscode.window.withProgress({
+		location: vscode.ProgressLocation.Window,
+		title: messages.graphEngine.spinnerText,
+		cancellable: true
+	}, async (progress, token) => {
+		token.onCancellationRequested(async () => {
+			await _stopExistingDfaRun(context);
+		});
+		customCancellationToken = new vscode.CancellationTokenSource();
+		customCancellationToken.token.onCancellationRequested(async () => {
+			customCancellationToken?.dispose();
+			customCancellationToken = null;
+			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+			return;
+		});
+
+		// We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
+		// the root directory of that project as the projectDir argument to run DFA.
+		return _runAndDisplayDfa(context, {
+			commandName: Constants.COMMAND_RUN_DFA
+		}, customCancellationToken, selectedMethods, targeting.getProjectDir(), sfgeCachePath);
+	});
 }
 
 async function runDfaOnWorkspace(context: vscode.ExtensionContext) {
@@ -228,7 +273,7 @@ async function runDfaOnWorkspace(context: vscode.ExtensionContext) {
 		// the root directory of that project as the projectDir argument to run DFA.
 		return _runAndDisplayDfa(context, {
 			commandName: Constants.COMMAND_RUN_DFA
-		}, customCancellationToken, null, targeting.getProjectDir());
+		}, customCancellationToken, null, targeting.getProjectDir(), sfgeCachePath);
 	});
 }
 
@@ -371,14 +416,16 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: 
  * @param runInfo A collection of services and information used to properly run the command
  * @param runInfo.commandName The specific command being run
  */
-export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo, cancelToken: vscode.CancellationTokenSource, methodLevelTarget: string, projectDir: string): Promise<void> {
+export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo: RunInfo,
+	cancelToken: vscode.CancellationTokenSource, methodLevelTarget: string[], projectDir: string,
+	cacheFilePath?: string): Promise<void> {
 	const {
 		commandName
 	} = runInfo;
 	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
-		const results = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context, sfgeCachePath);
+		const results = await new ScanRunner().runDfa(methodLevelTarget, projectDir, context, cacheFilePath);
 		if (results.length > 0) {
 			const panel = vscode.window.createWebviewPanel(
 				'dfaResults',
@@ -479,6 +526,7 @@ async function summarizeResultsAsToast(targets: string[], results: RuleResult[])
 // This method is called when your extension is deactivated
 export function deactivate() {
 	TelemetryService.dispose();
+	savedFilesCache.clear();
 }
 
 export function _isValidFileForAnalysis(documentUri: vscode.Uri) {
