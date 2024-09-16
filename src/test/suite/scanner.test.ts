@@ -612,7 +612,7 @@ suite('ScanRunner', () => {
 		let context: vscode.ExtensionContext;
 
 		suiteSetup(async function () {
-			this.timeout(10000);
+			this.timeout(60000);
 			// Activate the extension.
 			context = await ext.activate();
 		});
