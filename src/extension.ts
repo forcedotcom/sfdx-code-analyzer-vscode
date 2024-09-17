@@ -53,7 +53,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	// Define a log output channel that we can use, and clear it so it's fresh.
 	outputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
 	outputChannel.clear();
-	outputChannel.show();	
+	outputChannel.show();
 
 	// We need to do this first in case any other services need access to those provided by the core extension.
 	await CoreExtensionService.loadDependencies(context, outputChannel);
@@ -77,6 +77,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 	// Declare our commands.
 	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
+		console.log('calling command function');
 		return _runAndDisplayPathless([], {
 			commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
 			diagnosticCollection
@@ -145,10 +146,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		await _runDfa(context);
 	});
 	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, runDfaOnWorkspaceCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
-	
+
 	if (apexGuruEnabled) {
 		const runApexGuruOnSelectedFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
-			return await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection, 
+			return await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection,
 				{
 					commandName: Constants.COMMAND_RUN_APEX_GURU_ON_FILE,
 					diagnosticCollection,
@@ -157,7 +158,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		});
 		const runApexGuruOnCurrentFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
 			const targets: string[] = await targeting.getTargets([]);
-			return await ApexGuruFunctions.runApexGuruOnFile(vscode.Uri.file(targets[0]), 
+			return await ApexGuruFunctions.runApexGuruOnFile(vscode.Uri.file(targets[0]),
 				{
 					commandName: Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE,
 					diagnosticCollection,
@@ -166,7 +167,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		});
 		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile);
 	}
-	
+
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
@@ -262,7 +263,7 @@ export async function _stopExistingDfaRun(context: vscode.ExtensionContext): Pro
 			outputChannel.appendLine(errMsg);
 		}
 	} else {
-		await vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);	
+		await vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);
 	}
 }
 
@@ -326,27 +327,35 @@ export async function _runAndDisplayPathless(selections: vscode.Uri[], runInfo: 
 	} = runInfo;
 	const startTime = Date.now();
 	try {
+		console.log('verifying plugin install');
 		await verifyPluginInstallation();
+		console.log('plugin install verified');
 		return await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification
 		}, async (progress) => {
 			// Get targets
+			console.log('Calling progress function');
 			progress.report(messages.scanProgressReport.identifyingTargets);
 			const targets: string[] = await targeting.getTargets(selections);
 
 			// Run the scan.
 			progress.report(messages.scanProgressReport.analyzingTargets);
+			console.log('running scan');
 			const results: RuleResult[] = await new ScanRunner().run(targets);
+			console.log('scan finished');
 
 			progress.report(messages.scanProgressReport.processingResults);
 			new DiagnosticManager().displayDiagnostics(targets, results, diagnosticCollection);
+			console.log('sending telemetry event');
 			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
 				executedCommand: commandName,
 				duration: (Date.now() - startTime).toString()
 			});
+			console.log('summarizing');
 			// This has to be a floating promise or else the progress bar won't disappear.
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			summarizeResultsAsToast(targets, results);
+			console.log('summarized');
 		});
 	} catch (e) {
 		const errMsg = e instanceof Error ? e.message : e as string;
@@ -445,7 +454,7 @@ export async function _clearDiagnosticsForSelectedFiles(selections: vscode.Uri[]
 		for (const target of targets) {
 			diagnosticCollection.delete(vscode.Uri.file(target));
 		}
-		
+
 		TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
 			executedCommand: commandName,
 			duration: (Date.now() - startTime).toString()
