@@ -1,6 +1,6 @@
-const cp = require('child_process');
+const childProcess = require('child_process');
 
-cp.spawn('sf', ['-v']);
+const cp = childProcess.spawn('sf', ['-v']);
 
 cp.on('close', code => {
 	console.log(`isSfCliInstalled got close event, code is ${code}`);
