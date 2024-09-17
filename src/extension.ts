@@ -271,11 +271,15 @@ export async function _stopExistingDfaRun(context: vscode.ExtensionContext): Pro
  * @throws If {@code sf}/{@code sfdx} or {@code @salesforce/sfdx-scanner} is not installed.
  */
 export async function verifyPluginInstallation(): Promise<void> {
+	console.log('pre-install check');
 	if (!await SfCli.isSfCliInstalled()) {
+		console.log('Cli not installed');
 		throw new Error(messages.error.sfMissing);
 	} else if (!await SfCli.isCodeAnalyzerInstalled()) {
+		console.log('Code analyzer not installed');
 		throw new Error(messages.error.sfdxScannerMissing);
 	}
+	console.log('installed');
 }
 
 export function registerScanOnSave() {
