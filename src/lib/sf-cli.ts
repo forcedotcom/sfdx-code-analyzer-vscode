@@ -19,7 +19,7 @@ export class SfCli {
         return new Promise((res) => {
             const cp = cspawn.spawn('sf', ['-v']);
 
-            cp.on('exit', code => {
+            cp.on('close', code => {
                 // If the exit code is 0, then SF or SFDX is present.
                 // Otherwise, it's not.
                 res(code === 0);
