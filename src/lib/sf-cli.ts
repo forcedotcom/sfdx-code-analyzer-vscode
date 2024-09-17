@@ -33,7 +33,7 @@ export class SfCli {
      * @returns True if {@code sf} or {@code sfdx} is installed.
      */
     public static async isSfCliInstalled(): Promise<boolean> {
-		console.log(await SfCli.whichNode());
+		console.log(`node is ${await SfCli.whichNode()}`);
         return new Promise((res) => {
             const cp = childProcess.spawn('sf', ['-v']);
 
