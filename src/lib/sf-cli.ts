@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import cspawn = require('cross-spawn');
+//import cspawn = require('cross-spawn');
+import * as childProcess from 'node:child_process';
 
 /**
  * Class for interacting with {@code sf}/{@code sfdx} via the CLI.
@@ -17,7 +18,7 @@ export class SfCli {
      */
     public static async isSfCliInstalled(): Promise<boolean> {
         return new Promise((res) => {
-            const cp = cspawn.spawn('sf', ['-v']);
+            const cp = childProcess.spawn('sf', ['-v']);
 
             cp.on('close', code => {
 				console.log(`isSfCliInstalled got close event, code is ${code}`);
@@ -39,7 +40,7 @@ export class SfCli {
      */
     public static async isCodeAnalyzerInstalled(): Promise<boolean> {
         return new Promise((res) => {
-            const cp = cspawn.spawn('sf', ['plugins']);
+            const cp = childProcess.spawn('sf', ['plugins']);
 
             let stdout = '';
 
