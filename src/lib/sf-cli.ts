@@ -41,7 +41,7 @@ export class SfCli {
                 stdout += data;
             });
 
-            cp.on('exit', code => {
+            cp.on('close', code => {
                 // If the code is non-zero, we can infer Code Analyzer's absence.
                 res(code === 0 && stdout.includes('@salesforce/sfdx-scanner'));
             });
