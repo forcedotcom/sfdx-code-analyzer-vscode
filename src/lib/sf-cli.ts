@@ -12,9 +12,9 @@ import * as childProcess from 'node:child_process';
  */
 export class SfCli {
 
-	private static async whichNode(): Promise<string> {
+	private static async whichSF(): Promise<string> {
 		return new Promise((res) => {
-            const cp = childProcess.spawn('which', ['node']);
+            const cp = childProcess.spawn('which', ['sf']);
 
 			let stdout = '';
 
@@ -33,7 +33,7 @@ export class SfCli {
      * @returns True if {@code sf} or {@code sfdx} is installed.
      */
     public static async isSfCliInstalled(): Promise<boolean> {
-		console.log(`node is ${await SfCli.whichNode()}`);
+		console.log(`sf is ${await SfCli.whichSF()}`);
         return new Promise((res) => {
             const cp = childProcess.spawn('sf', ['-v']);
 
