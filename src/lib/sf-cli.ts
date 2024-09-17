@@ -16,7 +16,7 @@ export class SfCli {
 		return new Promise((res) => {
             const cp = childProcess.spawn('which', ['node']);
 
-			let stdout: string = '';
+			let stdout = '';
 
 			cp.stdout.on('data', data => {
 				stdout += data;
