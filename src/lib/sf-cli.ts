@@ -31,6 +31,10 @@ export class SfCli {
 				console.log(`isSfCliInstalled got exit event, code is ${code}`);
 				res(code === 0);
 			})
+
+			cp.on('error', err => {
+				console.log(`isSfCliInstalled got error event, err is ${err.name}, ${err.message}`);
+			})
         });
     }
 
