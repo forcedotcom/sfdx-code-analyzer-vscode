@@ -40,6 +40,8 @@ jobs:
       # are integration tests.
       - name: Install SF CLI
         run: npm install --global @salesforce/cli
+      - name: sf installed check
+        run: sf -v
       # We'll need to install Salesforce Code Analyzer, since some
       # of the tests are integration tests.
       # NOTE: SFCA can come from a tarball built in a previous step,
