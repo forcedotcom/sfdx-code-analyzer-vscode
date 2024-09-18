@@ -44,6 +44,8 @@ jobs:
         run: sf -v
       - name: blah
         run: node ./experimental-script.js
+      - name: path
+        run: echo $PATH
       # We'll need to install Salesforce Code Analyzer, since some
       # of the tests are integration tests.
       # NOTE: SFCA can come from a tarball built in a previous step,
