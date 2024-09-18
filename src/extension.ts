@@ -211,7 +211,6 @@ async function _runDfa(context: vscode.ExtensionContext) {
 		// Default to "Yes" if no choice is made
 		const rerunChangedOnly = choice == '***Yes***';
 		if (rerunChangedOnly) {
-			// Do nothing for now. This will be implemented as part of W-15639759
 			const deltaRunTargets = DeltaRunFunctions.getDeltaRunTarget(sfgeCachePath, savedFilesCache);
 			if (deltaRunTargets.length == 0) {
 				void vscode.window.showInformationMessage('***No local changes found that would change the outcome of previous SFGE full run.***');
