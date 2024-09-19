@@ -17,6 +17,7 @@ on:
 jobs:
   build-and-run:
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
