@@ -58,7 +58,7 @@ suite('Extension Test Suite', () => {
 			// ===== SETUP =====
 			// Set the timeout to a frankly absurd value, just to make sure Github Actions
 			// can finish it in time.
-			this.timeout(180000);
+			this.timeout(90000);
 			// Open a file in the editor.
 			const fileUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 			const doc = await vscode.workspace.openTextDocument(fileUri);
@@ -89,7 +89,7 @@ suite('Extension Test Suite', () => {
 				// ===== SETUP =====
 				// Set the timeout to a frankly absurd value, just to make sure Github Actions
 				// can finish it in time.
-				this.timeout(180000);
+				this.timeout(60000);
 				// Get the URI for a single file.
 				const targetUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 
@@ -119,7 +119,7 @@ suite('Extension Test Suite', () => {
 				// ===== SETUP =====
 				// Set the timeout to a frankly absurd value, just to make sure Github Actions
 				// can finish it in time.
-				this.timeout(180000);
+				this.timeout(60000);
 				// Get the URIs for two separate files.
 				const targetUri1: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 				const targetUri2: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA2.cls'));
