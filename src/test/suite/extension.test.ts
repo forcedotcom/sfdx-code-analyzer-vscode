@@ -92,7 +92,7 @@ suite('Extension Test Suite', () => {
 			}
 		});
 
-		suite.skip('sfca.runOnSelected', () => {
+		suite('sfca.runOnSelected', () => {
 			test('One file selected', async function() {
 				// ===== SETUP =====
 				// Set the timeout to a frankly absurd value, just to make sure Github Actions
@@ -154,12 +154,12 @@ suite('Extension Test Suite', () => {
 			});
 		});
 
-		test.skip('sfca.runDfaOnSelected', async () => {
+		test('sfca.runDfaOnSelected', async () => {
 			// TODO: Add actual tests for `runDfaOnSelected`.
 		});
 	});
 
-	suite.skip('#_runAndDisplayPathless()', () => {
+	suite('#_runAndDisplayPathless()', () => {
 		suite('Error handling', () => {
 			let commandTelemStub: Sinon.SinonStub;
 			let exceptionTelemStub: Sinon.SinonStub;
@@ -221,7 +221,7 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite.skip('#_runAndDisplayDfa()', () => {
+	suite('#_runAndDisplayDfa()', () => {
 		suite('Error handling', () => {
 			let commandTelemStub: Sinon.SinonStub;
 			let exceptionTelemStub: Sinon.SinonStub;
@@ -287,7 +287,7 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite.skip('#verifyPluginInstallation()', () => {
+	suite('#verifyPluginInstallation()', () => {
 		teardown(() => {
 			Sinon.restore();
 		});
@@ -331,7 +331,7 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite.skip('#_shouldProceedWithDfaRun()', () => {
+	suite('#_shouldProceedWithDfaRun()', () => {
 		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
 
@@ -366,7 +366,7 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite.skip('#_stopExistingDfaRun()', () => {
+	suite('#_stopExistingDfaRun()', () => {
         let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
@@ -394,7 +394,7 @@ suite('Extension Test Suite', () => {
         });
     });
 
-	suite.skip('#isValidFileForAnalysis', () => {
+	suite('#isValidFileForAnalysis', () => {
 		test('Returns true for valid files', async() => {
 			// ===== SETUP ===== and ===== ASSERTIONS =====
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.apex"))).to.equal(true);
@@ -411,7 +411,7 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite.skip('_clearDiagnosticsForSelectedFiles Test Suite', () => {
+	suite('_clearDiagnosticsForSelectedFiles Test Suite', () => {
 		let diagnosticCollection: vscode.DiagnosticCollection;
 		let runInfo: RunInfo;
 		let getTargetsStub: Sinon.SinonStub;
@@ -532,7 +532,7 @@ suite('Extension Test Suite', () => {
 		});
 	});
 
-	suite.skip('_removeSingleDiagnostic Test Suite', () => {
+	suite('_removeSingleDiagnostic Test Suite', () => {
 		let diagnosticCollection: vscode.DiagnosticCollection;
 
 		setup(() => {
