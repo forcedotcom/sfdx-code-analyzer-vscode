@@ -1,9 +1,15 @@
 const childProcess = require('child_process');
 
-const cp = childProcess.spawn('sf', ['-v']);
+const cp = childProcess.spawn('echo', ['$PATH']);
+
+let stdout = '';
+
+cp.stdout.on('data', data => {
+	stdout += data;
+});
 
 cp.on('close', code => {
-	console.log(`isSfCliInstalled got close event, code is ${code}`);
+	console.log(`isSfCliInstalled got close event, code is ${code}, data is ${stdout}`);
 	// If the exit code is 0, then SF or SFDX is present.
 	// Otherwise, it's not.
 });

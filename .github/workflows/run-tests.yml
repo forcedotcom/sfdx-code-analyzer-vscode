@@ -42,6 +42,8 @@ jobs:
         run: npm install --global @salesforce/cli
       - name: sf installed check
         run: sf -v
+      - name: run which sf
+        run: which sf
       - name: blah
         run: node ./experimental-script.js
       - name: path

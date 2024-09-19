@@ -14,7 +14,23 @@ export class SfCli {
 
 	private static async echoPath(): Promise<string> {
 		return new Promise((res) => {
-            const cp = childProcess.spawn('echo', ['$PATH']);
+            const cp = childProcess.spawn('echo', ['${PATH}']);
+
+			let stdout = '';
+
+			cp.stdout.on('data', data => {
+				stdout += data;
+			});
+
+            cp.on('close', code => {
+                res(stdout);
+            });
+        });
+	}
+
+	private static async echoLs(): Promise<string> {
+		return new Promise((res) => {
+            const cp = childProcess.spawn('ls', ['/usr/local/bin']);
 
 			let stdout = '';
 
@@ -33,7 +49,8 @@ export class SfCli {
      * @returns True if {@code sf} or {@code sfdx} is installed.
      */
     public static async isSfCliInstalled(): Promise<boolean> {
-		console.log(`sf is ${await SfCli.echoPath()}`);
+		console.log(`path is ${await SfCli.echoPath()}`);
+		console.log(`echo ls is ${await this.echoLs()}`);
         return new Promise((res) => {
             const cp = childProcess.spawn('sf', ['-v']);
 
