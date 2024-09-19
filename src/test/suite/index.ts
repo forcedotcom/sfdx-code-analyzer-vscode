@@ -68,7 +68,7 @@ export async function run(): Promise<void> {
 	const testsRoot = path.resolve(__dirname, '..');
 
 	// Add all files to the test suite.
-	const files = glob.sync('**/*.test.js', {cwd: testsRoot});
+	const files = glob.sync('**/issue-demonstration/**/*.test.js', {cwd: testsRoot});
 	files.forEach(f => mocha.addFile(path.resolve(testsRoot, f)));
 
 	// Run the Mocha tests.

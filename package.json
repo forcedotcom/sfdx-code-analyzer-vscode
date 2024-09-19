@@ -33,10 +33,12 @@
         "SFCA"
     ],
     "dependencies": {
+        "@types/which": "^3.0.4",
         "cross-spawn": "^7.0.3",
         "glob": "^8.0.3",
         "globby": "^11.0.0",
-        "semver": "^7.5.4"
+        "semver": "^7.5.4",
+        "which": "^4.0.0"
     },
     "devDependencies": {
         "@istanbuljs/nyc-config-typescript": "^1.0.2",
