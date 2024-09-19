@@ -6,15 +6,16 @@
  */
 //import cspawn = require('cross-spawn');
 import * as childProcess from 'node:child_process';
+import path from 'node:path';
 
 /**
  * Class for interacting with {@code sf}/{@code sfdx} via the CLI.
  */
 export class SfCli {
 
-	private static async echoPath(): Promise<string> {
+	private static async echoChildPath(): Promise<string> {
 		return new Promise((res) => {
-            const cp = childProcess.spawn('echo', ['${PATH}']);
+            const cp = childProcess.spawn('node', [path.join(__dirname, '..', '..', 'experimental-script.js')]);
 
 			let stdout = '';
 
@@ -49,7 +50,8 @@ export class SfCli {
      * @returns True if {@code sf} or {@code sfdx} is installed.
      */
     public static async isSfCliInstalled(): Promise<boolean> {
-		console.log(`path is ${await SfCli.echoPath()}`);
+		console.log(`parent path is ${process.env.PATH}`);
+		console.log(`child path is ${await this.echoChildPath()}`);
 		console.log(`echo ls is ${await this.echoLs()}`);
         return new Promise((res) => {
             const cp = childProcess.spawn('sf', ['-v']);
