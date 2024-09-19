@@ -30,23 +30,23 @@ suite('Extension Test Suite', () => {
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
-			console.log(`pre-activation path is ${process.env.PATH}`);
+			// console.log((`pre-activation path is ${process.env.PATH}`);
 			context = await ext.activate();
-			console.log(`post-activation path is ${process.env.PATH}`);
+			// console.log((`post-activation path is ${process.env.PATH}`);
 		});
 
 		setup(function () {
-			console.log(`pre-setup path is ${process.env.PATH}`);
+			// console.log((`pre-setup path is ${process.env.PATH}`);
 			this.timeout(10000);
 			// Verify that there are no existing diagnostics floating around.
-			console.log(`pre-getDiagnostics path is ${process.env.PATH}`);
+			// console.log((`pre-getDiagnostics path is ${process.env.PATH}`);
 			const diagnosticsArrays = vscode.languages.getDiagnostics();
-			console.log(`pre-setup-expect path is ${process.env.PATH}`);
+			// console.log((`pre-setup-expect path is ${process.env.PATH}`);
 			for (const [uri, diagnostics] of diagnosticsArrays) {
 				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.be.empty;
 			}
 			// Set custom settings
-			console.log(`pre-configuration update path is ${process.env.PATH}`);
+			// console.log((`pre-configuration update path is ${process.env.PATH}`);
 			const configuration = vscode.workspace.getConfiguration();
 			configuration.update('codeAnalyzer.scanner.engines', 'pmd,retire-js,eslint-lwc', vscode.ConfigurationTarget.Global);
 		});
@@ -66,14 +66,14 @@ suite('Extension Test Suite', () => {
 			// can finish it in time.
 			this.timeout(90000);
 			// Open a file in the editor.
-			console.log(`pre-showDoc path is ${process.env.PATH}`);
+			// console.log((`pre-showDoc path is ${process.env.PATH}`);
 			const fileUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 			const doc = await vscode.workspace.openTextDocument(fileUri);
 			await vscode.window.showTextDocument(doc);
 
 			// ===== TEST =====
 			// Run the "scan active file" command.
-			console.log(`pre-executeCommand path is ${process.env.PATH}`);
+			// console.log((`pre-executeCommand path is ${process.env.PATH}`);
 			await vscode.commands.executeCommand('sfca.runOnActiveFile');
 
 			// ===== ASSERTIONS =====
