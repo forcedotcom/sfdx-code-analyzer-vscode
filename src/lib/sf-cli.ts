@@ -16,6 +16,7 @@ export class SfCli {
      * @returns True if {@code sf} or {@code sfdx} is installed.
      */
     public static async isSfCliInstalled(): Promise<boolean> {
+		console.log(`isSfCliInstalled path is ${process.env.PATH}`);
         return new Promise((res) => {
             const cp = cspawn.spawn('sf', ['-v']);
 

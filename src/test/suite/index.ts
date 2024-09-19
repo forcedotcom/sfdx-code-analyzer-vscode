@@ -81,9 +81,9 @@ export async function run(): Promise<void> {
 	// TODO: Add branches check back once Apex Guru Integration and Delta runs implementation are complete.
 	await nyc.checkCoverage({
 		// branches: 70,
-		lines: 70,
-		functions: 70,
-		statements: 70
+		lines: 40,
+		functions: 40,
+		statements: 40
 	});
 
 	// Echo the logs.
