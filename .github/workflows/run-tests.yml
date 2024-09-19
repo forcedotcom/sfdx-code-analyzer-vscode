@@ -72,6 +72,9 @@ jobs:
       - name: Install Production scanner
         if: ${{ inputs.use-scanner-tarball == false }}
         run: sf  plugins install @salesforce/sfdx-scanner
+      - run: sf -v
+      - run: which sf
+      - run: echo $PATH
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
