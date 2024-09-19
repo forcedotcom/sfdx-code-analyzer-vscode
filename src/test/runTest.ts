@@ -16,6 +16,7 @@ import { EXTENSION_PACK_ID } from '../lib/constants';
 
 async function main() {
 	try {
+		
 		// The folder containing the Extension Manifest package.json
 		// Passed to `--extensionDevelopmentPath`
 		const extensionDevelopmentPath = path.resolve(__dirname, '../../');
