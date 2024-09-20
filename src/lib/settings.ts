@@ -53,4 +53,8 @@ export class SettingsManager {
     public static getApexGuruEnabled(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
     }
+
+    public static getSfgeDeltaRunsEnabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.deltaRuns').get('enabled');
+    }
 }

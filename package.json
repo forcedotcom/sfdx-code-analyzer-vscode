@@ -168,6 +168,11 @@
                     "type": "boolean",
                     "default": false,
                     "description": "Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
+                },
+                "codeAnalyzer.deltaRuns.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "***Enable delta run of Salesforce Graph Engine***"
                 }
             }
         },
@@ -187,7 +192,7 @@
                 },
                 {
                     "command": "sfca.runDfa",
-                    "when": "false"
+                    "when": "true"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
