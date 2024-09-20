@@ -123,11 +123,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	});
 
 	sfgeCachePath = path.join(createTempDirectory(), 'sfca-graph-engine-cache.json');
-	const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
-		await _runDfa(context);
-		savedFilesCache.clear();
-	});
-	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, runDfaOnWorkspaceCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
+	context.subscriptions.push(runOnActiveFile, runOnSelected, runDfaOnSelectedMethodCmd, removeDiagnosticsOnActiveFile, removeDiagnosticsOnSelectedFile, removeDiagnosticsInRange);
 	
 	if (apexGuruEnabled) {
 		const runApexGuruOnSelectedFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
@@ -148,6 +144,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 				});
 		});
 		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile);
+	}
+
+	if (SettingsManager.getSfgeDeltaRunsEnabled()) {
+		const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
+			await _runDfa(context);
+			savedFilesCache.clear();
+		});
+		context.subscriptions.push(runDfaOnWorkspaceCmd);
 	}
 
 	const documentSaveListener = vscode.workspace.onDidSaveTextDocument(document => {
