@@ -11,7 +11,7 @@ import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
 import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
-import {CoreExtensionService, TelemetryService} from '../../lib/core-extension-service';
+import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
 
@@ -238,7 +238,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command.
 				await _runAndDisplayDfa(null, {
 					commandName: fakeTelemetryName
-				}, null, 'someMethod', 'some/project/dir');
+				}, null, ['someMethod'], 'some/project/dir');
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
@@ -263,7 +263,7 @@ suite('Extension Test Suite', () => {
 				try {
 					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName
-					}, null, 'someMethod', 'some/project/dir');
+					}, null, ['someMethod'], 'some/project/dir');
 				} catch (e) {
 					err = e;
 				}
