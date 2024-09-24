@@ -21,6 +21,8 @@ import * as Constants from './lib/constants';
 import * as path from 'path';
 import { SIGKILL } from 'constants';
 import * as ApexGuruFunctions from './apexguru/apex-guru-service'
+import * as os from 'os';
+import * as fs from 'fs';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -37,6 +39,8 @@ let diagnosticCollection: vscode.DiagnosticCollection = null;
 let customCancellationToken: vscode.CancellationTokenSource | null = null;
 
 let outputChannel: vscode.LogOutputChannel;
+
+let sfgeCachePath: string = null;
 
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
@@ -136,6 +140,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		}
 	});
 
+	sfgeCachePath = path.join(createTempDirectory(), 'sfca-graph-engine-cache.json');
 	const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
 		await _runDfa(context);
 	});
@@ -165,6 +170,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+export function createTempDirectory(): string {
+	const tempFolderPrefix = path.join(os.tmpdir(), Constants.EXTENSION_PACK_ID);
+	try {
+		const folder = fs.mkdtempSync(tempFolderPrefix);
+		return folder;
+	} catch (err) {
+		throw new Error('Failed to create temporary directory');
+	}
 }
 
 async function _runDfa(context: vscode.ExtensionContext) {
@@ -212,14 +227,13 @@ async function runDfaOnWorkspace(context: vscode.ExtensionContext) {
 		// We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
 		// the root directory of that project as the projectDir argument to run DFA.
 		return _runAndDisplayDfa(context, {
-			commandName: Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD
+			commandName: Constants.COMMAND_RUN_DFA
 		}, customCancellationToken, null, targeting.getProjectDir());
 	});
 }
 
 function violationsCacheExists() {
-	// Returns true for now. Actual cache check will be performed as part of W-15639759.
-	return true;
+	return fs.existsSync(sfgeCachePath);
 }
 
 export function _removeDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
@@ -364,7 +378,7 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 	const startTime = Date.now();
 	try {
 		await verifyPluginInstallation();
-		const results = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context);
+		const results = await new ScanRunner().runDfa([methodLevelTarget], projectDir, context, sfgeCachePath);
 		if (results.length > 0) {
 			const panel = vscode.window.createWebviewPanel(
 				'dfaResults',
