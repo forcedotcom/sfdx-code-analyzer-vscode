@@ -111,14 +111,14 @@ export class _ApexGuruFixGenerator extends FixGenerator {
     
         const action = new vscode.CodeAction(messages.fixer.fixWithApexGuruSuggestions, vscode.CodeActionKind.QuickFix);
         action.diagnostics = [this.diagnostic];
-
-        const edit = new vscode.WorkspaceEdit();
         const range = this.diagnostic.range;  // Assuming the range is the location of the existing code in the document
         const diagnosticStartLine = new vscode.Position(range.start.line, range.start.character);
-        edit.insert(document.uri, diagnosticStartLine, suggestedCode + '\n');
-        
-        // Assign the edit to the action
-        action.edit = edit;
+
+        action.command = {
+            title: 'Apply ApexGuru Fix',
+            command: Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
+            arguments: [document, diagnosticStartLine, suggestedCode + '\n'] 
+        }
         
         return action;
     }
