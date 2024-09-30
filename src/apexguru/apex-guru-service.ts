@@ -57,7 +57,9 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 			new DiagnosticManager().displayDiagnostics([selection.fsPath], [ruleResult], diagnosticCollection);
 			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
 				executedCommand: commandName,
-				duration: (Date.now() - startTime).toString()
+				duration: (Date.now() - startTime).toString(),
+				violationsCount: ruleResult.violations.length.toString(),
+				violationsWithSuggestedCodeCount: getViolationsWithSuggestions(ruleResult).toString()
 			});
 			void vscode.window.showInformationMessage(messages.apexGuru.finishedScan(ruleResult.violations.length));
 		});
@@ -66,6 +68,11 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
         outputChannel.error('Initial Code Analyzer with ApexGuru request failed.');
         outputChannel.appendLine(errMsg);
     }
+}
+
+export function getViolationsWithSuggestions(ruleResult: RuleResult): number {
+    // Filter violations that have a non-empty suggestedCode and get count
+    return ruleResult.violations.filter(violation => (violation as ApexGuruViolation).suggestedCode?.trim() !== '').length;
 }
 
 export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number): Promise<ApexGuruQueryResponse> {

@@ -371,4 +371,140 @@ suite('Apex Guru Test Suite', () => {
             expect(connectionStub.request.callCount).to.be.greaterThan(0);
         });
     });
+    suite('#getViolationsWithSuggestions', () => {
+        test('Returns 0 when there are no violations', () => {
+            // ===== SETUP =====
+            const ruleResult: RuleResult = {
+                engine: 'fake_engine',
+                fileName: 'test.cls',
+                violations: []
+            };
+            // ===== TEST =====
+            const result = ApexGuruFunctions.getViolationsWithSuggestions(ruleResult);
+            // ===== ASSERTIONS =====
+            expect(result).to.equal(0);
+        });
+
+        test('Returns 0 when there are violations but no suggestions', () => {
+            // ===== SETUP =====
+            const ruleResult: RuleResult = {
+                engine: 'fake_engine',
+                fileName: 'test.cls',
+                violations: [
+                    {
+                        ruleName: 'BestPractices',
+                        message: 'Avoid using System.debug',
+                        severity: 1,
+                        category: 'BestPractices',
+                        line: 10,
+                        column: 1,
+                        currentCode: 'System.debug();',
+                        suggestedCode: '', // No suggested code
+                        url: 'TestFile.cls'
+                    } as ApexGuruViolation
+                ]
+            };
+            // ===== TEST =====
+            const result = ApexGuruFunctions.getViolationsWithSuggestions(ruleResult);
+            // ===== ASSERTIONS =====
+            expect(result).to.equal(0);
+        });
+
+        test('Returns correct count when there are violations with suggestions', () => {
+            // ===== SETUP =====
+            const ruleResult: RuleResult = {
+                engine: 'fake_engine',
+                fileName: 'test.cls',
+                violations: [
+                    {
+                        ruleName: 'BestPractices',
+                        message: 'Avoid using System.debug',
+                        severity: 1,
+                        category: 'BestPractices',
+                        line: 10,
+                        column: 1,
+                        currentCode: 'System.debug();',
+                        suggestedCode: 'System.out.println("Hello World");',
+                        url: 'TestFile.cls'
+                    } as ApexGuruViolation
+                ]
+            };
+            // ===== TEST =====
+            const result = ApexGuruFunctions.getViolationsWithSuggestions(ruleResult);
+            // ===== ASSERTIONS =====
+            expect(result).to.equal(1);
+        });
+
+        test('Returns correct count when multiple violations have suggestions', () => {
+            // ===== SETUP =====
+            const ruleResult: RuleResult = {
+                engine: 'fake_engine',
+                fileName: 'test.cls',
+                violations: [
+                    {
+                        ruleName: 'BestPractices',
+                        message: 'Avoid using System.debug',
+                        severity: 1,
+                        category: 'BestPractices',
+                        line: 10,
+                        column: 1,
+                        currentCode: 'System.debug();',
+                        suggestedCode: 'System.out.println("Hello World");',
+                        url: 'TestFile.cls'
+                    } as ApexGuruViolation,
+                    {
+                        ruleName: 'CodeQuality',
+                        message: 'Improve variable naming',
+                        severity: 1,
+                        category: 'CodeQuality',
+                        line: 12,
+                        column: 2,
+                        currentCode: 'int x;',
+                        suggestedCode: 'int userCount;',
+                        url: 'TestFile.cls'
+                    } as ApexGuruViolation
+                ]
+            };
+            // ===== TEST =====
+            const result = ApexGuruFunctions.getViolationsWithSuggestions(ruleResult);
+            // ===== ASSERTIONS =====
+            expect(result).to.equal(2);
+        });
+
+        test('Ignores violations without suggestedCode', () => {
+            // ===== SETUP =====
+            const ruleResult: RuleResult = {
+                engine: 'fake_engine',
+                fileName: 'test.cls',
+                violations: [
+                    {
+                        ruleName: 'BestPractices',
+                        message: 'Avoid using System.debug',
+                        severity: 1,
+                        category: 'BestPractices',
+                        line: 10,
+                        column: 1,
+                        currentCode: 'System.debug();',
+                        suggestedCode: 'System.out.println("Hello World");',
+                        url: 'TestFile.cls'
+                    } as ApexGuruViolation,
+                    {
+                        ruleName: 'CodeQuality',
+                        message: 'Improve variable naming',
+                        severity: 1,
+                        category: 'CodeQuality',
+                        line: 12,
+                        column: 2,
+                        currentCode: 'int x;',
+                        suggestedCode: '', // No suggestion for this violation
+                        url: 'TestFile.cls'
+                    } as ApexGuruViolation
+                ]
+            };
+            // ===== TEST =====
+            const result = ApexGuruFunctions.getViolationsWithSuggestions(ruleResult);
+            // ===== ASSERTIONS =====
+            expect(result).to.equal(1);
+        });
+    });
 });

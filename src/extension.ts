@@ -143,7 +143,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 					outputChannel: outputChannel
 				});
 		});
-		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile);
+		const insertApexGuruSuggestions = vscode.commands.registerCommand(Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS, async (document: vscode.TextDocument, position: vscode.Position, suggestedCode: string) => {
+			const edit = new vscode.WorkspaceEdit();
+			edit.insert(document.uri, position, suggestedCode);
+			await vscode.workspace.applyEdit(edit);
+			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
+				executedCommand: Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
+				lines: suggestedCode.split('\n').length.toString()
+			});
+		})
+		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile, insertApexGuruSuggestions);
 	}
 
 	if (SettingsManager.getSfgeDeltaRunsEnabled()) {
