@@ -18,3 +18,16 @@ jobs:
         node: ['lts/*']
     runs-on: ${{ matrix.os.vm }}
     timeout-minutes: 60
+    steps:
+      # === Setup. We need to get the code, set up nodejs, and create the results directory. ===
+      - uses: actions/checkout@v4
+        with:
+          ref: 'release'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+      - run: mkdir smoke-test-results
