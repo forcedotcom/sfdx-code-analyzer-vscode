@@ -69,7 +69,7 @@ jobs:
           Write-Host "Installing Code Analyzer Extension..."
           DIR C:\
           DIR "C:\Program Files\"
-          DIR "C:\Program Files\Microsoft VS Code\"
+          DIR "C:\Program Files (x86)\"
 
       # 3 Install VS Code and Extension on macOS
       - name: Install VS Code on macOS
