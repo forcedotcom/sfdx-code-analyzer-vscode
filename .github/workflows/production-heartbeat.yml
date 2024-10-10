@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os.vm }}
     timeout-minutes: 60
     steps:
-      # === Install VS Code and Extension on Ubuntu ===
+      # 1 Install VS Code and Extension on Ubuntu
       - name: Install VS Code on Ubuntu
         if: runner.os == 'Linux'
         run: |
@@ -44,11 +44,11 @@ jobs:
             echo "Extension installation failed" && exit 1
           fi
 
-      # === Install VS Code and Extension on Windows ===
+      # 2 Install VS Code and Extension on Windows
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
-          Invoke-WebRequest -Uri https://aka.ms/win32-x64-user-stable -OutFile vscode_installer.exe
+          curl -L -o vscode_installer.exe https://aka.ms/win32-x64-user-stable
           Start-Process vscode_installer.exe -ArgumentList '/verysilent /norestart' -Wait
 
       - name: Install Salesforce Code Analyzer Extension on Windows
@@ -65,3 +65,23 @@ jobs:
             Write-Error "Extension installation failed" 
             exit 1
           }
+
+      # 3 Install VS Code and Extension on macOS
+      - name: Install VS Code on macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install --cask visual-studio-code
+
+      - name: Install Salesforce Code Analyzer Extension on macOS
+        if: runner.os == 'macOS'
+        run: |
+          code --install-extension salesforce.sfdx-code-analyzer-vscode
+
+      - name: Verify Extension Installation on macOS
+        if: runner.os == 'macOS'
+        run: |
+          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+            echo "Extension installed successfully"
+          else
+            echo "Extension installation failed" && exit 1
+          fi
