@@ -48,18 +48,17 @@ jobs:
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
-          curl -L -o vscode_installer.exe 'https://code.visualstudio.com/sha/download?build=stable&os=win32-arm64-user'
-          Start-Process vscode_installer.exe -ArgumentList '/verysilent /norestart' -Wait
-
-      - name: Install Salesforce Code Analyzer Extension on Windows
-        if: runner.os == 'Windows'
-        run: |
           # Ensure no conflicting instances of VS Code are running
           Stop-Process -Name "Code" -Force -ErrorAction SilentlyContinue
           # Download and install Visual Studio Code
           Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user" -OutFile vscode_installer.exe
           # Install VS Code silently
           Start-Process vscode_installer.exe -ArgumentList '/verysilent /norestart' -Wait
+
+      - name: Install Salesforce Code Analyzer Extension on Windows
+        if: runner.os == 'Windows'
+        run: |
+          code --install-extension salesforce.sfdx-code-analyzer-vscode
 
       - name: Verify Extension Installation on Windows
         if: runner.os == 'Windows'
