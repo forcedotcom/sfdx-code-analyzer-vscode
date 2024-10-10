@@ -59,10 +59,9 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           Write-Host "Installing Code Analyzer Extension..."
-          DIR C:\
-          DIR "C:\Program Files\"
-          DIR "C:\Program Files (x86)\"
-          code --install-extension salesforce.sfdx-code-analyzer-vscode
+          DIR "C:\Program Files\Microsoft VS Code\"
+          DIR "C:\Program Files\Microsoft VS Code\bin\"
+          "C:\Program Files\Microsoft VS Code\bin\code" --install-extension salesforce.sfdx-code-analyzer-vscode
 
       # 3 Install VS Code and Extension on macOS
       - name: Install VS Code on macOS
