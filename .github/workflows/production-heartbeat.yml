@@ -56,9 +56,7 @@ jobs:
           Write-Host "Downloading VS Code complete"
           # Install VS Code silently
           Write-Host "Installing Visual Studio Code..."
-          ./vscode_installer.exe /norestart /log log.txt
-          Write-Host "Installation log:"
-          Get-Content log.txt
+          ./vscode_installer.exe
           Write-Host "VS Code installation complete"
 
       - name: Install Salesforce Code Analyzer Extension on Windows
