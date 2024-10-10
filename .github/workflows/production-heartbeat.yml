@@ -54,7 +54,12 @@ jobs:
       - name: Install Salesforce Code Analyzer Extension on Windows
         if: runner.os == 'Windows'
         run: |
-          code --install-extension salesforce.sfdx-code-analyzer-vscode
+          # Ensure no conflicting instances of VS Code are running
+          Stop-Process -Name "Code" -Force -ErrorAction SilentlyContinue
+          # Download and install Visual Studio Code
+          Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user" -OutFile vscode_installer.exe
+          # Install VS Code silently
+          Start-Process vscode_installer.exe -ArgumentList '/verysilent /norestart' -Wait
 
       - name: Verify Extension Installation on Windows
         if: runner.os == 'Windows'
