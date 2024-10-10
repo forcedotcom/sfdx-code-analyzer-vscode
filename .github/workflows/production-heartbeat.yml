@@ -32,7 +32,24 @@ jobs:
           java-version: '11'
       - run: mkdir smoke-test-results
 
-      - name: Say Hello World
-        id: say_hello_world
-        shell: bash
-        run: echo "Hello World"
+      - name: Install VS Code
+        run: |
+          sudo apt update
+          sudo apt install wget gpg -y
+          wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+          sudo install -o root -g root -m 644 packages.microsoft.gpg /usr/share/keyrings/
+          sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+          sudo apt update
+          sudo apt install code -y
+
+      - name: Install Salesforce Code Analyzer Extension
+        run: |
+          code --install-extension salesforce.sfdx-code-analyzer-vscode
+
+      - name: Verify Extension Installation
+        run: |
+          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+            echo "Extension installed successfully"
+          else
+            echo "Extension installation failed" && exit 1
+          fi
