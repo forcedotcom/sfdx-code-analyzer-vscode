@@ -58,6 +58,10 @@ jobs:
           Write-Host "Installing Visual Studio Code..."
           ./vscode_installer.exe
           Write-Host "VS Code installation complete"
+          Write-Host "Adding VS Code CLI (code) to PATH..."
+          $codePath = "${env:USERPROFILE}\AppData\Local\Programs\Microsoft VS Code\bin"
+          [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";" + $codePath, [System.EnvironmentVariableTarget]::Process)
+          Write-Host "VS Code CLI added to PATH."
 
       - name: Install Salesforce Code Analyzer Extension on Windows
         if: runner.os == 'Windows'
