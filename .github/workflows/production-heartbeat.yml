@@ -70,8 +70,8 @@ jobs:
           DIR C:\Users\installer\
           DIR C:\Users\Public\
           DIR C:\Users\runneradmin\
-          DIR C:\Users\.NET v4.5\
-          DIR C:\Users\.NET v4.5 Classic\
+          DIR "C:\Users\.NET/ v4.5\"
+          DIR "C:\Users\.NET v4.5 Classic\"
           C:\Users\*\AppData\Local\Programs\Microsoft VS Code\bin\code --install-extension salesforce.sfdx-code-analyzer-vscode
           Write-Host "Code Analyzer Extension installation complete"
 
