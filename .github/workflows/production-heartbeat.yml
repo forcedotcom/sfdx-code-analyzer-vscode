@@ -48,7 +48,7 @@ jobs:
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
-          curl -L -o vscode_installer.exe https://code.visualstudio.com/sha/download?build=stable&os=win32-arm64-user
+          curl -L -o vscode_installer.exe 'https://code.visualstudio.com/sha/download?build=stable&os=win32-arm64-user'
           Start-Process vscode_installer.exe -ArgumentList '/verysilent /norestart' -Wait
 
       - name: Install Salesforce Code Analyzer Extension on Windows
