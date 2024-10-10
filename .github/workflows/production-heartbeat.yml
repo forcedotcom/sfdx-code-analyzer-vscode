@@ -11,7 +11,6 @@ on:
 jobs:
   production-heartbeat:
     strategy:
-      # By default, if any job in a matrix fails, all other jobs are immediately cancelled. This makes the jobs run to completion instead.
       fail-fast: false
       matrix:
         os: [{vm: ubuntu-latest, exe: .sh}, {vm: windows-2019, exe: .cmd}]
@@ -19,20 +18,9 @@ jobs:
     runs-on: ${{ matrix.os.vm }}
     timeout-minutes: 60
     steps:
-      # === Setup. We need to get the code, set up nodejs, and create the results directory. ===
-      - uses: actions/checkout@v4
-        with:
-          ref: 'main'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-      - run: mkdir smoke-test-results
-
-      - name: Install VS Code
+      # === Install VS Code and Extension on Ubuntu ===
+      - name: Install VS Code on Ubuntu
+        if: runner.os == 'Linux'
         run: |
           sudo apt update
           sudo apt install wget gpg -y
@@ -42,14 +30,38 @@ jobs:
           sudo apt update
           sudo apt install code -y
 
-      - name: Install Salesforce Code Analyzer Extension
+      - name: Install Salesforce Code Analyzer Extension on Ubuntu
+        if: runner.os == 'Linux'
         run: |
           code --install-extension salesforce.sfdx-code-analyzer-vscode
 
-      - name: Verify Extension Installation
+      - name: Verify Extension Installation on Ubuntu
+        if: runner.os == 'Linux'
         run: |
           if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
             echo "Extension installed successfully"
           else
             echo "Extension installation failed" && exit 1
           fi
+
+      # === Install VS Code and Extension on Windows ===
+      - name: Install VS Code on Windows
+        if: runner.os == 'Windows'
+        run: |
+          Invoke-WebRequest -Uri https://aka.ms/win32-x64-user-stable -OutFile vscode_installer.exe
+          Start-Process vscode_installer.exe -ArgumentList '/verysilent /norestart' -Wait
+
+      - name: Install Salesforce Code Analyzer Extension on Windows
+        if: runner.os == 'Windows'
+        run: |
+          code --install-extension salesforce.sfdx-code-analyzer-vscode
+
+      - name: Verify Extension Installation on Windows
+        if: runner.os == 'Windows'
+        run: |
+          if (code --list-extensions | findstr 'salesforce.sfdx-code-analyzer-vscode') {
+            Write-Output "Extension installed successfully"
+          } else {
+            Write-Error "Extension installation failed" 
+            exit 1
+          }
