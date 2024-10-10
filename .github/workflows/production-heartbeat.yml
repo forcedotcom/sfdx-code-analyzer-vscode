@@ -48,20 +48,12 @@ jobs:
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
-          # Ensure no conflicting instances of VS Code are running
-          Stop-Process -Name "Code" -Force -ErrorAction SilentlyContinue
-          # Download and install Visual Studio Code
-          Write-Host "Downloading VS Code..."
-          Invoke-WebRequest -Uri "https://aka.ms/win32-x64-user-stable" -OutFile vscode_installer.exe
-          Write-Host "Downloading VS Code complete"
-          # Install VS Code silently
-          Write-Host "Installing Visual Studio Code..."
-          ./vscode_installer.exe
-          Write-Host "VS Code installation complete"
-          Write-Host "Adding VS Code CLI (code) to PATH..."
-          $codePath = "C:\Users\${env:USERPROFILE}\AppData\Local\Programs\Microsoft VS Code\bin"
-          [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";" + $codePath, [System.EnvironmentVariableTarget]::Process)
-          Write-Host "VS Code CLI added to PATH."
+          Write-Host "Installing Chocolatey..."
+          Set-ExecutionPolicy Bypass -Scope Process -Force; \
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; \
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          Write-Host "Installing Visual Studio Code using Chocolatey..."
+          choco install vscode -y
 
       - name: Install Salesforce Code Analyzer Extension on Windows
         if: runner.os == 'Windows'
