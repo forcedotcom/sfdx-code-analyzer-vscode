@@ -67,6 +67,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           Write-Host "Installing Code Analyzer Extension..."
+          DIR C:\Users\
           C:\Users\${env:USERPROFILE}\AppData\Local\Programs\Microsoft VS Code\bin\code --install-extension salesforce.sfdx-code-analyzer-vscode
           Write-Host "Code Analyzer Extension installation complete"
 
