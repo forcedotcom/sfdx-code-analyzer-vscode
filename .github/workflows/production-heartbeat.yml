@@ -59,7 +59,7 @@ jobs:
           ./vscode_installer.exe
           Write-Host "VS Code installation complete"
           Write-Host "Adding VS Code CLI (code) to PATH..."
-          $codePath = "${env:USERPROFILE}\AppData\Local\Programs\Microsoft VS Code\bin"
+          $codePath = "C:\Users\${env:USERPROFILE}\AppData\Local\Programs\Microsoft VS Code\bin"
           [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";" + $codePath, [System.EnvironmentVariableTarget]::Process)
           Write-Host "VS Code CLI added to PATH."
 
@@ -73,7 +73,7 @@ jobs:
       - name: Verify Extension Installation on Windows
         if: runner.os == 'Windows'
         run: |
-          if (code --list-extensions | findstr 'salesforce.sfdx-code-analyzer-vscode') {
+          if (C:\Users\${env:USERPROFILE}\AppData\Local\Programs\Microsoft VS Code\bin\code --list-extensions | findstr 'salesforce.sfdx-code-analyzer-vscode') {
             Write-Output "Extension installed successfully"
           } else {
             Write-Error "Extension installation failed" 
