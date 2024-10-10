@@ -52,7 +52,7 @@ jobs:
           Stop-Process -Name "Code" -Force -ErrorAction SilentlyContinue
           # Download and install Visual Studio Code
           Write-Host "Downloading VS Code..."
-          Invoke-WebRequest -Uri "https://code.visualstudio.com/sha/download?build=stable&os=win32-x64-user" -OutFile vscode_installer.exe
+          Invoke-WebRequest -Uri "https://aka.ms/win32-x64-user-stable" -OutFile vscode_installer.exe
           Write-Host "Downloading VS Code complete"
           # Install VS Code silently
           Write-Host "Installing Visual Studio Code..."
@@ -70,6 +70,7 @@ jobs:
           DIR C:\
           DIR "C:\Program Files\"
           DIR "C:\Program Files (x86)\"
+          code --install-extension salesforce.sfdx-code-analyzer-vscode
 
       # 3 Install VS Code and Extension on macOS
       - name: Install VS Code on macOS
