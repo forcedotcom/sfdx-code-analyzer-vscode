@@ -48,25 +48,27 @@ jobs:
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
-          Write-Host "Installing Chocolatey..."
-          Set-ExecutionPolicy Bypass -Scope Process -Force;
-          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-          Write-Host "Installing Visual Studio Code using Chocolatey..."
-          choco install vscode -y
+          echo "Downloading VS Code..."
+          curl -L -o vscode_installer.exe "https://aka.ms/win32-x64-user-stable"
+          echo "Downloading VS Code complete"
+          
+          echo "Installing VS Code..."
+          ./vscode_installer.exe /verysilent /norestart
+          echo "VS Code installation complete"
+        shell: bash
 
       - name: Install Salesforce Code Analyzer Extension on Windows
         if: runner.os == 'Windows'
         run: |
           echo "Installing Code Analyzer Extension..."
-          "/c/Program Files/Microsoft VS Code/bin/code" --install-extension salesforce.sfdx-code-analyzer-vscode
+          "code" --install-extension salesforce.sfdx-code-analyzer-vscode
           echo "Installing Code Analyzer Complete"
           
           echo "Waiting for 10 seconds..."
           sleep 10
           
           echo "Listing installed extensions..."
-          "/c/Program Files/Microsoft VS Code/bin/code" --list-extensions
+          "code" --list-extensions
         shell: bash
 
       # 3 Install VS Code and Extension on macOS
