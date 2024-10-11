@@ -63,6 +63,18 @@ jobs:
           Write-Host "Installing Code Analyzer Complete"
         shell: pwsh
 
+      - name: Verify Extension Installation on Windows
+        if: runner.os == 'Windows'
+        run: |
+          $extension = & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
+          if ($extension -contains 'salesforce.sfdx-code-analyzer-vscode') {
+            Write-Output "Extension installed successfully"
+          } else {
+            Write-Error "Extension installation failed" 
+            exit 1
+          }
+        shell: pwsh
+
       # 3 Install VS Code and Extension on macOS
       - name: Install VS Code on macOS
         if: runner.os == 'macOS'
