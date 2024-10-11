@@ -13,80 +13,81 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [{vm: ubuntu-latest, exe: .sh}, {vm: windows-2019, exe: .cmd}, {vm: macos-latest, exe: .sh}]
+        # os: [{vm: ubuntu-latest, exe: .sh}, {vm: windows-2019, exe: .cmd}, {vm: macos-latest, exe: .sh}]
+        os: [{vm: windows-2019, exe: .cmd}]
         node: ['lts/*']
     runs-on: ${{ matrix.os.vm }}
     timeout-minutes: 60
     steps:
       # 1 Install VS Code and Extension on Ubuntu
-      # - name: Install VS Code on Ubuntu
-      #   if: runner.os == 'Linux'
-      #   run: |
-      #     sudo apt update
-      #     sudo apt install wget gpg -y
-      #     wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-      #     sudo install -o root -g root -m 644 packages.microsoft.gpg /usr/share/keyrings/
-      #     sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
-      #     sudo apt update
-      #     sudo apt install code -y
+      - name: Install VS Code on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install wget gpg -y
+          wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+          sudo install -o root -g root -m 644 packages.microsoft.gpg /usr/share/keyrings/
+          sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
+          sudo apt update
+          sudo apt install code -y
 
-      # - name: Install Salesforce Code Analyzer Extension on Ubuntu
-      #   if: runner.os == 'Linux'
-      #   run: |
-      #     code --install-extension salesforce.sfdx-code-analyzer-vscode
+      - name: Install Salesforce Code Analyzer Extension on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          code --install-extension salesforce.sfdx-code-analyzer-vscode
 
-      # - name: Verify Extension Installation on Ubuntu
-      #   if: runner.os == 'Linux'
-      #   run: |
-      #     if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
-      #       echo "Extension installed successfully"
-      #     else
-      #       echo "Extension installation failed" && exit 1
-      #     fi
+      - name: Verify Extension Installation on Ubuntu
+        if: runner.os == 'Linux'
+        run: |
+          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+            echo "Extension installed successfully"
+          else
+            echo "Extension installation failed" && exit 1
+          fi
 
-      # # 2 Install VS Code and Extension on Windows
-      # - name: Install VS Code on Windows
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     Write-Host "Installing Chocolatey..."
-      #     Set-ExecutionPolicy Bypass -Scope Process -Force;
-      #     [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
-      #     iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-      #     Write-Host "Installing Visual Studio Code using Chocolatey..."
-      #     choco install vscode -y
+      # 2 Install VS Code and Extension on Windows
+      - name: Install VS Code on Windows
+        if: runner.os == 'Windows'
+        run: |
+          Write-Host "Installing Chocolatey..."
+          Set-ExecutionPolicy Bypass -Scope Process -Force;
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          Write-Host "Installing Visual Studio Code using Chocolatey..."
+          choco install vscode -y
 
-      # - name: Install Salesforce Code Analyzer Extension on Windows
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     echo "Installing Code Analyzer Extension..."
-      #     "/c/Program Files/Microsoft VS Code/bin/code" --install-extension salesforce.sfdx-code-analyzer-vscode
-      #     echo "Installing Code Analyzer Complete"
+      - name: Install Salesforce Code Analyzer Extension on Windows
+        if: runner.os == 'Windows'
+        run: |
+          echo "Installing Code Analyzer Extension..."
+          "/c/Program Files/Microsoft VS Code/bin/code" --install-extension salesforce.sfdx-code-analyzer-vscode
+          echo "Installing Code Analyzer Complete"
           
-      #     echo "Waiting for 10 seconds..."
-      #     sleep 10
+          echo "Waiting for 10 seconds..."
+          sleep 10
           
-      #     echo "Listing installed extensions..."
-      #     "/c/Program Files/Microsoft VS Code/bin/code" --list-extensions
-      #   shell: bash
+          echo "Listing installed extensions..."
+          "/c/Program Files/Microsoft VS Code/bin/code" --list-extensions
+        shell: bash
 
-      # - name: Verify Extension on Windows
-      #   if: runner.os == 'Windows'
-      #   run: |
-      #     echo "Waiting for 10 seconds..."
-      #     sleep 10
+      - name: Verify Extension on Windows
+        if: runner.os == 'Windows'
+        run: |
+          echo "Waiting for 10 seconds..."
+          sleep 10
 
-      #     echo "Listing installed extensions..."
-      #     extensions=$("/c/Program Files/Microsoft VS Code/bin/code" --list-extensions)
+          echo "Listing installed extensions..."
+          extensions=$("/c/Program Files/Microsoft VS Code/bin/code" --list-extensions)
 
-      #     echo "$extensions"
+          echo "$extensions"
 
-      #     if echo "$extensions" | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
-      #       echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is installed successfully"
-      #     else
-      #       echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is NOT installed"
-      #       exit 1
-      #     fi
-      #   shell: bash
+          if echo "$extensions" | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+            echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is installed successfully"
+          else
+            echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is NOT installed"
+            exit 1
+          fi
+        shell: bash
 
       # 3 Install VS Code and Extension on macOS
       - name: Install VS Code on macOS
@@ -114,7 +115,7 @@ jobs:
         # Note that the `join()` call omits null values, so if any steps were skipped, they won't have a corresponding
         # value in the string.
         # if: ${{ failure() || cancelled() }}
-        if: runner.os == 'macOS'
+        if: runner.os == 'Windows'
         shell: bash
         env:
           # If we're here because steps failed or were skipped, then that's a critical problem. Otherwise it's a normal one.
