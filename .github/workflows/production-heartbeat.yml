@@ -48,14 +48,12 @@ jobs:
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
-          echo "Downloading VS Code..."
-          curl -L -o vscode_installer.exe "https://aka.ms/win32-x64-user-stable"
-          echo "Downloading VS Code complete"
-          
-          echo "Installing VS Code..."
-          ./vscode_installer.exe
-          echo "VS Code installation complete"
-        shell: bash
+          Write-Host "Installing Chocolatey..."
+          Set-ExecutionPolicy Bypass -Scope Process -Force;
+          [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072;
+          iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+          Write-Host "Installing Visual Studio Code using Chocolatey..."
+          choco install vscode -y
 
       - name: Install Salesforce Code Analyzer Extension on Windows
         if: runner.os == 'Windows'
