@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os.vm }}
     timeout-minutes: 60
     steps:
-      # 1 Install VS Code and Extension on Ubuntu
+      # 1 Ubuntu Test
       - name: Install VS Code on Ubuntu
         if: runner.os == 'Linux'
         run: |
@@ -44,7 +44,7 @@ jobs:
             echo "Extension installation failed" && exit 1
           fi
 
-      # 2 Install VS Code and Extension on Windows
+      # 2 Windows Test
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
@@ -54,6 +54,13 @@ jobs:
           iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
           Write-Host "Installing Visual Studio Code using Chocolatey..."
           choco install vscode -y
+
+      - name: Ensure VS Code Command Available on Windows
+        if: runner.os == 'Windows'
+        run: |
+          # Manually refresh the path to include VS Code
+          $env:PATH += ";C:\Program Files\Microsoft VS Code\bin"
+          Write-Host "VS Code installation path added to PATH"
 
       - name: Install Salesforce Code Analyzer Extension on Windows
         if: runner.os == 'Windows'
@@ -66,19 +73,25 @@ jobs:
       - name: Verify Extension Installation on Windows
         if: runner.os == 'Windows'
         run: |
-          & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
-          $extension = & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
-          Write-Output "Installed extensions:"
-          Write-Output $extension
-          if ($extension -contains 'salesforce.sfdx-code-analyzer-vscode') {
+          # Ensure VS Code binary is available and list installed extensions
+          $env:PATH += ";C:\Program Files\Microsoft VS Code\bin"
+          
+          $extensions = & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
+          
+          Write-Host "Installed extensions:"
+          Write-Output $extensions
+          
+          # Check if the extension is installed
+          if ($extensions -contains 'salesforce.sfdx-code-analyzer-vscode') {
             Write-Output "Extension installed successfully"
           } else {
-            Write-Error "Extension installation failed" 
+            Write-Error "Extension installation failed"
             exit 1
           }
         shell: pwsh
 
-      # 3 Install VS Code and Extension on macOS
+
+      # MacOS Test
       - name: Install VS Code on macOS
         if: runner.os == 'macOS'
         run: |
