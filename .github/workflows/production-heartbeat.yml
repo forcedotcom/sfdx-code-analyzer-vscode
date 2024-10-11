@@ -81,7 +81,7 @@ jobs:
 
           echo "$extensions"
 
-          if echo "$extensions" | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+          if echo "$extensions" | grep -q 'salesforce.sfdx-code-analyzer-vscode-dummy'; then
             echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is installed successfully"
           else
             echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is NOT installed"
@@ -103,7 +103,7 @@ jobs:
       - name: Verify Extension Installation on macOS
         if: runner.os == 'macOS'
         run: |
-          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode-dummy'; then
+          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
             echo "Extension installed successfully"
           else
             echo "Extension installation failed" && exit 1
