@@ -66,6 +66,7 @@ jobs:
       - name: Verify Extension Installation on Windows
         if: runner.os == 'Windows'
         run: |
+          & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
           $extension = & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
           Write-Output "Installed extensions:"
           Write-Output $extension
