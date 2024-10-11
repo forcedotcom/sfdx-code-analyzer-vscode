@@ -103,7 +103,7 @@ jobs:
       - name: Verify Extension Installation on macOS
         if: runner.os == 'macOS'
         run: |
-          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+          if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode-dummy'; then
             echo "Extension installed successfully"
           else
             echo "Extension installation failed" && exit 1
@@ -114,8 +114,7 @@ jobs:
         # There are problems if any step failed or was skipped.
         # Note that the `join()` call omits null values, so if any steps were skipped, they won't have a corresponding
         # value in the string.
-        # if: ${{ failure() || cancelled() }}
-        if: runner.os == 'Windows'
+        if: ${{ failure() || cancelled() }}
         shell: bash
         env:
           # If we're here because steps failed or were skipped, then that's a critical problem. Otherwise it's a normal one.
