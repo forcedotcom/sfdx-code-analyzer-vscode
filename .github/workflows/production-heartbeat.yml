@@ -67,6 +67,8 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           $extension = & "C:\Program Files\Microsoft VS Code\bin\code" --list-extensions
+          Write-Output "Installed extensions:"
+          Write-Output $extension
           if ($extension -contains 'salesforce.sfdx-code-analyzer-vscode') {
             Write-Output "Extension installed successfully"
           } else {
