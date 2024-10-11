@@ -59,14 +59,33 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           echo "Installing Code Analyzer Extension..."
-          "code" --install-extension salesforce.sfdx-code-analyzer-vscode
+          "/c/Program Files/Microsoft VS Code/bin/code" --install-extension salesforce.sfdx-code-analyzer-vscode
           echo "Installing Code Analyzer Complete"
           
           echo "Waiting for 10 seconds..."
           sleep 10
           
           echo "Listing installed extensions..."
-          "code" --list-extensions
+          "/c/Program Files/Microsoft VS Code/bin/code" --list-extensions
+        shell: bash
+
+      - name: Verify Extension on Windows
+        if: runner.os == 'Windows'
+        run: |
+          echo "Waiting for 10 seconds..."
+          sleep 10
+
+          echo "Listing installed extensions..."
+          extensions=$("/c/Program Files/Microsoft VS Code/bin/code" --list-extensions)
+
+          echo "$extensions"
+
+          if echo "$extensions" | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
+            echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is installed successfully"
+          else
+            echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is NOT installed"
+            exit 1
+          fi
         shell: bash
 
       # 3 Install VS Code and Extension on macOS
