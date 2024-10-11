@@ -53,7 +53,7 @@ jobs:
           echo "Downloading VS Code complete"
           
           echo "Installing VS Code..."
-          ./vscode_installer.exe /verysilent /norestart
+          ./vscode_installer.exe
           echo "VS Code installation complete"
         shell: bash
 
