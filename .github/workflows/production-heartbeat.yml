@@ -46,6 +46,8 @@ jobs:
           fi
 
       # 2 Install VS Code and Extension on Windows
+      # We use chocolatey to install vscode since it gives a reliable path for the location of code.exe
+      # We have also seen Windows to be flaky, so adding addition echo statements.
       - name: Install VS Code on Windows
         if: runner.os == 'Windows'
         run: |
