@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [{vm: ubuntu-latest, exe: .sh}, {vm: windows-2019, exe: .cmd}, {vm: macos-latest, exe: .sh}]
+        os: [{vm: ubuntu-latest}, {vm: windows-2019}, {vm: macos-latest}]
         node: ['lts/*']
     runs-on: ${{ matrix.os.vm }}
     timeout-minutes: 60
@@ -41,7 +41,7 @@ jobs:
           if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
             echo "Extension installed successfully"
           else
-            echo "Extension installation failed" && exit 1
+            echo "::error Extension installation failed" && exit 1
           fi
 
       # 2 Install VS Code and Extension on Windows
@@ -85,7 +85,7 @@ jobs:
           if echo "$extensions" | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
             echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is installed successfully"
           else
-            echo "Extension 'salesforce.sfdx-code-analyzer-vscode' is NOT installed"
+            echo "::error Extension 'salesforce.sfdx-code-analyzer-vscode' is NOT installed"
             exit 1
           fi
         shell: bash
@@ -107,7 +107,7 @@ jobs:
           if code --list-extensions | grep -q 'salesforce.sfdx-code-analyzer-vscode'; then
             echo "Extension installed successfully"
           else
-            echo "Extension installation failed" && exit 1
+            echo "::error Extension installation failed" && exit 1
           fi
 
       # === Report any problems ===
