@@ -19,7 +19,7 @@ jobs:
   smoke-test:
     name: 'Run smoke tests'
     needs: build-scanner-tarball
-    uses: ./.github/workflows/run-tests.yml
+    uses: ./.github/workflows/run-tests2.yml
     with:
       # For daily builds, we want to make sure we haven't pushed a breaking change
       # to the scanner's `dev` branch.
