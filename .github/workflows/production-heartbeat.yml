@@ -131,6 +131,7 @@ jobs:
             ALERT_SEV="critical"
             ALERT_SUMMARY="Production heartbeat script failed on ${{ runner.os }}"
           else
+            # Leaving the else part here to help with running end-to-end sanity test with real alerts being created.
             ALERT_SEV="info"
             ALERT_SUMMARY="Production heartbeat script succeeded with retries on ${{ runner.os }}"
           fi
