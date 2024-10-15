@@ -19,7 +19,7 @@ jobs:
   smoke-test:
     name: 'Run smoke tests'
     needs: build-scanner-tarball
-    uses: ./.github/workflows/run-tests2.yml
+    uses: ./.github/workflows/run-tests.yml
     with:
       # For daily builds, we want to make sure we haven't pushed a breaking change
       # to the scanner's `dev` branch.
@@ -33,7 +33,7 @@ jobs:
     name: 'Report problems'
     runs-on: ubuntu-latest
     needs: [build-scanner-tarball, smoke-test, create-vsix-artifact]
-    if: ${{ failure() || cancelled() }}
+    if: ${{ success() || failure() || cancelled() }}
     steps:
       - name: Report problems
         shell: bash
