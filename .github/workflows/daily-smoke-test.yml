@@ -33,7 +33,7 @@ jobs:
     name: 'Report problems'
     runs-on: ubuntu-latest
     needs: [build-scanner-tarball, smoke-test, create-vsix-artifact]
-    if: ${{ failure() || cancelled() }}
+    # if: ${{ failure() || cancelled() }}
     steps:
       - name: Report problems
         shell: bash
