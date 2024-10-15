@@ -28,4 +28,45 @@ jobs:
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
+  # Step 4: Report any problems
+  report-problems:
+    name: 'Report problems'
+    runs-on: ubuntu-latest
+    needs: [build-scanner-tarball, smoke-test, create-vsix-artifact]
+    if: ${{ failure() || cancelled() }}
+    steps:
+      - name: Report problems
+        shell: bash
+        env:
+          IS_CRITICAL: ${{ contains(join(steps.*.outcome), 'failure') || contains(join(steps.*.outcome), 'skipped') }}
+          RUN_LINK: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [[ ${{ env.IS_CRITICAL }} == true ]]; then
+            ALERT_SEV="critical"
+            ALERT_SUMMARY="Production heartbeat script failed on ${{ runner.os }}"
+          else
+            ALERT_SEV="info"
+            ALERT_SUMMARY="Production heartbeat script succeeded with retries on ${{ runner.os }}"
+          fi
+          
+          generate_post_data() {
+            cat <<EOF
+            {"payload": {
+              "summary": "${ALERT_SUMMARY}",
+              "source": "Github Actions",
+              "severity": "${ALERT_SEV}"
+            },
+            "links": [{
+              "href": "${{ env.RUN_LINK }}",
+              "text": "Link to action execution"
+            }],
+            "event_action": "trigger",
+            "dedup_key": "GH-HB-${{ matrix.os.vm }}-${{ matrix.node }}",
+            "routing_key": "${{ secrets.PAGERDUTY_HEARTBEAT_KEY }}"
+            }
+            EOF
+          }
+          
+          curl --request POST --data "$(generate_post_data)" https://events.pagerduty.com/v2/enqueue
+  
 
