@@ -30,6 +30,7 @@ export const messages = {
     },
     graphEngine: {
         noViolationsFound: "Scan was completed. No violations found.",
+        noViolationsFoundForPartialRuns: "Partial Salesforce Graph Engine scan of the changed code completed, and no violations found.  IMPORTANT: You might still have violations in the code that you haven't changed since the previous full scan.",  
         resultsTab: "Graph Engine Results",
         spinnerText: 'Running Graph Engine analysis...',
         statusBarName: "Graph Engine Analysis",
