@@ -155,7 +155,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		context.subscriptions.push(runApexGuruOnSelectedFile, runApexGuruOnCurrentFile, insertApexGuruSuggestions);
 	}
 
-	if (SettingsManager.getSfgeDeltaRunsEnabled()) {
+	if (SettingsManager.getSfgePartialSfgeRunsEnabled()) {
 		await vscode.commands.executeCommand('setContext', 'sfca.partialRunsEnabled', true);
 		const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
 			await _runDfa(context);

@@ -189,15 +189,15 @@ suite('SettingsManager Test Suite', () => {
     test('getSfgeDeltaRunsEnabled should return the delta runs enabled setting', () => {
         // ===== SETUP =====
         const mockAnalyzeOnSaveEnabled = true;
-        getConfigurationStub.withArgs('codeAnalyzer.deltaRuns').returns({
+        getConfigurationStub.withArgs('codeAnalyzer.partialGraphEngineScans').returns({
             get: Sinon.stub().returns(mockAnalyzeOnSaveEnabled)
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getSfgeDeltaRunsEnabled();
+        const result = SettingsManager.getSfgePartialSfgeRunsEnabled();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.deltaRuns')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.partialGraphEngineScans')).to.be.true;
     });
 });
