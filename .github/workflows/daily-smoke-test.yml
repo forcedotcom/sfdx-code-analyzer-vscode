@@ -43,30 +43,29 @@ jobs:
         run: |
           if [[ ${{ env.IS_CRITICAL }} == true ]]; then
             ALERT_SEV="critical"
-            ALERT_SUMMARY="Production heartbeat script failed on ${{ runner.os }}"
+            ALERT_SUMMARY="Daily smoke test failed on ${{ runner.os }}"
           else
             ALERT_SEV="info"
-            ALERT_SUMMARY="Production heartbeat script succeeded with retries on ${{ runner.os }}"
+            ALERT_SUMMARY="Daily smoke test succeeded with retries on ${{ runner.os }}"
           fi
-          
+
           generate_post_data() {
             cat <<EOF
-            {"payload": {
-              "summary": "${ALERT_SUMMARY}",
-              "source": "Github Actions",
-              "severity": "${ALERT_SEV}"
-            },
-            "links": [{
-              "href": "${{ env.RUN_LINK }}",
-              "text": "Link to action execution"
-            }],
-            "event_action": "trigger",
-            "dedup_key": "GH-HB-${{ matrix.os.vm }}-${{ matrix.node }}",
-            "routing_key": "${{ secrets.PAGERDUTY_HEARTBEAT_KEY }}"
+            {
+              "payload": {
+                "summary": "${ALERT_SUMMARY}",
+                "source": "Github Actions",
+                "severity": "${ALERT_SEV}"
+              },
+              "links": [{
+                "href": "${{ env.RUN_LINK }}",
+                "text": "Link to action execution"
+              }],
+              "event_action": "trigger",
+              "dedup_key": "GH-HB-${{ matrix.os.vm }}-${{ matrix.node }}",
+              "routing_key": "${{ secrets.PAGERDUTY_HEARTBEAT_KEY }}"
             }
-            EOF
+          EOF
           }
-          
-          curl --request POST --data "$(generate_post_data)" https://events.pagerduty.com/v2/enqueue
-  
 
+          curl --request POST --data "$(generate_post_data)" https://events.pagerduty.com/v2/enqueue
