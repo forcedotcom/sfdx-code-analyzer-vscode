@@ -179,7 +179,7 @@ suite('Apex Guru Test Suite', () => {
                   column: 1,
                   currentCode: 'System.out.println("Old Hello World");',
                   suggestedCode: 'System.out.println("New Hello World");',
-                  url: "TestFile.cls"
+                  url: "https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5"
               }]
           });
       });
@@ -210,7 +210,7 @@ suite('Apex Guru Test Suite', () => {
                 column: 1,
                 currentCode: 'System.out.println("Old Hello World");',
                 suggestedCode: 'System.out.println("New Hello World");',
-                url: "TestFile.cls"
+                url: "https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5"
             }]
         });
     });
@@ -236,7 +236,7 @@ suite('Apex Guru Test Suite', () => {
                 category: 'BestPractices',
                 line: 10,
                 column: 1,
-                url: "TestFile.cls",
+                url: "https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5",
                 currentCode: '',
                 suggestedCode: '',
             }]
