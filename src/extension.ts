@@ -156,6 +156,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	}
 
 	if (SettingsManager.getSfgeDeltaRunsEnabled()) {
+		await vscode.commands.executeCommand('setContext', 'sfca.partialRunsEnabled', true);
 		const runDfaOnWorkspaceCmd = vscode.commands.registerCommand(Constants.COMMAND_RUN_DFA, async () => {
 			await _runDfa(context);
 			savedFilesCache.clear();
@@ -212,26 +213,28 @@ export function createTempDirectory(): string {
 
 async function _runDfa(context: vscode.ExtensionContext) {
 	if (violationsCacheExists()) {
+		const partialScanText = 'Partial scan: Scan only the code that you changed since the previous scan.';
+		const fullScanText = 'Full scan: Scan all the code in this project again.';
 		const choice = await vscode.window.showQuickPick(
-			['***Yes***', '***No***'],
+			[partialScanText, fullScanText],
 			{
-				placeHolder: '***We identified a previous Salesforce Graph Engine run. Do you want to only run the previously failed violations from that run?***',
+				placeHolder: 'You previously scanned this code using Salesforce Graph Engine. What kind of scan do you want to run now?',
 				canPickMany: false,
 				ignoreFocusOut: true
 			}
 		);
 
 		// Default to "Yes" if no choice is made
-		const rerunChangedOnly = choice == '***Yes***';
+		const rerunChangedOnly = choice == partialScanText;
 		if (rerunChangedOnly) {
 			const deltaRunTargets = DeltaRunFunctions.getDeltaRunTarget(sfgeCachePath, savedFilesCache);
 			if (deltaRunTargets.length == 0) {
-				void vscode.window.showInformationMessage('***No local changes found that would change the outcome of previous SFGE full run.***');
+				void vscode.window.showInformationMessage("Your local changes didn't change the outcome of the previous full Salesforce Graph Engine scan.");
 				return
 			}
 			await runDfaOnSelectMethods(context, deltaRunTargets);
 		} else {
-			void vscode.window.showWarningMessage('***A full run of the graph engine will happen in the background. You can cancel this by clicking on the status progress.***');
+			void vscode.window.showWarningMessage('A full Salesforce Graph Engine scan is running in the background. You can cancel it by clicking the progress bar.');
 			await runDfaOnWorkspace(context);
 		}
 	} else {
@@ -252,7 +255,7 @@ async function runDfaOnSelectMethods(context: vscode.ExtensionContext, selectedM
 		customCancellationToken.token.onCancellationRequested(async () => {
 			customCancellationToken?.dispose();
 			customCancellationToken = null;
-			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound);
+			await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFoundForPartialRuns);
 			return;
 		});
 

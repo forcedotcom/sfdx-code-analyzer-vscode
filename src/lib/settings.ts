@@ -55,6 +55,6 @@ export class SettingsManager {
     }
 
     public static getSfgeDeltaRunsEnabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.deltaRuns').get('enabled');
+        return vscode.workspace.getConfiguration('codeAnalyzer.partialGraphEngineScans').get('enabled');
     }
 }

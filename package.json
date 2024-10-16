@@ -102,7 +102,7 @@
             },
             {
                 "command": "sfca.runDfa",
-                "title": "***SFDX: Run Graph-Engine Based Analysis***"
+                "title": "SFDX: Scan Project with Graph Engine Path-Based Analysis"
             },
             {
                 "command": "sfca.runApexGuruAnalysisOnSelectedFile",
@@ -169,10 +169,10 @@
                     "default": false,
                     "description": "Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
                 },
-                "codeAnalyzer.deltaRuns.enabled": {
+                "codeAnalyzer.partialGraphEngineScans.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "***Enable delta run of Salesforce Graph Engine***"
+                    "description": "Partial Salesforce Graph Engine Scans: Enabled"
                 }
             }
         },
@@ -192,7 +192,7 @@
                 },
                 {
                     "command": "sfca.runDfa",
-                    "when": "true"
+                    "when": "sfca.partialRunsEnabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
