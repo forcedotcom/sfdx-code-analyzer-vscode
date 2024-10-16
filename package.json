@@ -172,7 +172,7 @@
                 "codeAnalyzer.partialGraphEngineScans.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Partial Salesforce Graph Engine Scans: Enabled"
+                    "description": "Enables partial Salesforce Graph Engine scans on only the code you've modified since the initial full scan. (Beta)"
                 }
             }
         },
