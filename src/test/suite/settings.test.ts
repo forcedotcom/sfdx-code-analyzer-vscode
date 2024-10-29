@@ -185,4 +185,19 @@ suite('SettingsManager Test Suite', () => {
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
         expect(getConfigurationStub.calledOnceWith('codeAnalyzer.apexGuru')).to.be.true;
     });
+
+    test('getSfgeDeltaRunsEnabled should return the delta runs enabled setting', () => {
+        // ===== SETUP =====
+        const mockAnalyzeOnSaveEnabled = true;
+        getConfigurationStub.withArgs('codeAnalyzer.partialGraphEngineScans').returns({
+            get: Sinon.stub().returns(mockAnalyzeOnSaveEnabled)
+        });
+
+        // ===== TEST =====
+        const result = SettingsManager.getSfgePartialSfgeRunsEnabled();
+
+        // ===== ASSERTIONS =====
+        expect(result).to.equal(mockAnalyzeOnSaveEnabled);
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.partialGraphEngineScans')).to.be.true;
+    });
 });

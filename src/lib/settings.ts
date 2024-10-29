@@ -53,4 +53,8 @@ export class SettingsManager {
     public static getApexGuruEnabled(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
     }
+
+    public static getSfgePartialSfgeRunsEnabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.partialGraphEngineScans').get('enabled');
+    }
 }

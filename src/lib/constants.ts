@@ -19,6 +19,7 @@ export const COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE = 'sfca.removeDiagnosti
 export const COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
 export const COMMAND_RUN_APEX_GURU_ON_FILE = 'sfca.runApexGuruAnalysisOnSelectedFile';
 export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnCurrentFile';
+export const COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
 
 // telemetry event keys
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';

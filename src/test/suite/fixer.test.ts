@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import {expect} from 'chai';
 import path = require('path');
+import * as Constants from '../../lib/constants';
 import {_NoOpFixGenerator, _PmdFixGenerator, _ApexGuruFixGenerator} from '../../lib/fixer';
 
 suite('fixer.ts', () => {
@@ -529,9 +530,7 @@ suite('fixer.ts', () => {
     
                 // Validate results.
                 expect(fixes).to.have.lengthOf(1, 'One fix should be offered');
-                const fix = fixes[0].edit.get(fileUri)[0];
-                expect(fix.newText).to.equal('apex guru suggested code\n', 'The suppression code should match the suggestion');
-                expect(fix.range.start.line).to.equal(7, 'The suppression should be added at the diagnostic line');
+                expect(fixes[0].command.command).to.equal(Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS);
             });
     
             test('Should not generate a suppression fix if line is already processed', async () => {
@@ -604,8 +603,7 @@ suite('fixer.ts', () => {
                 const fix = fixGenerator.generateApexGuruSuppresssion(doc);
     
                 // Validate results.
-                expect(fix.edit.get(fileUri)[0].newText).to.equal('apex guru suggested code\n', 'The suppression code should match the suggestion');
-                expect(fix.edit.get(fileUri)[0].range.start.line).to.equal(7, 'The suppression should be added at the diagnostic line');
+                expect(fix.command.command).to.equal(Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS);
             });
         });
     });
