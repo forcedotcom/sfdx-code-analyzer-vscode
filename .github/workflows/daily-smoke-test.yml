@@ -38,16 +38,10 @@ jobs:
       - name: Report problems
         shell: bash
         env:
-          IS_CRITICAL: ${{ contains(join(steps.*.outcome), 'failure') || contains(join(steps.*.outcome), 'skipped') }}
           RUN_LINK: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [[ ${{ env.IS_CRITICAL }} == true ]]; then
-            ALERT_SEV="critical"
-            ALERT_SUMMARY="Daily smoke test failed on ${{ runner.os }}"
-          else
-            ALERT_SEV="info"
-            ALERT_SUMMARY="Daily smoke test succeeded with retries on ${{ runner.os }}"
-          fi
+          ALERT_SEV="critical"
+          ALERT_SUMMARY="Daily smoke test failed on ${{ runner.os }}"
 
           generate_post_data() {
             cat <<EOF
