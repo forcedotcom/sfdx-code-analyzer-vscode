@@ -25,7 +25,7 @@ jobs:
       - name: 'Check out, build, pack'
         run: |
           # Check out the target branch.
-          git clone https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
+          git clone -b dev-4 https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
           cd sfdx-scanner
           git checkout ${{ inputs.target-branch }}
           # Install and build dependencies.
