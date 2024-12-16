@@ -6,7 +6,7 @@ on:
         description: "Which branch of the scanner should be built?"
         required: false
         type: string
-        default: "dev"
+        default: "dev-4"
 
 jobs:
   build-tarball:
@@ -25,9 +25,8 @@ jobs:
       - name: 'Check out, build, pack'
         run: |
           # Check out the target branch.
-          git clone https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
+          git clone -b ${{ inputs.target-branch }} https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
           cd sfdx-scanner
-          git checkout ${{ inputs.target-branch }}
           # Install and build dependencies.
           yarn
           yarn build

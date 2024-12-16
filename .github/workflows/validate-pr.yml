@@ -21,7 +21,7 @@ jobs:
     name: 'Build scanner tarball'
     uses: ./.github/workflows/build-scanner-tarball.yml
     with:
-      target-branch: 'dev'
+      target-branch: 'dev-4'
   # Step 2: Actually run the tests.
   run_tests:
     name: 'Run unit tests'
