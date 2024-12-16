@@ -5,8 +5,8 @@ on:
     # Cron syntax is "minute[0-59] hour[0-23] date[1-31] month[1-12] day[0-6]". '*' is 'any value', and multiple values
     # can be specified with comma-separated lists. All times are UTC.
     # So this expression means "run at 17:30 UTC every day". This time was chosen because it corresponds to
-    # 11:30AM CDT, meaning that any issues will be surfaced towards the start of business.
-    - cron: "30 17 * * *"
+    # 9:30AM PST, meaning that any issues will be surfaced on working days when people are likely to be awake and online.
+    - cron: "30 17 * * 1-5"
 
 jobs:
   # Step 1: Build the scanner tarball so it can be installed locally.
