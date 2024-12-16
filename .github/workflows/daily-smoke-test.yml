@@ -14,7 +14,7 @@ jobs:
     name: 'Build scanner tarball'
     uses: ./.github/workflows/build-scanner-tarball.yml
     with:
-      target-branch: 'dev'
+      target-branch: 'dev-4'
   # Step 2: Actually run the tests.
   smoke-test:
     name: 'Run smoke tests'
@@ -22,7 +22,7 @@ jobs:
     uses: ./.github/workflows/run-tests.yml
     with:
       # For daily builds, we want to make sure we haven't pushed a breaking change
-      # to the scanner's `dev` branch.
+      # to the scanner's `dev-4` branch.
       use-scanner-tarball: true
   # Step 3: Build a VSIX artifact for use if needed.
   create-vsix-artifact:
