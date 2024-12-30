@@ -144,7 +144,7 @@ export class _PmdFixGenerator extends FixGenerator {
                 void llmService.callLLM(prompt, '1')
                 .then(codeSnippet => {
                     action.command = {
-                        command: 'codegenie.unifiedDiff',
+                        command: Constants.CODEGENIE_UNIFIED_DIFF,
                         title: 'Diff',
                         arguments: [codeSnippet, this.document.uri.toString()]
                     };

@@ -210,6 +210,7 @@ function setupUnifiedDiff(context: vscode.ExtensionContext) {
 				await sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffRejectAll();
 			})
 	);
+	sharedvscodeui.CGUnifiedDiff.singleton.activate(context);
 }
 
 async function runMethodLevelDfa(context: vscode.ExtensionContext, methodLevelTarget: string[]) {
