@@ -25,7 +25,6 @@ import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as sharedvscodeui from 'shared-vscode-ui';
-import { DiffHunk } from 'shared-vscode-ui';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -182,33 +181,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 function setupUnifiedDiff(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF, (code: string, file?: string) => {
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF, async (code: string, file?: string) => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-				sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiff(code, file);
+				await sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiff(code, file);
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_ACCEPT, (hunk: DiffHunk) => {
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: sharedvscodeui.DiffHunk) => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-				sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffAccept(hunk);
+				await sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffAccept(hunk);
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_REJECT, (hunk: DiffHunk) => {
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: sharedvscodeui.DiffHunk) => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-				sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffReject(hunk);
+				await sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffReject(hunk);
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, () => {
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call	
-				sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffAcceptAll();
+				await sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffAcceptAll();
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_REJECT_ALL, () => {
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-				sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffRejectAll();
+				await sharedvscodeui.CGUnifiedDiff.singleton.unifiedDiffRejectAll();
 			})
 	);
 }
