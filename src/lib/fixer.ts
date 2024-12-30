@@ -7,6 +7,9 @@
 import * as vscode from 'vscode';
 import {messages} from './messages';
 import * as Constants from './constants';
+import { ServiceProvider, ServiceType } from '@salesforce/vscode-service-provider';
+import { FixGenerator } from './fix-generator';
+import { StringFormatter } from './string-formatter';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -51,31 +54,6 @@ export class Fixer implements vscode.CodeActionProvider {
                 return new _NoOpFixGenerator(document, diagnostic);
         }
     }
-}
-
-/**
- * Abstract parent class for engine-specific fix generators.
- * @abstract
- */
-abstract class FixGenerator {
-    protected document: vscode.TextDocument;
-    protected diagnostic: vscode.Diagnostic;
-
-    /**
-     *
-     * @param document A document to which fixes should be added
-     * @param diagnostic The diagnostic from which fixes should be generated
-     */
-    public constructor(document: vscode.TextDocument, diagnostic: vscode.Diagnostic) {
-        this.document = document;
-        this.diagnostic = diagnostic;
-    }
-
-    /**
-     * Abstract template method for generating fixes.
-     * @abstract
-     */
-    public abstract generateFixes(processedLines: Set<number>, document?: vscode.TextDocument, diagnostic?: vscode.Diagnostic): vscode.CodeAction[];
 }
 
 /**
@@ -148,11 +126,39 @@ export class _PmdFixGenerator extends FixGenerator {
             const lineNumber = this.diagnostic.range.start.line;
             if (!processedLines.has(lineNumber)) {
                 fixes.push(this.generateLineLevelSuppression());
+                fixes.push(this.generateLineLevelA4DFix());
                 processedLines.add(lineNumber);
             }
             fixes.push(this.generateClassLevelSuppression());
         }
         return fixes;
+    }
+
+
+    private generateLineLevelA4DFix(): vscode.CodeAction {
+        // Create a position indicating the very end of the violation's start line.
+        const action = new vscode.CodeAction('Fix with A4D', vscode.CodeActionKind.QuickFix);  
+        const prompt = this.generatePrompt();  
+        void ServiceProvider.getService(ServiceType.LLMService, 'sfdx-code-analyzer-vscode')
+            .then(llmService => {
+                void llmService.callLLM(prompt, '1')
+                .then(codeSnippet => {
+                    action.command = {
+                        command: 'codegenie.unifiedDiff',
+                        title: 'Diff',
+                        arguments: [codeSnippet, this.document.uri.toString()]
+                    };
+                });
+            });
+        return action;
+    }
+
+    private generatePrompt(): string {
+        const formatter = new StringFormatter('Given code with the following content %s, with violation %s, reported on lines %s, give the fixed code without the violation');
+        return formatter.substitute(
+            this.document.getText(),
+            this.diagnostic.message,
+            this.diagnostic.range.start.line.toString() + '-' + this.diagnostic.range.end.line.toString())    
     }
 
     /**

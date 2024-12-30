@@ -529,6 +529,11 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@salesforce/vscode-service-provider@^1.3.0-rc.6.2":
+  version "1.3.0-rc.6.2"
+  resolved "https://registry.yarnpkg.com/@salesforce/vscode-service-provider/-/vscode-service-provider-1.3.0-rc.6.2.tgz#7de9098f648211bd504b6844f99c46efa771b14b"
+  integrity sha512-ASe5T6Mtf05y7EBdfJmBCLCrojoOAKzzj/Ho4J/cRntwotJlPVQBP4TabkQvsTdGWPtfG6r4Qd5tVY+Y5VywTA==
+
 "@sinonjs/commons@^3.0.0", "@sinonjs/commons@^3.0.1":
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/@sinonjs/commons/-/commons-3.0.1.tgz#1029357e44ca901a615585f6d27738dbc89084cd"

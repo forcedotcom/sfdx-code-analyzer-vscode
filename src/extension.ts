@@ -18,12 +18,13 @@ import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import { CoreExtensionService, TelemetryService } from './lib/core-extension-service';
 import * as Constants from './lib/constants';
-import * as path from 'path';
 import { SIGKILL } from 'constants';
+import * as path from 'path';
 import * as ApexGuruFunctions from './apexguru/apex-guru-service';
 import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
+import * as shared-vscode-ui from 'shared-vscode-ui';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -171,8 +172,39 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	context.subscriptions.push(documentSaveListener);
 	
 	TelemetryService.sendExtensionActivationEvent(extensionHrStart);
+
+	setupUnifiedDiff(context);
+
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
+}
+
+function setupUnifiedDiff(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF, (code: string, file?: string) => {
+					CGUnifiedDiff.singleton.unifiedDiff(code, file);
+			})
+	);
+	context.subscriptions.push(
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_ACCEPT, (hunk: DiffHunk) => {
+					CGUnifiedDiff.singleton.unifiedDiffAccept(hunk);
+			})
+	);
+	context.subscriptions.push(
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_REJECT, (hunk: DiffHunk) => {
+					CGUnifiedDiff.singleton.unifiedDiffReject(hunk);
+			})
+	);
+	context.subscriptions.push(
+			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, () => {
+					CGUnifiedDiff.singleton.unifiedDiffAcceptAll();
+			})
+	);
+	context.subscriptions.push(
+			vscode.commands.registerCommand(constants.CODEGENIE_UNIFIED_DIFF_REJECT_ALL, () => {
+					CGUnifiedDiff.singleton.unifiedDiffRejectAll();
+			})
+	);
 }
 
 async function runMethodLevelDfa(context: vscode.ExtensionContext, methodLevelTarget: string[]) {
