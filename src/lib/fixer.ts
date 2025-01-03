@@ -10,6 +10,7 @@ import * as Constants from './constants';
 import { ServiceProvider, ServiceType } from '@salesforce/vscode-service-provider';
 import { FixGenerator } from './fix-generator';
 import { StringFormatter } from './string-formatter';
+import { A4DActionProvider } from './code-action-provider';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -25,13 +26,19 @@ export class Fixer implements vscode.CodeActionProvider {
     public provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
         const processedLines = new Set<number>(); 
         // Iterate over all diagnostics.
-        return context.diagnostics
+        const codeActions = context.diagnostics
             // Throw out diagnostics that aren't ours, or are for the wrong line.
             .filter(diagnostic => messages.diagnostics.source && messages.diagnostics.source.isSource(diagnostic.source) && diagnostic.range.isEqual(range))
             // Get and use the appropriate fix generator.
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.
             .reduce((acc, next) => [...acc, ...next], []);
+        
+        // Add A4D related codefixes to this
+        const a4dActionProvider = new A4DActionProvider();
+        const fullCodeActions = codeActions.concat(a4dActionProvider.provideCodeActions(document, null, context, null));
+
+        return fullCodeActions;
     }
 
     /**
@@ -126,7 +133,6 @@ export class _PmdFixGenerator extends FixGenerator {
             const lineNumber = this.diagnostic.range.start.line;
             if (!processedLines.has(lineNumber)) {
                 fixes.push(this.generateLineLevelSuppression());
-                fixes.push(this.generateLineLevelA4DFix());
                 processedLines.add(lineNumber);
             }
             fixes.push(this.generateClassLevelSuppression());
@@ -137,20 +143,25 @@ export class _PmdFixGenerator extends FixGenerator {
 
     private generateLineLevelA4DFix(): vscode.CodeAction {
         // Create a position indicating the very end of the violation's start line.
-        const action = new vscode.CodeAction('Fix with A4D', vscode.CodeActionKind.QuickFix);  
-        const prompt = this.generatePrompt();  
-        void ServiceProvider.getService(ServiceType.LLMService, 'sfdx-code-analyzer-vscode')
-            .then(llmService => {
-                void llmService.callLLM(prompt, '1')
-                .then(codeSnippet => {
-                    action.command = {
-                        command: Constants.CODEGENIE_UNIFIED_DIFF,
-                        title: 'Diff',
-                        arguments: [codeSnippet, this.document.uri.toString()]
-                    };
-                });
-            });
+        const action = new vscode.CodeAction('Fix with A4D', vscode.CodeActionKind.QuickFix);
+        action.command = undefined;
+        action.isPreferred = true;
         return action;
+
+        void this.fetchCodeSnippet().then(codeSnippet => {
+            action.command = {
+                command: Constants.CODEGENIE_UNIFIED_DIFF,
+                title: 'Diff',
+                arguments: [codeSnippet, this.document.uri.toString()],
+            };
+        });
+        return action;
+    }
+
+    private async fetchCodeSnippet(): Promise<string> {
+        const prompt = this.generatePrompt();
+        const llmService = await ServiceProvider.getService(ServiceType.LLMService, 'sfdx-code-analyzer-vscode');
+        return llmService.callLLM(prompt, '1');
     }
 
     private generatePrompt(): string {

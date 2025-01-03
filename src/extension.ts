@@ -16,6 +16,7 @@ import {RuleResult} from './types';
 import {DiagnosticManager} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
+import {A4DActionProvider} from './lib/code-action-provider';
 import { CoreExtensionService, TelemetryService } from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 import { SIGKILL } from 'constants';
@@ -180,6 +181,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 }
 
 function setupUnifiedDiff(context: vscode.ExtensionContext) {
+	context.subscriptions.push(
+    vscode.languages.registerCodeActionsProvider(
+      { scheme: 'file', language: 'apex' },
+      new A4DActionProvider(),
+      {
+        providedCodeActionKinds: A4DActionProvider.providedCodeActionKinds
+      }
+    )
+  );
 	context.subscriptions.push(
 			vscode.commands.registerCommand(Constants.CODEGENIE_UNIFIED_DIFF, async (code: string, file?: string) => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
