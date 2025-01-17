@@ -16,9 +16,7 @@ jobs:
         with:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node dependencies'
-        run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.IDEE_GH_TOKEN }}" > ~/.npmrc
-          yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile
       - name: 'Create VSIX'
         run: npx vsce package
       - name: 'Upload artifact'
