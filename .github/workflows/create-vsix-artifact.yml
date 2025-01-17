@@ -13,6 +13,8 @@ jobs:
           token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       - name: 'Configure Git'
         run: |
+          git config --global url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "ssh://git@github.com/"
+          git config --global url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "git@github.com:"
           git config --global url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "github:"
       - name: 'Set up NodeJS'
         uses: actions/setup-node@v4
