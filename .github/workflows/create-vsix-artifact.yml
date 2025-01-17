@@ -17,6 +17,8 @@ jobs:
           node-version: 'lts/*' # Node LTS should always be fine.
       - name: 'Install node dependencies'
         run: yarn install --frozen-lockfile
+        with:
+          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       - name: 'Create VSIX'
         run: npx vsce package
       - name: 'Upload artifact'
