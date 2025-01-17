@@ -18,8 +18,10 @@ jobs:
       - name: 'Authenticate with GitHub'
         run: |
           echo "//github.com/:_authToken=${{ secrets.IDEE_GH_TOKEN }}" > ~/.npmrc
+      - name: 'Clear Yarn Cache'
+        run: yarn cache clean
       - name: 'Install node dependencies'
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.IDEE_GH_TOKEN }}
       - name: 'Create VSIX'
