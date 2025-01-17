@@ -9,6 +9,7 @@ jobs:
     steps:
       - name: 'Check out the code'
         uses: actions/checkout@v4
+        secrets: inherit
         with:
           token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       - name: 'Set up NodeJS'
