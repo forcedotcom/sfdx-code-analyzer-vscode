@@ -37,5 +37,3 @@ jobs:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
     secrets: inherit
-    with:
-      token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
