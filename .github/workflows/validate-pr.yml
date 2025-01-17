@@ -36,5 +36,3 @@ jobs:
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
-    with:
-      token: ${{ secrets.IDEE_GH_TOKEN }}
