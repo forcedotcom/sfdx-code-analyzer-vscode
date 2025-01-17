@@ -20,6 +20,8 @@ jobs:
           echo "//github.com/:_authToken=${{ secrets.IDEE_GH_TOKEN }}" > ~/.npmrc
       - name: 'Clear Yarn Cache'
         run: yarn cache clean
+      - name: Configure Git for private repo access
+        run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: 'Install node dependencies'
         run: yarn install --frozen-lockfile --verbose
         env:
