@@ -43,9 +43,9 @@ export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
 
 // codegenie diff
-export const CODEGENIE_UNIFIED_DIFF = 'codegenieLocal.unifiedDiff';
-export const CODEGENIE_UNIFIED_DIFF_ACCEPT = 'codegenieLocal.unifiedDiff.accept';
-export const CODEGENIE_UNIFIED_DIFF_REJECT = 'codegenieLocal.unifiedDiff.reject';
-export const CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL = 'codegenieLocal.unifiedDiff.acceptAll';
-export const CODEGENIE_UNIFIED_DIFF_REJECT_ALL = 'codegenieLocal.unifiedDiff.rejectAll';
-export const RESOLVE_CODE_ACTION = 'codegenieLocal.resolve.codeAction';
+export const CODEGENIE_UNIFIED_DIFF = 'unifiedDiff';
+export const CODEGENIE_UNIFIED_DIFF_ACCEPT = 'unifiedDiff.accept';
+export const CODEGENIE_UNIFIED_DIFF_REJECT = 'unifiedDiff.reject';
+export const CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL = 'unifiedDiff.acceptAll';
+export const CODEGENIE_UNIFIED_DIFF_REJECT_ALL = 'unifiedDiff.rejectAll';
+export const RESOLVE_CODE_ACTION = 'resolve.codeAction';

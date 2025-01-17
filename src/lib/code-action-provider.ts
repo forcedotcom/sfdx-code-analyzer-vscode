@@ -10,7 +10,8 @@ export class A4DActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     range: vscode.Range,
     context: vscode.CodeActionContext,
-    token: vscode.CancellationToken
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _token: vscode.CancellationToken
   ): vscode.CodeAction[] {
     const codeActions: vscode.CodeAction[] = [];
 
@@ -50,16 +51,21 @@ export class A4DActionProvider implements vscode.CodeActionProvider {
   
         // Generate the prompt
         const [document, diagnostic] = codeAction.command.arguments as [vscode.TextDocument, vscode.Diagnostic];
-        const prompt = this.generatePrompt(document, diagnostic);
+        const visibleRange = vscode.window.activeTextEditor.visibleRanges[0];
+        const prompt = this.generatePrompt(document, diagnostic, visibleRange);
   
         // Get the LLM service instance
         const llmService = await ServiceProvider.getService(ServiceType.LLMService, 'sfdx-code-analyzer-vscode');
   
         // Call the LLM service with the generated prompt
-        const codeSnippet = await llmService.callLLM(prompt, '1');
-  
+        let codeSnippet = await llmService.callLLM(prompt, '1');
+        if (codeSnippet.startsWith('```apex')) {
+          codeSnippet = codeSnippet.slice(7, codeSnippet.length - 3);
+        }
+
+        const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), visibleRange.start.line, visibleRange.end.line);
         // Update the command arguments with the resolved code snippet
-        codeAction.command.arguments = [codeSnippet.slice(7, codeSnippet.length - 3), document.uri];
+        codeAction.command.arguments = [updatedFileContent, document.uri];
   
         return codeAction;
       } catch (error) {
@@ -70,7 +76,7 @@ export class A4DActionProvider implements vscode.CodeActionProvider {
     })();
   }
 
-  private generatePrompt(document:vscode.TextDocument, diagnostic: vscode.Diagnostic): string {
+  private generatePrompt(document:vscode.TextDocument, diagnostic: vscode.Diagnostic, visibleRange: vscode.Range): string {
     const devAssistantDetailedPrompt = `<|system|>
     You are Dev Assistant, an AI coding assistant built by Salesforce to help its developers write correct, readable and efficient code.
       You are currently running in an IDE and have been asked a question by the developers.
@@ -97,13 +103,164 @@ export class A4DActionProvider implements vscode.CodeActionProvider {
     `;
     
 
-      const formatter = new StringFormatter(devAssistantDetailedPrompt
-        .concat('\n<user>Given code with the following content %s, with violation %s, reported on lines %s, give the fixed code without the violation.')
-        .concat('\n<|endofprompt|>')
-        .concat('\n<|assistant|>'));
-      return formatter.substitute(
-          document.getText(),
-          diagnostic.message,
-          diagnostic.range.start.line.toString() + '-' + diagnostic.range.end.line.toString())    
+    const formatter = new StringFormatter(devAssistantDetailedPrompt
+      .concat(`Here is some relevant context:
+        
+        ***Current Code Context***
+        \`\`\`
+        %s
+        \`\`\`
+        <user>Given code with the following content
+         %s,
+         with violation %s,
+         give the fixed code without the violation by appending USER_MODE in the SOQL
+         <|endofprompt|>
+         <|assistant|>
+         `));
+    
+    return formatter.substitute(
+        this.getVisibleCode(visibleRange),this.extractCodeFromApexFile(document.getText(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1),
+        diagnostic.message);
+
+    // The following send visible code for the lines of exception
+    // return formatter.substitute(
+    //   this.getVisibleCode(visibleRange), this.getVisibleCode(visibleRange),
+    //   diagnostic.message);  
   }
+
+  private getVisibleCode(range: vscode.Range): string {
+    const editor = vscode.window.activeTextEditor;
+    return editor.document.getText(range);
+
+    // const isOutputContext = editor?.document.uri.scheme === 'output';
+    // if (editor && !isOutputContext) {
+    //   const selection = editor.selection;
+    //   if (selection && !selection.isEmpty) {
+    //     const selectionRange = new vscode.Range(
+    //       visibleRange.,
+    //       selection.start.character,
+    //       selection.end.line,
+    //       selection.end.character
+    //     );
+    //     return editor.document.getText(visibleRange);
+    //   }
+    // }
+    // return '';
+  }
+
+  private extractMethodFromApexCode(fileContent: string, lineNumber: number): CodeRange | null {
+    // Split the file content into lines for easy processing
+    const lines = fileContent.split("\n");
+
+    if (lineNumber < 1 || lineNumber > lines.length) {
+        throw new Error("Invalid line number.");
+    }
+
+    // Join the lines with line numbers for reference
+    const codeWithLineNumbers = lines.map((line, index) => ({ line, number: index + 1 }));
+
+    // Define a regex to detect method or function definitions
+    const methodRegex = /^\s*(public|private|protected|global)?\s*(static)?\s*[\w<>[\]]+\s+\w+\s*\(.*\)\s*{/;
+
+    // Find all potential method/function start lines
+    const methodStartLines = codeWithLineNumbers
+        .filter(({ line }) => methodRegex.test(line))
+        .map(({ number }) => number);
+
+    // Sort the methods by line number
+    methodStartLines.sort((a, b) => a - b);
+
+    // Find the method that surrounds the given line number
+    let methodStartLine = -1;
+    let nextMethodStartLine = -1;
+
+    for (let i = 0; i < methodStartLines.length; i++) {
+        if (methodStartLines[i] <= lineNumber && 
+            (i + 1 === methodStartLines.length || methodStartLines[i + 1] > lineNumber)) {
+            methodStartLine = methodStartLines[i];
+            nextMethodStartLine = methodStartLines[i + 1] || lines.length + 1;
+            break;
+        }
+    }
+
+    if (methodStartLine === -1) {
+        return null; // No method found around the given line number
+    }
+
+    // Extract the method code from methodStartLine to just before nextMethodStartLine
+    const methodLines = lines.slice(methodStartLine - 1, nextMethodStartLine - 1);
+
+    const codeRange: CodeRange = {
+      content: methodLines.join('\n'),
+      startLineNumber: methodStartLine,
+      endLineNumber: nextMethodStartLine - 1
+    };
+
+    return codeRange;
+  }
+
+  private extractCodeFromApexFile(
+    fileContent: string,
+    startLine: number,
+    endLine: number
+): string | null {
+    // Split the file content into lines for processing
+    const lines = fileContent.split("\n");
+
+    // Validate the line numbers
+    if (startLine < 1 || endLine > lines.length || startLine > endLine) {
+        throw new Error("Invalid start or end line number.");
+    }
+
+    // Extract the lines between startLine and endLine (inclusive)
+    const extractedLines = lines.slice(startLine - 1, endLine);
+    return extractedLines.join("\n");
+  }
+
+
+  private replaceCodeInFile(
+    fileContent: string,
+    replaceCode: string,
+    startLine: number,
+    endLine: number
+): string {
+    // Split the file content into an array of lines
+    const lines = fileContent.split("\n");
+
+    if (startLine < 1 && endLine >= lines.length - 1) {
+      // This means the whole file content is replaced
+      return replaceCode;
+    }
+
+    // Ensure startLine and endLine are within valid ranges
+    if (startLine < 1 || endLine > lines.length || startLine > endLine) {
+        throw new Error("Invalid startLine or endLine values.");
+    }
+
+    // Determine the leading spaces of the first line being replaced
+    const leadingSpaces = lines[startLine - 1].match(/^\s*/)?.[0] || "";
+
+    // Add the leading spaces to each line of the replaceCode
+    const indentedReplaceCode = replaceCode
+        .split("\n")
+        .map(line => leadingSpaces + line)
+        .join("\n");
+
+    // Replace the specified lines with the new code
+    const updatedLines = [
+        ...lines.slice(0, startLine),
+        indentedReplaceCode,
+        ...lines.slice(endLine + 1)
+    ];
+
+    // Join the lines back into a single string
+    return updatedLines.join("\n");
+  }
+
 }
+
+type CodeRange = {
+  content: string;
+  startLineNumber: number;
+  endLineNumber: number;
+};
