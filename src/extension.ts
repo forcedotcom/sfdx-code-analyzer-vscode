@@ -179,15 +179,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 
 function setupUnifiedDiff(context: vscode.ExtensionContext) {
-	// context.subscriptions.push(
-  //   vscode.languages.registerCodeActionsProvider(
-  //     { scheme: 'file', language: 'apex' },
-  //     new A4DActionProvider(),
-  //     {
-  //       providedCodeActionKinds: A4DActionProvider.providedCodeActionKinds
-  //     }
-  //   )
-  // );
 	context.subscriptions.push(
 			vscode.commands.registerCommand(Constants.UNIFIED_DIFF, async (code: string, file?: string) => {
 				// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
