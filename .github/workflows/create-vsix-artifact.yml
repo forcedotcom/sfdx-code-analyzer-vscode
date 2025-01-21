@@ -23,7 +23,7 @@ jobs:
       - name: Configure Git for private repo access
         run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: 'Install node dependencies'
-        run: yarn install
+        run: yarn install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.IDEE_GH_TOKEN }}
       - name: 'Create VSIX'
