@@ -24,7 +24,8 @@ import * as ApexGuruFunctions from './apexguru/apex-guru-service';
 import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
-import { VSCodeUnifiedDiff, DiffHunk } from 'einstein-shared';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { VSCodeUnifiedDiff, DiffHunk, LRUCache } from 'einstein-shared';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
