@@ -37,7 +37,13 @@ export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
 // apex guru APIS
 export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
 export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
-
-// feature gates
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
+
+// A4D Integration
+export const A4D_FIX_AVAILABLE_RULES = ['ApexCRUDViolation'];
+export const UNIFIED_DIFF = 'unifiedDiff';
+export const UNIFIED_DIFF_ACCEPT = 'unifiedDiff.accept';
+export const UNIFIED_DIFF_REJECT = 'unifiedDiff.reject';
+export const UNIFIED_DIFF_ACCEPT_ALL = 'unifiedDiff.acceptAll';
+export const UNIFIED_DIFF_REJECT_ALL = 'unifiedDiff.rejectAll';

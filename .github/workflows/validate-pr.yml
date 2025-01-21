@@ -31,8 +31,10 @@ jobs:
       # We want to validate the extension against whatever version of the scanner we
       # *plan* to publish, not what's *already* published.
       use-scanner-tarball: true
+    secrets: inherit
   # BUILD A VSIX ARTIFACT
   # Additionally, build a VSIX that can be downloaded by the user if needed.
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
+    secrets: inherit

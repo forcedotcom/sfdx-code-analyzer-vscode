@@ -9,10 +9,14 @@ jobs:
     steps:
       - name: 'Check out the code'
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       - name: 'Set up NodeJS'
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*' # Node LTS should always be fine.
+      - name: Configure Git for private repo access
+        run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: 'Install node dependencies'
         run: yarn install --frozen-lockfile
       - name: 'Create VSIX'
