@@ -73,10 +73,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
 	context.subscriptions.push(diagnosticCollection);
 
-	// Define a code action provider for quickfixes.
+	// Define a code action provider for generic quickfixes.
 	const fixer = new Fixer();
 	context.subscriptions.push(
 		vscode.languages.registerCodeActionsProvider({pattern: '**/**'}, fixer, {
+			providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+		})
+	);
+
+	const a4dFixer = new A4DActionProvider();
+	context.subscriptions.push(
+		vscode.languages.registerCodeActionsProvider({pattern: '**/**'}, a4dFixer, {
 			providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
 		})
 	);

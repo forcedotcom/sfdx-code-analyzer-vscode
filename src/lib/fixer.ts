@@ -10,7 +10,6 @@ import * as Constants from './constants';
 import { ServiceProvider, ServiceType } from '@salesforce/vscode-service-provider';
 import { FixGenerator } from './fix-generator';
 import { StringFormatter } from './string-formatter';
-import { A4DActionProvider } from './code-action-provider';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -33,12 +32,12 @@ export class Fixer implements vscode.CodeActionProvider {
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.
             .reduce((acc, next) => [...acc, ...next], []);
-        
+        return codeActions;
         // Add A4D related codefixes to this
-        const a4dActionProvider = new A4DActionProvider();
-        const fullCodeActions = codeActions.concat(a4dActionProvider.provideCodeActions(document, null, context, null));
+        // const a4dActionProvider = new A4DActionProvider();
+        // const fullCodeActions = codeActions.concat(a4dActionProvider.provideCodeActions(document, null, context, null));
 
-        return fullCodeActions;
+        // return fullCodeActions;
     }
 
     /**
