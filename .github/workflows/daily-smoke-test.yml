@@ -24,7 +24,7 @@ jobs:
       # For daily builds, we want to make sure we haven't pushed a breaking change
       # to the scanner's `dev-4` branch.
       use-scanner-tarball: true
-      secrets: inherit
+    secrets: inherit
   # Step 3: Build a VSIX artifact for use if needed.
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'

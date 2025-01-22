@@ -59,7 +59,7 @@ jobs:
       # Before publishing, we want to test the extension against whatever
       # version of the scanner is currently live.
       use-scanner-tarball: false
-      secrets: inherit
+    secrets: inherit
 
   publish-vscode:
     name: 'Publish to VSCode Marketplace'
