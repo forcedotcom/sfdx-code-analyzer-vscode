@@ -29,6 +29,7 @@ jobs:
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
+    secrets: inherit
   # Step 4: Report any problems
   report-problems:
     name: 'Report problems'
