@@ -22,6 +22,7 @@ jobs:
     name: 'Upload VSIX as artifact'
     needs: verify-should-run
     uses: ./.github/workflows/create-vsix-artifact.yml
+    secrets: inherit
   create-github-release:
     runs-on: ubuntu-latest
     needs: create-vsix-artifact
