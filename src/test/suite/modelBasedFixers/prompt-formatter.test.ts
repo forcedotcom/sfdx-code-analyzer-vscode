@@ -7,51 +7,72 @@
 
 
 import { expect } from 'chai';
-import { PromptFormatter } from '../../../modelBasedFixers/prompt-formatter';
+import { PromptBuilder } from '../../../modelBasedFixers/prompt-formatter';
 
 suite('PromptFormatter', () => {
-  suite('constructor', () => {
-    test('should initialize with a template string', () => {
-      const template = 'Hello %s';
-      const formatter = new PromptFormatter(template);
-      expect(formatter['template']).to.equal(template);
-    });
+  const baseTemplate = `
+Fix the code:
+{{###VIOLATION_CODE###}}
+
+Violation: {{###VIOLATION_MESSAGE###}}
+
+Additional Notes: {{###ADDITIONAL_PROMPT###}}
+`;
+
+  test('replaces violation code placeholder', () => {
+      const formatter = new PromptBuilder(baseTemplate);
+      const result = formatter
+          .withViolationCode('class Test {}')
+          .build();
+      
+      expect(result).to.include('class Test {}');
+      expect(result).to.not.include('{{###VIOLATION_CODE###}}');
   });
 
-  suite('substitute', () => {
-    test('should replace a single %s placeholder', () => {
-      const template = 'Hello %s';
-      const formatter = new PromptFormatter(template);
-      const result = formatter.substitute('World');
-      expect(result).to.equal('Hello World');
-    });
+  test('replaces violation message placeholder', () => {
+      const formatter = new PromptBuilder(baseTemplate);
+      const result = formatter
+          .withViolationMessage('Code style violation')
+          .build();
+      
+      expect(result).to.include('Code style violation');
+      expect(result).to.not.include('{{###VIOLATION_MESSAGE###}}');
+  });
 
-    test('should replace multiple %s placeholders in order', () => {
-      const template = '%s World %s!';
-      const formatter = new PromptFormatter(template);
-      const result = formatter.substitute('Hello', 'all');
-      expect(result).to.equal('Hello World all!');
-    });
+  test('replaces additional prompt placeholder', () => {
+      const formatter = new PromptBuilder(baseTemplate);
+      const result = formatter
+          .withAdditionalPrompt('Improve readability')
+          .build();
+      
+      expect(result).to.include('Improve readability');
+      expect(result).to.not.include('{{###ADDITIONAL_PROMPT###}}');
+  });
 
-    test('should handle empty template', () => {
-      const template = '';
-      const formatter = new PromptFormatter(template);
-      const result = formatter.substitute('test');
-      expect(result).to.equal('');
-    });
+  test('supports chaining multiple replacements', () => {
+      const formatter = new PromptBuilder(baseTemplate);
+      const result = formatter
+          .withViolationCode('class Test {}')
+          .withViolationMessage('Code style violation')
+          .withAdditionalPrompt('Improve readability')
+          .build();
+      
+      expect(result).to.include('class Test {}');
+      expect(result).to.include('Code style violation');
+      expect(result).to.include('Improve readability');
+      expect(result).to.not.include('{{###VIOLATION_CODE###}}');
+      expect(result).to.not.include('{{###VIOLATION_MESSAGE###}}');
+      expect(result).to.not.include('{{###ADDITIONAL_PROMPT###}}');
+  });
 
-    test('should handle no replacements if no %s in template', () => {
-      const template = 'No placeholders';
-      const formatter = new PromptFormatter(template);
-      const result = formatter.substitute('test');
-      expect(result).to.equal('No placeholders');
-    });
-
-    test('should handle multiple substitutions with extra values', () => {
-      const template = '%s %s %s';
-      const formatter = new PromptFormatter(template);
-      const result = formatter.substitute('One', 'Two', 'Three', 'Four');
-      expect(result).to.equal('One Two Three');
-    });
+  test('handles partial replacements', () => {
+      const formatter = new PromptBuilder(baseTemplate);
+      const result = formatter
+          .withViolationCode('class Test {}')
+          .build();
+      
+      expect(result).to.include('class Test {}');
+      expect(result).to.include('{{###VIOLATION_MESSAGE###}}');
+      expect(result).to.include('{{###ADDITIONAL_PROMPT###}}');
   });
 });

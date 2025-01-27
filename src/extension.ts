@@ -81,13 +81,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		})
 	);
 
-	// Define a code action provider for model based quickfixes.
-	const apexPmdFixer = new ApexPmdViolationsFixer();
-	context.subscriptions.push(
-		vscode.languages.registerCodeActionsProvider({pattern: '**/*.cls'}, apexPmdFixer, {
-			providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
-		})
-	);
+	if (Constants.ENABLE_A4D_INTEGRATION) {
+		// Define a code action provider for model based quickfixes.
+		const apexPmdFixer = new ApexPmdViolationsFixer();
+		context.subscriptions.push(
+			vscode.languages.registerCodeActionsProvider({pattern: '**/*.cls'}, apexPmdFixer, {
+				providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+			})
+		);
+	}
 
 	// Declare our commands.
 	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {

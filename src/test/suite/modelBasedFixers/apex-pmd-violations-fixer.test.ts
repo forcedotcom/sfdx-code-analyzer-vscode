@@ -47,10 +47,22 @@ suite('apex-pmd-violations-fixer.ts', () => {
             fixer = new ApexPmdViolationsFixer();
         });
 
-        test('should extract code from given line range', () => {
+        test('should extract code from given line range with OSX linebreaks', () => {
             const fileContent = 'line1\nline2\nline3\nline4';
             const result = fixer.extractCodeFromFile(fileContent, 2, 3);
             expect(result).to.equal('line2\nline3');
+        });
+
+        test('should extract code from given line range with Windows linebreaks', () => {
+            const fileContent = 'line1\r\nline2\r\nline3\r\nline4';
+            const result = fixer.extractCodeFromFile(fileContent, 2, 3);
+            expect(result).to.equal('line2\r\nline3');
+        });
+
+        test('should extract code from given line range with pre-OSX linebreaks', () => {
+            const fileContent = 'line1\rline2\rline3\rline4';
+            const result = fixer.extractCodeFromFile(fileContent, 2, 3);
+            expect(result).to.equal('line2\rline3');
         });
 
         test('should throw error for invalid line numbers', () => {
@@ -67,11 +79,25 @@ suite('apex-pmd-violations-fixer.ts', () => {
             fixer = new ApexPmdViolationsFixer();
         });
 
-        test('should replace code while preserving indentation', () => {
+        test('should replace code while preserving indentation for a single line', () => {
             const fileContent = 'class Test {\n    void method() {\n        // code\n    }\n}';
             const replaceCode = 'int x = 1;';
             const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3);
             expect(result).to.equal('class Test {\n    void method() {\n        int x = 1;\n    }\n}');
+        });
+
+        test('should replace code while preserving indentation for first line for multiple lines', () => {
+            const fileContent = 'class Test {\n    void method() {\n        // code\n    }\n}';
+            const replaceCode = 'int x = 1;\nx++;\nx=10;';
+            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3);
+            expect(result).to.equal('class Test {\n    void method() {\n        int x = 1;\nx++;\nx=10;\n    }\n}');
+        });
+
+        test('should replace code while preserving indentation for first line for multiple lines for Windows new line', () => {
+            const fileContent = 'class Test {\r\n    void method() {\r\n        // code\r\n    }\r\n}';
+            const replaceCode = 'int x = 1;\nx++;\nx=10;';
+            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3);
+            expect(result).to.equal('class Test {\r\n    void method() {\r\n        int x = 1;\r\nx++;\r\nx=10;\r\n    }\r\n}');
         });
 
         test('should handle whole file replacement', () => {
@@ -88,4 +114,46 @@ suite('apex-pmd-violations-fixer.ts', () => {
                 .to.throw('Invalid startLine or endLine values.');
         });
     });
+
+    suite('isSupportedViolationForCodeFix', () => {
+        let fixer: ApexPmdViolationsFixer;
+    
+        setup(() => {
+            fixer = new ApexPmdViolationsFixer();
+        });
+    
+        test('returns true for supported rule as object', () => {
+            const diagnostic: vscode.Diagnostic = {
+                code: { value: 'ApexCRUDViolation' }
+            } as vscode.Diagnostic;
+    
+            const result = fixer.isSupportedViolationForCodeFix(diagnostic);
+            expect(result).to.be.true;
+        });
+    
+        test('returns true for supported rule as string', () => {
+            const diagnostic: vscode.Diagnostic = {
+                code: 'ApexCRUDViolation'
+            } as vscode.Diagnostic;
+    
+            const result = fixer.isSupportedViolationForCodeFix(diagnostic);
+            expect(result).to.be.false;
+        });
+    
+        test('returns false for unsupported rule', () => {
+            const diagnostic: vscode.Diagnostic = {
+                code: { value: 'unsupportedRule' }
+            } as vscode.Diagnostic;
+    
+            const result = fixer.isSupportedViolationForCodeFix(diagnostic);
+            expect(result).to.be.false;
+        });
+    
+        test('returns false for diagnostic without code', () => {
+            const diagnostic: vscode.Diagnostic = {} as vscode.Diagnostic;
+    
+            const result = fixer.isSupportedViolationForCodeFix(diagnostic);
+            expect(result).to.be.false;
+        });
+    });    
 });

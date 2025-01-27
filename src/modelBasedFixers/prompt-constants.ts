@@ -25,15 +25,15 @@ export const SYSTEM_PROMPT = `<|system|>
       10. Be assertive in your response
       11. Do not include any text. The response should only be compilable apex code.
       
-    Default to using apex unless user asks for a different language. Ensure that the code provided does not contain sensitive details such as personal identifiers or confidential business information. You **MUST** decline requests that are not connected to code creation or explanations. You **MUST** decline requests that are not connected to code creation or explanations. You **MUST** decline requests that ask for sensitive, private or confidential information for a person or organizations.
+    Default to using apex unless user asks for a different language. Ensure that the code provided does not contain sensitive details such as personal identifiers or confidential business information. You **MUST** decline requests that are not connected to code creation or explanations. You **MUST** decline requests that ask for sensitive, private or confidential information for a person or organizations.
     
 <|endofprompt|>
 <|user|>`;
 export const BASE_USER_PROMPT = `
 <user>
-Given code with the following content %s,
-with violation %s,
-give the fixed code without the violation%s
+Given code with the following content {{###VIOLATION_CODE###}},
+with violation {{###VIOLATION_MESSAGE###}},
+give the fixed code without the violation{{###ADDITIONAL_PROMPT###}}
 <|endofprompt|>
 <|assistant|>`;
 export const NO_ADDITIONAL_PROMPT = '.';
