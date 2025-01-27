@@ -25,6 +25,7 @@ import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
 import { VSCodeUnifiedDiff, DiffHunk } from 'einstein-shared';
+import { ApexPmdViolationsFixer } from './modelBasedFixers/apex-pmd-violations-fixer'
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -72,13 +73,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
 	context.subscriptions.push(diagnosticCollection);
 
-	// Define a code action provider for quickfixes.
+	// Define a code action provider for generic quickfixes.
 	const fixer = new Fixer();
 	context.subscriptions.push(
 		vscode.languages.registerCodeActionsProvider({pattern: '**/**'}, fixer, {
 			providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
 		})
 	);
+
+	if (Constants.ENABLE_A4D_INTEGRATION) {
+		// Define a code action provider for model based quickfixes.
+		const apexPmdFixer = new ApexPmdViolationsFixer();
+		context.subscriptions.push(
+			vscode.languages.registerCodeActionsProvider({pattern: '**/*.cls'}, apexPmdFixer, {
+				providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
+			})
+		);
+	}
 
 	// Declare our commands.
 	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
