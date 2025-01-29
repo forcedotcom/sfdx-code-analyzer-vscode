@@ -78,8 +78,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 const llmService = await ServiceProvider.getService(ServiceType.LLMService, Constants.EXTENSION_ID);
 
                 // Call the LLM service with the generated prompt
-                let codeSnippet = await llmService.callLLM(prompt);
-                codeSnippet = this.removeCodeMarkdowns(codeSnippet);
+                const llmResponse = await llmService.callLLM(prompt);
+                const codeSnippet = this.extractCodeFromResponse(llmResponse);
 
                 const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1);
                 // Update the command arguments with the resolved code snippet
@@ -102,12 +102,21 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         })();
     }
 
-    public removeCodeMarkdowns(codeSnippet: string) {
-        if (codeSnippet.startsWith('```apex')) {
-            codeSnippet = codeSnippet.trimEnd();
-            codeSnippet = codeSnippet.slice(7, codeSnippet.length - 3);
+    public extractCodeFromResponse(response: string) {
+        const startTag = '```apex';
+        const endTag = '``';
+
+        const startIndex = response.indexOf(startTag);
+        if (startIndex === -1) return response;
+
+        const afterStartTag = startIndex + startTag.length;
+        const endIndex = response.indexOf(endTag, afterStartTag);
+
+        if (endIndex !== -1) {
+            return response.slice(afterStartTag, endIndex).trim();
         }
-        return codeSnippet;
+
+        return response;
     }
 
     public generatePrompt(document:vscode.TextDocument, diagnostic: vscode.Diagnostic): string {

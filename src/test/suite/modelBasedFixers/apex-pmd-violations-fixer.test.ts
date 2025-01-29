@@ -30,14 +30,54 @@ suite('apex-pmd-violations-fixer.ts', () => {
             const result = await fixer.resolveCodeAction(codeAction, token);
             expect(result).to.be.null;
         });
+    });
 
-        test('should handle code snippet markdown removal', () => {
+    suite('extractCodeFromResponse', () => {
+        let fixer: ApexPmdViolationsFixer;
+
+        setup(() => {
+            fixer = new ApexPmdViolationsFixer();
+        });
+
+        test('should extract code ending with triple ticks', () => {
             const codeWithMarkdown = '```apex\nclass TestClass {\n}\n```';
-            const expectedCode = '\nclass TestClass {\n}\n';
-            
-            const result = fixer.removeCodeMarkdowns(codeWithMarkdown);
+            const expectedCode = 'class TestClass {\n}';
+
+            const result = fixer.extractCodeFromResponse(codeWithMarkdown);
             expect(result).to.equal(expectedCode);
         });
+
+        test('should extract code ending with double ticks', () => {
+            const codeWithMarkdown = '```apex\nclass TestClass {\n}\n``';
+            const expectedCode = 'class TestClass {\n}';
+
+            const result = fixer.extractCodeFromResponse(codeWithMarkdown);
+            expect(result).to.equal(expectedCode);
+        });
+
+        test('should extract code ending with no new line before code', () => {
+            const codeWithMarkdown = '```apexclass TestClass {\n}\n```';
+            const expectedCode = 'class TestClass {\n}';
+
+            const result = fixer.extractCodeFromResponse(codeWithMarkdown);
+            expect(result).to.equal(expectedCode);
+        });
+
+        test('should extract code in the middle of instruction', () => {
+            const codeWithMarkdown = '\nSome instruction here\n```apex\nclass TestClass {\n}\n```Some additional information here\n';
+            const expectedCode = 'class TestClass {\n}';
+
+            const result = fixer.extractCodeFromResponse(codeWithMarkdown);
+            expect(result).to.equal(expectedCode);
+        });
+        test('should extract first code block when multiple code blocks are present', () => {
+            const codeWithMarkdown = '\n```apex\nclass TestClass1 {\n}\n```\n```apex\nclass TestClass2 {\n}\n```\n';
+            const expectedCode = 'class TestClass1 {\n}';
+
+            const result = fixer.extractCodeFromResponse(codeWithMarkdown);
+            expect(result).to.equal(expectedCode);
+        });
+
     });
 
     suite('extractCodeFromFile', () => {
