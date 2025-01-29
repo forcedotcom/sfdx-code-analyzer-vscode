@@ -145,6 +145,7 @@
 				"codeAnalyzer.ruleSelectors": {
 					"type": "string",
 					"default": "Recommended",
+					"markdownDescription": "Specifies Rule Selectors to use during default execution of Code Analyzer v5 (Beta). Use commas for unions (e.g., \"Security,Performance\") and colons for intersections (e.g., \"pmd:Security\").",
 					"description": "Specifies Rule Selectors to use during default execution of Code Analyzer v5 (Beta)."
 				}
 			}
