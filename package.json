@@ -118,7 +118,7 @@
         "configuration": [{
 			"title": "General",
 			"properties": {
-				"codeAnalyzerV5.enabled": {
+				"codeAnalyzer.enableV5": {
 					"type": "boolean",
 					"default": false,
 					"description": "Use Code Analyzer v5 (Beta) instead of Code Analyzer v4."
