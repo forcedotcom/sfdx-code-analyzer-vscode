@@ -118,6 +118,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
             return response.slice(afterStartTag, endIndex).trim();
         }
 
+        // We return the original response so we can see the response in the diff.
+        // TODO: Change this to no reponse closer to releasing this as a feature to the users.
         return response;
     }
 
