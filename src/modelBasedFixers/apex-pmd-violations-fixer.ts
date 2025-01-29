@@ -104,6 +104,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
 
     public extractCodeFromResponse(response: string) {
         const startTag = '```apex';
+        // Model returns code block with ending double backticks.
+        // For now keeping double backticks to catch both double and triple backtick scenarios.
         const endTag = '``';
 
         const startIndex = response.indexOf(startTag);
