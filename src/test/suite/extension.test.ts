@@ -11,6 +11,7 @@ import {SfCli} from '../../lib/sf-cli';
 import Sinon = require('sinon');
 import { _runAndDisplayPathless, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
+import {SettingsManager} from '../../lib/settings';
 import {TelemetryService} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
@@ -52,97 +53,181 @@ suite('Extension Test Suite', () => {
 			_clearDiagnostics();
 		});
 
-		// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-		// (Arrow functions bind lexical `this` and we don't want that.)
-		test('sfca.runOnActiveFile', async function() {
-			// ===== SETUP =====
-			// Set the timeout to a frankly absurd value, just to make sure Github Actions
-			// can finish it in time.
-			this.timeout(90000);
-			// Open a file in the editor.
+		suite('sfca.runOnActiveFile', () => {
 			const fileUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
-			const doc = await vscode.workspace.openTextDocument(fileUri);
-			await vscode.window.showTextDocument(doc);
 
-			// ===== TEST =====
-			// Run the "scan active file" command.
-			await vscode.commands.executeCommand('sfca.runOnActiveFile');
+			setup(async function() {
+				// Open a file in the editor.
+				const doc = await vscode.workspace.openTextDocument(fileUri);
+				await vscode.window.showTextDocument(doc);
+			});
 
-			// ===== ASSERTIONS =====
-			// Verify that we added diagnostics.
-			const diagnosticArrays = vscode.languages.getDiagnostics();
-			const [uri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === fileUri.toString());
-			expect(uri, `Expected diagnostics for ${fileUri.toString()}`).to.exist;
-			expect(diagnostics, 'Expected non-empty diagnostic array').to.not.be.empty;
+			teardown(() => {
+				Sinon.restore();
+			});
 
-			// At present, we expect only violations for PMD's `ApexDoc` rule.
-			for (const diagnostic of diagnostics) {
-				expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
-				expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
-				expect(diagnostic.code).to.have.property('target');
-				expect((diagnostic.code['target'] as vscode.Uri).scheme).to.equal('https');
-			}
-		});
-
-		suite('sfca.runOnSelected', () => {
-			test('One file selected', async function() {
+			async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
 				// ===== SETUP =====
-				// Set the timeout to a frankly absurd value, just to make sure Github Actions
-				// can finish it in time.
-				this.timeout(60000);
-				// Get the URI for a single file.
-				const targetUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
+				// Set V5's enablement to the desired state.
+				Sinon.stub(SettingsManager, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
 
 				// ===== TEST =====
-				// Run the "scan selected files" command.
-				// Pass the URI in as the first parameter, since that's what happens on a single-file selection.
-				await vscode.commands.executeCommand('sfca.runOnSelected', targetUri, []);
+				// Run the "scan active file" command.
+				await vscode.commands.executeCommand('sfca.runOnActiveFile');
 
 				// ===== ASSERTIONS =====
 				// Verify that we added diagnostics.
 				const diagnosticArrays = vscode.languages.getDiagnostics();
-				const [resultsUri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri.toString());
-				expect(resultsUri, `Expected diagnostics for ${targetUri.toString()}`).to.exist;
-				expect(diagnostics, `Expected non-empty diagnostics for ${targetUri.toString()}`).to.not.be.empty;
+				const [uri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === fileUri.toString());
+				expect(uri, `Expected diagnostics for ${fileUri.toString()}`).to.exist;
+				expect(diagnostics, 'Expected non-empty diagnostic array').to.not.be.empty;
+
 				// At present, we expect only violations for PMD's `ApexDoc` rule.
 				for (const diagnostic of diagnostics) {
 					expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
 					expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+					expect(diagnostic.code).to.have.property('target');
+					expect((diagnostic.code['target'] as vscode.Uri).scheme).to.equal('https');
 				}
-			});
+			}
 
-			test('One folder selected', () => {
-				// TODO: IMPLEMENT THIS TEST
-			});
-
-			test('Multiple files selected', async function() {
-				// ===== SETUP =====
+			// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+			// (Arrow functions bind lexical `this` and we don't want that.)
+			test('Adds proper diagnostics when running with v4', async function() {
 				// Set the timeout to a frankly absurd value, just to make sure Github Actions
 				// can finish it in time.
-				this.timeout(60000);
+				this.timeout(90000);
+				await runTest(false);
+			});
+
+			// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+			// (Arrow functions bind lexical `this` and we don't want that.)
+			test('Adds proper diagnostics when running with v5', async function() {
+				// Set the timeout to a frankly absurd value, just to make sure Github Actions
+				// can finish it in time.
+				this.timeout(90000);
+				await runTest(true);
+			});
+		});
+
+		suite('sfca.runOnSelected', () => {
+			suite('One file selected', () => {
+				// Get the URI for a single file.
+				const targetUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
+
+				teardown(() => {
+					Sinon.restore();
+				});
+
+				async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
+					// ===== SETUP =====
+					// Set V5's enablement to the desired state.
+					Sinon.stub(SettingsManager, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+
+					// ===== TEST =====
+					// Run the "scan selected files" command.
+					// Pass the URI in as the first parameter, since that's what happens on a single-file selection.
+					await vscode.commands.executeCommand('sfca.runOnSelected', targetUri, []);
+
+					// ===== ASSERTIONS =====
+					// Verify that we added diagnostics.
+					const diagnosticArrays = vscode.languages.getDiagnostics();
+					const [resultsUri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri.toString());
+					expect(resultsUri, `Expected diagnostics for ${targetUri.toString()}`).to.exist;
+					expect(diagnostics, `Expected non-empty diagnostics for ${targetUri.toString()}`).to.not.be.empty;
+					// At present, we expect only violations for PMD's `ApexDoc` rule.
+					for (const diagnostic of diagnostics) {
+						expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
+						expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+					}
+				}
+
+				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+				// (Arrow functions bind lexical `this` and we don't want that.)
+				test('Adds proper diagnostics when running with v4', async function() {
+					// Set the timeout to a frankly absurd value, just to make sure Github Actions
+					// can finish it in time.
+					this.timeout(90000);
+					await runTest(false);
+				});
+
+				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+				// (Arrow functions bind lexical `this` and we don't want that.)
+				test('Adds proper diagnostics when running with v5', async function() {
+					// Set the timeout to a frankly absurd value, just to make sure Github Actions
+					// can finish it in time.
+					this.timeout(90000);
+					await runTest(true);
+				});
+			});
+
+			suite('One folder selected', () => {
+				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+				// (Arrow functions bind lexical `this` and we don't want that.)
+				test('Adds proper diagnostics when running with v4', async function() {
+					// TODO: WRITE THIS TEST
+				});
+
+				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+				// (Arrow functions bind lexical `this` and we don't want that.)
+				test.skip('Adds proper diagnostics when running with v5', async function() {
+					// TODO: WRITE THIS TEST
+				});
+			});
+
+			suite('Multiple files selected', () => {
 				// Get the URIs for two separate files.
 				const targetUri1: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
 				const targetUri2: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA2.cls'));
 
-				// ===== TEST =====
-				// Run the "scan selected files" command.
-				// Pass the URIs in as the second parameter, since that's what happens on a multi-select pick.
-				await vscode.commands.executeCommand('sfca.runOnSelected', null, [targetUri1, targetUri2]);
+				teardown(() => {
+					Sinon.restore();
+				});
 
-				// ===== ASSERTIONS =====
-				// Verify that we added diagnostics.
-				const diagnosticArrays = vscode.languages.getDiagnostics();
-				const [resultsUri1, diagnostics1] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri1.toString());
-				const [resultsUri2, diagnostics2] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri2.toString());
-				expect(resultsUri1, `Expected diagnostics for ${targetUri1.toString()}`).to.exist;
-				expect(resultsUri2, `Expected diagnostics for ${targetUri2.toString()}`).to.exist;
-				expect(diagnostics1, `Expected non-empty diagnostics for ${targetUri1.toString()}`).to.not.be.empty;
-				expect(diagnostics2, `Expected non-empty diagnostics for ${targetUri2.toString()}`).to.not.be.empty;
-				// At present, we expect only violations for PMD's `ApexDoc` rule.
-				for (const diagnostic of [...diagnostics1, ...diagnostics2]) {
-					expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
-					expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+				async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
+					// ===== SETUP =====
+					// Set V5's enablement to the desired state.
+					Sinon.stub(SettingsManager, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+
+					// ===== TEST =====
+					// Run the "scan selected files" command.
+					// Pass the URIs in as the second parameter, since that's what happens on a multi-select pick.
+					await vscode.commands.executeCommand('sfca.runOnSelected', null, [targetUri1, targetUri2]);
+
+
+					// ===== ASSERTIONS =====
+					// Verify that we added diagnostics.
+					const diagnosticArrays = vscode.languages.getDiagnostics();
+					const [resultsUri1, diagnostics1] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri1.toString());
+					const [resultsUri2, diagnostics2] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri2.toString());
+					expect(resultsUri1, `Expected diagnostics for ${targetUri1.toString()}`).to.exist;
+					expect(resultsUri2, `Expected diagnostics for ${targetUri2.toString()}`).to.exist;
+					expect(diagnostics1, `Expected non-empty diagnostics for ${targetUri1.toString()}`).to.not.be.empty;
+					expect(diagnostics2, `Expected non-empty diagnostics for ${targetUri2.toString()}`).to.not.be.empty;
+					// At present, we expect only violations for PMD's `ApexDoc` rule.
+					for (const diagnostic of [...diagnostics1, ...diagnostics2]) {
+						expect(diagnostic.source).to.equal('pmd via Code Analyzer', 'Wrong source');
+						expect(diagnostic.code).to.have.property('value', 'ApexDoc', 'Wrong rule violated');
+					}
 				}
+
+				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+				// (Arrow functions bind lexical `this` and we don't want that.)
+				test('Adds proper diagnostics when running with v4', async function() {
+					// Set the timeout to a frankly absurd value, just to make sure Github Actions
+					// can finish it in time.
+					this.timeout(90000);
+					await runTest(false);
+				});
+
+				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
+				// (Arrow functions bind lexical `this` and we don't want that.)
+				test('Adds proper diagnostics when running with v5', async function() {
+					// Set the timeout to a frankly absurd value, just to make sure Github Actions
+					// can finish it in time.
+					this.timeout(90000);
+					await runTest(true);
+				});
 			});
 		});
 
@@ -340,7 +425,7 @@ suite('Extension Test Suite', () => {
 
 		test('Returns true and confirmation message not called when no existing DFA process detected', async() => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
-			
+
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
 			expect(await _shouldProceedWithDfaRun(context)).to.equal(true);
@@ -407,7 +492,7 @@ suite('Extension Test Suite', () => {
 		let diagnosticCollection: vscode.DiagnosticCollection;
 		let runInfo: RunInfo;
 		let getTargetsStub: Sinon.SinonStub;
-	
+
 		suiteSetup(() => {
 			// Create a diagnostic collection before the test suite starts.
 			diagnosticCollection = vscode.languages.createDiagnosticCollection();
@@ -417,18 +502,18 @@ suite('Extension Test Suite', () => {
 			};
 			getTargetsStub = Sinon.stub(targeting, 'getTargets');
 		});
-	
+
 		setup(() => {
 			// Ensure the diagnostic collection is clear before each test.
 			diagnosticCollection.clear();
 		});
-	
+
 		teardown(() => {
 			// Clear the diagnostic collection after each test.
 			diagnosticCollection.clear();
 			getTargetsStub.reset();
 		});
-	
+
 		test('Should clear diagnostics for a single file', async () => {
 			// ===== SETUP =====
 			const uri = vscode.Uri.file('/some/path/file1.cls');
@@ -437,16 +522,16 @@ suite('Extension Test Suite', () => {
 			];
 			runInfo.diagnosticCollection.set(uri, diagnostics);
 			getTargetsStub.returns(['/some/path/file1.cls']);
-	
+
 			expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
-	
+
 			// ===== TEST =====
 			await _clearDiagnosticsForSelectedFiles([uri], runInfo);
 
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
 		});
-	
+
 		test('Should clear diagnostics for multiple files', async () => {
 			// ===== SETUP =====
 			const uri1 = vscode.Uri.file('/some/path/file2.cls');
@@ -457,10 +542,10 @@ suite('Extension Test Suite', () => {
 			diagnosticCollection.set(uri1, diagnostics);
 			diagnosticCollection.set(uri2, diagnostics);
 			getTargetsStub.returns(['/some/path/file2.cls', '/some/path/file3.cls']);
-	
+
 			expect(diagnosticCollection.get(uri1)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 			expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
-	
+
 			// ===== TEST =====
 			await _clearDiagnosticsForSelectedFiles([uri1, uri2], runInfo);
 
@@ -468,18 +553,18 @@ suite('Extension Test Suite', () => {
 			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
 			expect(runInfo.diagnosticCollection.get(uri2)).to.be.empty;
 		});
-	
+
 		test('Should handle case with no diagnostics to clear', async () => {
 			// ===== SETUP =====
 			const uri = vscode.Uri.file('/some/path/file4.cls');
-	
+
 			// ===== TEST =====
 			await _clearDiagnosticsForSelectedFiles([uri], runInfo);
-	
+
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
 		});
-	
+
 		test('Should handle case with an empty URI array', async () => {
 			// ===== SETUP =====
 			const uri = vscode.Uri.file('/some/path/file5.cls');
@@ -490,14 +575,14 @@ suite('Extension Test Suite', () => {
 			getTargetsStub.returns([]);
 
 			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
-	
+
 			// ===== TEST =====
 			await _clearDiagnosticsForSelectedFiles([], runInfo);
-	
+
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
 		});
-	
+
 		test('Should not affect other diagnostics not in the selected list', async () => {
 			// ===== SETUP =====
 			const uri1 = vscode.Uri.file('/some/path/file6.cls');
@@ -511,13 +596,13 @@ suite('Extension Test Suite', () => {
 			diagnosticCollection.set(uri1, diagnostics1);
 			diagnosticCollection.set(uri2, diagnostics2);
 			getTargetsStub.returns(['/some/path/file6.cls']);
-	
+
 			expect(diagnosticCollection.get(uri1)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 			expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
-	
+
 			// ===== TEST =====
 			await _clearDiagnosticsForSelectedFiles([uri1], runInfo);
-	
+
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
 			expect(runInfo.diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
@@ -526,71 +611,71 @@ suite('Extension Test Suite', () => {
 
 	suite('_removeSingleDiagnostic Test Suite', () => {
 		let diagnosticCollection: vscode.DiagnosticCollection;
-	
+
 		setup(() => {
 			// Create a new diagnostic collection for each test
 			diagnosticCollection = vscode.languages.createDiagnosticCollection();
 		});
-	
+
 		teardown(() => {
 			// Clear the diagnostic collection after each test
 			diagnosticCollection.clear();
 		});
-	
+
 		test('Should remove a single diagnostic from the collection', () => {
 			// ===== SETUP =====
 			const uri = vscode.Uri.file('/some/path/file1.cls');
 			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
 			const anotherDiagnostic = new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Another diagnostic', vscode.DiagnosticSeverity.Error);
-	
+
 			// Set initial diagnostics
 			diagnosticCollection.set(uri, [diagnosticToRemove, anotherDiagnostic]);
-	
+
 			expect(diagnosticCollection.get(uri)).to.have.lengthOf(2, 'Expected two diagnostics to be present before removal');
-	
+
 			// ===== TEST =====
 			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
-	
+
 			// ===== ASSERTIONS =====
 			const remainingDiagnostics = diagnosticCollection.get(uri);
 			expect(remainingDiagnostics).to.have.lengthOf(1, 'Expected one diagnostic to remain after removal');
 			expect(remainingDiagnostics[0].message).to.equal('Another diagnostic', 'Expected the remaining diagnostic to be the one not removed');
 		});
-	
+
 		test('Should handle removing a diagnostic from an empty collection', () => {
 			// ===== SETUP =====
 			const uri = vscode.Uri.file('/some/path/file2.cls');
 			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
-	
+
 			expect(diagnosticCollection.get(uri)).to.be.empty;
-	
+
 			// ===== TEST =====
 			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
-	
+
 			// ===== ASSERTIONS =====
 			const remainingDiagnostics = diagnosticCollection.get(uri);
 			expect(remainingDiagnostics).to.be.empty;
 		});
-	
+
 		test('Should handle case where diagnostic is not found', () => {
 			// ===== SETUP =====
 			const uri = vscode.Uri.file('/some/path/file3.cls');
 			const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
 			const existingDiagnostic = new vscode.Diagnostic(new vscode.Range(1, 0, 1, 5), 'Existing diagnostic', vscode.DiagnosticSeverity.Error);
-	
+
 			// Set initial diagnostics
 			diagnosticCollection.set(uri, [existingDiagnostic]);
-	
+
 			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected one diagnostic to be present before attempting removal');
-	
+
 			// ===== TEST =====
 			_removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
-	
+
 			// ===== ASSERTIONS =====
 			const remainingDiagnostics = diagnosticCollection.get(uri);
 			expect(remainingDiagnostics).to.have.lengthOf(1, 'Expected the diagnostic collection to remain unchanged');
 			expect(remainingDiagnostics[0].message).to.equal('Existing diagnostic', 'Expected the existing diagnostic to remain unchanged');
 		});
 	});
-	
+
 });

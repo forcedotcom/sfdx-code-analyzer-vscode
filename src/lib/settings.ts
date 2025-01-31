@@ -10,6 +10,10 @@ import * as vscode from 'vscode';
  * Class for accessing the values of configuration settings
  */
 export class SettingsManager {
+	public static getCodeAnalyzerV5Enabled(): boolean {
+		return vscode.workspace.getConfiguration('codeAnalyzer').get('enableV5');
+	}
+
     public static getPmdCustomConfigFile(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('customConfigFile');
     }
