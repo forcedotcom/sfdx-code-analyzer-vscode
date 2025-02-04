@@ -115,33 +115,14 @@
                 "title": "SFDX: Scan Current File for Performance Issues with ApexGuru"
             }
         ],
-        "configuration": {
-            "title": "Salesforce Code Analyzer",
-            "properties": {
-                "codeAnalyzer.pMD.customConfigFile": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Replace Code Analyzer's default PMD config file, choose a custom file."
-                },
-                "codeAnalyzer.graphEngine.disableWarningViolations": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Suppress warning violations, such as those related to StripInaccessible READ access."
-                },
-                "codeAnalyzer.graphEngine.threadTimeout": {
-                    "type": "number",
-                    "default": 900000,
-                    "description": "After the thread timeout elapses, the path evaluation aborts. The default timeout is 900,000 milliseconds."
-                },
-                "codeAnalyzer.graphEngine.pathExpansionLimit": {
-                    "type": "number",
-                    "default": 0,
-                    "description": "An upper boundary to limit the complexity of code analyzed by Graph Engine. The default of 0 is a dynamically determined limit that's based on heap space. To learn more about heap space, see OutOfMemory errors in the Graph Engine documentation."
-                },
-                "codeAnalyzer.graphEngine.jvmArgs": {
-                    "type": "string",
-                    "description": "The Java Virtual Machine (JVM) arguments used to optimize Salesforce Graph Engine execution for your system."
-                },
+        "configuration": [{
+			"title": "General",
+			"properties": {
+				"codeAnalyzer.enableV5": {
+					"type": "boolean",
+					"default": false,
+					"description": "Use Code Analyzer v5 (Beta) instead of Code Analyzer v4."
+				},
                 "codeAnalyzer.analyzeOnSave.enabled": {
                     "type": "boolean",
                     "default": false,
@@ -152,32 +133,69 @@
                     "default": false,
                     "description": "Scan files on open automatically."
                 },
+				"codeAnalyzer.apexGuru.enabled": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
+                }
+			}
+		}, {
+			"title": "Code Analyzer v5 (Beta)",
+			"properties": {
+				"codeAnalyzer.ruleSelectors": {
+					"type": "string",
+					"default": "Recommended",
+					"markdownDescription": "Specifies the default set of rules to use when executing Code Analyzer v5 (Beta). Specify the rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\")."
+				}
+			}
+		}, {
+			"title": "Code Analyzer v4",
+			"properties": {
+				"codeAnalyzer.pMD.customConfigFile": {
+                    "type": "string",
+                    "default": "",
+                    "description": "(v4 only) Replace Code Analyzer's default PMD config file, choose a custom file."
+                },
+				"codeAnalyzer.graphEngine.disableWarningViolations": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "(v4 only) Suppress warning violations, such as those related to StripInaccessible READ access."
+                },
+				"codeAnalyzer.graphEngine.threadTimeout": {
+                    "type": "number",
+                    "default": 900000,
+                    "description": "(v4 only) After the thread timeout elapses, the path evaluation aborts. The default timeout is 900,000 milliseconds."
+                },
+				"codeAnalyzer.graphEngine.pathExpansionLimit": {
+                    "type": "number",
+                    "default": 0,
+                    "description": "(v4 only) An upper boundary to limit the complexity of code analyzed by Graph Engine. The default of 0 is a dynamically determined limit that's based on heap space. To learn more about heap space, see OutOfMemory errors in the Graph Engine documentation."
+                },
+                "codeAnalyzer.graphEngine.jvmArgs": {
+                    "type": "string",
+                    "description": "(v4 only) The Java Virtual Machine (JVM) arguments used to optimize Salesforce Graph Engine execution for your system."
+                },
                 "codeAnalyzer.scanner.engines": {
                     "type": "string",
                     "default": "pmd,retire-js,eslint-lwc",
-                    "description": "The engines to run. Specify multiple values as a comma-separated list. Possible values are pmd, pmd-appexchange, retire-js, eslint, eslint-lwc, and eslint-typescript."
+                    "description": "(v4 only) The engines to run. Specify multiple values as a comma-separated list. Possible values are pmd, pmd-appexchange, retire-js, eslint, eslint-lwc, and eslint-typescript."
                 },
                 "codeAnalyzer.normalizeSeverity.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Output normalized severity (high, moderate, low) and engine-specific severity across all engines."
+                    "description": "(v4 only) Output normalized severity (high, moderate, low) and engine-specific severity across all engines."
                 },
                 "codeAnalyzer.rules.category": {
                     "type": "string",
-                    "description": "The categories of rules to run. Specify multiple values as a comma-separated list. Run 'sf scanner rule list -e' in the terminal for the list of categories associated with a specific engine."
-                },
-                "codeAnalyzer.apexGuru.enabled": {
-                    "type": "boolean",
-                    "default": false,
-                    "description": "Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
+                    "description": "(v4 only) The categories of rules to run. Specify multiple values as a comma-separated list. Run 'sf scanner rule list -e' in the terminal for the list of categories associated with a specific engine."
                 },
                 "codeAnalyzer.partialGraphEngineScans.enabled": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enables partial Salesforce Graph Engine scans on only the code you've modified since the initial full scan. (Beta)"
+                    "description": "(v4 only) Enables partial Salesforce Graph Engine scans on only the code you've modified since the initial full scan. (Beta)"
                 }
-            }
-        },
+			}
+		}],
         "menus": {
             "commandPalette": [
                 {
