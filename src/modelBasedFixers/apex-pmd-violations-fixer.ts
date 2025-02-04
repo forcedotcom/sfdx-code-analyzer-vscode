@@ -10,7 +10,8 @@ import * as Constants from '../lib/constants';
 import * as PromptConstants from './prompt-constants';
 import { ServiceProvider, ServiceType } from '@salesforce/vscode-service-provider';
 import { PromptBuilder } from './prompt-formatter';
-import {messages} from '../lib/messages';
+import { messages } from '../lib/messages';
+import { randomUUID } from 'crypto';
 
 export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
     static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -78,7 +79,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 const llmService = await ServiceProvider.getService(ServiceType.LLMService, Constants.EXTENSION_ID);
 
                 // Call the LLM service with the generated prompt
-                const llmResponse = await llmService.callLLM(prompt);
+                const llmResponse = await llmService.callLLM(prompt, getUniqueId());
                 const codeSnippet = this.extractCodeFromResponse(llmResponse);
 
                 const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1);
@@ -193,4 +194,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         // Join the lines back into a single string
         return updatedLines.join(lineEnding);
     }
+}
+
+export function getUniqueId(): string {
+    return randomUUID();
 }
