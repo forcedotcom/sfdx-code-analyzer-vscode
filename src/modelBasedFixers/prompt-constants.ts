@@ -30,9 +30,14 @@ export const SYSTEM_PROMPT = `<|system|>
 <|endofprompt|>
 <|user|>`;
 export const BASE_USER_PROMPT = `
-<user>
-Given code with the following content {{###VIOLATION_CODE###}},
-with violation {{###VIOLATION_MESSAGE###}},
+Given code with the following content
+
+***Apex Code Context***
+\`\`\`
+{{###VIOLATION_CODE###}}
+\`\`\`
+with violation
+{{###VIOLATION_MESSAGE###}},
 give the fixed code without the violation{{###ADDITIONAL_PROMPT###}}
 <|endofprompt|>
 <|assistant|>`;
