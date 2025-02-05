@@ -53,7 +53,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
     }
 
     private extractDiagnosticCode(diagnostic: vscode.Diagnostic) {
-        return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? String(diagnostic.code.value) : '';
+        return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? diagnostic.code.value.toString() : '';
     }
 
     public isSupportedViolationForCodeFix(diagnostic: vscode.Diagnostic): unknown {

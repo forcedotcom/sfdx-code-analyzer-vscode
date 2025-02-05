@@ -597,6 +597,3 @@ export function _isValidFileForAnalysis(documentUri: vscode.Uri) {
 	return allowedFileTypes.includes(path.extname(documentUri.path));
 }
 
-export function extractDiagnosticCode(diagnostic: vscode.Diagnostic) {
-	return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? String(diagnostic.code.value) : '';
-}
