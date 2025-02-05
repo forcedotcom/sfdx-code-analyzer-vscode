@@ -210,6 +210,13 @@ function setupUnifiedDiff(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_ACCEPT_ALL, async () => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll();
+				// For accept all, it is tricky to get all the code that gets accepted and to remove them from diagnostic.
+				// Hence, we save the file and rerun the scan instead.
+				await vscode.window.activeTextEditor.document.save();
+				return _runAndDisplayPathless([], {
+					commandName: Constants.COMMAND_RUN_ON_ACTIVE_FILE,
+					diagnosticCollection
+				});
 			})
 	);
 	context.subscriptions.push(
