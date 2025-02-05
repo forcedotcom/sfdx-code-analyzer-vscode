@@ -48,6 +48,8 @@ let sfgeCachePath: string = null;
 // Create a Set to store saved file paths
 const savedFilesCache: Set<string> = new Set();
 
+const apexPmdFixer = new ApexPmdViolationsFixer();
+
 /**
  * This method is invoked when the extension is first activated (this is currently configured to be when a sfdx project is loaded).
  * The activation trigger can be changed by changing activationEvents in package.json
@@ -83,7 +85,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 	if (Constants.ENABLE_A4D_INTEGRATION) {
 		// Define a code action provider for model based quickfixes.
-		const apexPmdFixer = new ApexPmdViolationsFixer();
 		context.subscriptions.push(
 			vscode.languages.registerCodeActionsProvider({pattern: '**/*.cls'}, apexPmdFixer, {
 				providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
@@ -196,8 +197,9 @@ function setupUnifiedDiff(context: vscode.ExtensionContext) {
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk) => {
+			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk, range: vscode.Range) => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(hunk);
+				apexPmdFixer.removeDiagnosticsWithInRange(vscode.window.activeTextEditor.document.uri, range, diagnosticCollection);
 			})
 	);
 	context.subscriptions.push(
@@ -341,12 +343,8 @@ function violationsCacheExists() {
 
 export function _removeDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
 	const currentDiagnostics = diagnosticCollection.get(uri) || [];
-	const updatedDiagnostics = filterOutDiagnosticsInRange(currentDiagnostics, range);
+	const updatedDiagnostics = currentDiagnostics.filter(diagnostic => (diagnostic.range.start.line != range.start.line && diagnostic.range.end.line != range.end.line));
 	diagnosticCollection.set(uri, updatedDiagnostics);
-}
-
-function filterOutDiagnosticsInRange(currentDiagnostics: readonly vscode.Diagnostic[], range: vscode.Range) {
-	return currentDiagnostics.filter(diagnostic => (diagnostic.range.start.line != range.start.line && diagnostic.range.end.line != range.end.line));
 }
 
 export async function _stopExistingDfaRun(context: vscode.ExtensionContext): Promise<void> {
@@ -592,3 +590,6 @@ export function _isValidFileForAnalysis(documentUri: vscode.Uri) {
 	return allowedFileTypes.includes(path.extname(documentUri.path));
 }
 
+export function extractDiagnosticCode(diagnostic: vscode.Diagnostic) {
+	return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? String(diagnostic.code.value) : '';
+}
