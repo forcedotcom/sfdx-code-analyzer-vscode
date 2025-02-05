@@ -195,5 +195,91 @@ suite('apex-pmd-violations-fixer.ts', () => {
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
             expect(result).to.be.false;
         });
-    });    
+    });
+
+    suite('removeDiagnosticsWithInRange', () => {
+        let fixer: ApexPmdViolationsFixer;
+        let diagnosticCollection: vscode.DiagnosticCollection;
+        let uri: vscode.Uri;
+
+        setup(() => {
+            fixer = new ApexPmdViolationsFixer();
+            diagnosticCollection = vscode.languages.createDiagnosticCollection();
+            uri = vscode.Uri.file('test.apex');
+        });
+
+        teardown(() => {
+            diagnosticCollection.clear();
+        });
+
+        test('should remove diagnostics that overlap with the given range', () => {
+            const diagnostics: vscode.Diagnostic[] = [
+                new vscode.Diagnostic(new vscode.Range(2, 0, 4, 10), 'Overlapping diagnostic'),
+                new vscode.Diagnostic(new vscode.Range(5, 0, 6, 10), 'Non-overlapping diagnostic')
+            ];
+            diagnostics[0].code = { value: 'ApexCRUDViolation', target: uri };
+            diagnostics[1].code = { value: 'ApexCRUDViolation', target: uri };
+            diagnosticCollection.set(uri, diagnostics);
+
+            fixer.removeDiagnosticsWithInRange(uri, new vscode.Range(3, 0, 4, 10), diagnosticCollection);
+
+            const updatedDiagnostics = diagnosticCollection.get(uri) || [];
+            expect(updatedDiagnostics).to.have.lengthOf(1);
+            expect(updatedDiagnostics[0].message).to.equal('Non-overlapping diagnostic');
+        });
+
+        test('should retain diagnostics that do not overlap with the given range', () => {
+            const diagnostics: vscode.Diagnostic[] = [
+                new vscode.Diagnostic(new vscode.Range(0, 0, 1, 10), 'Non-overlapping diagnostic 1'),
+                new vscode.Diagnostic(new vscode.Range(5, 0, 6, 10), 'Non-overlapping diagnostic 2')
+            ];
+            diagnostics[0].code = { value: 'ApexCRUDViolation', target: uri };
+            diagnostics[1].code = { value: 'ApexCRUDViolation', target: uri };
+            diagnosticCollection.set(uri, diagnostics);
+
+            fixer.removeDiagnosticsWithInRange(uri, new vscode.Range(2, 0, 3, 10), diagnosticCollection);
+
+            const updatedDiagnostics = diagnosticCollection.get(uri) || [];
+            expect(updatedDiagnostics).to.have.lengthOf(2);
+        });
+
+        test('should not remove diagnostics with code not A4D_FIX_AVAILABLE_RULES', () => {
+            const diagnostics: vscode.Diagnostic[] = [
+                new vscode.Diagnostic(new vscode.Range(2, 0, 4, 10), 'Overlapping diagnostic', vscode.DiagnosticSeverity.Warning),
+                new vscode.Diagnostic(new vscode.Range(5, 0, 6, 10), 'Non-overlapping diagnostic', vscode.DiagnosticSeverity.Warning)
+            ];
+            diagnostics[0].code = { value: 'SomeOtherViolation', target: uri };
+            diagnostics[1].code = { value: 'SomeOtherViolation', target: uri };
+
+            diagnosticCollection.set(uri, diagnostics);
+
+            fixer.removeDiagnosticsWithInRange(uri, new vscode.Range(3, 0, 4, 10), diagnosticCollection);
+
+            const updatedDiagnostics = diagnosticCollection.get(uri) || [];
+            expect(updatedDiagnostics).to.have.lengthOf(2);
+        });
+
+        test('should do nothing if no diagnostics exist for the URI', () => {
+            fixer.removeDiagnosticsWithInRange(uri, new vscode.Range(2, 0, 4, 10), diagnosticCollection);
+
+            const updatedDiagnostics = diagnosticCollection.get(uri);
+            expect(updatedDiagnostics).to.have.lengthOf(0);
+        });
+
+        test('should handle single-line overlaps correctly', () => {
+            const diagnostics: vscode.Diagnostic[] = [
+                new vscode.Diagnostic(new vscode.Range(3, 0, 3, 10), 'Single-line diagnostic'),
+                new vscode.Diagnostic(new vscode.Range(5, 0, 6, 10), 'Non-overlapping diagnostic')
+            ];
+            diagnostics[0].code = { value: 'ApexCRUDViolation', target: uri };
+            diagnostics[1].code = { value: 'ApexCRUDViolation', target: uri };
+            diagnosticCollection.set(uri, diagnostics);
+
+            fixer.removeDiagnosticsWithInRange(uri, new vscode.Range(3, 0, 3, 10), diagnosticCollection);
+
+            const updatedDiagnostics = diagnosticCollection.get(uri) || [];
+            expect(updatedDiagnostics).to.have.lengthOf(1);
+            expect(updatedDiagnostics[0].message).to.equal('Non-overlapping diagnostic');
+        });
+    });
 });

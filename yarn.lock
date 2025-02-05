@@ -1491,9 +1491,9 @@ ecdsa-sig-formatter@1.0.11:
   dependencies:
     safe-buffer "^5.0.1"
 
-"einstein-shared@https://github.com/forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.9":
-  version "0.3.9"
-  resolved "https://github.com/forcedotcom/salesforcedx-vscode-einstein-shared#a1a8286c0558cf613efab31220f8982f17f8d2da"
+"einstein-shared@https://github.com/forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10":
+  version "0.3.10"
+  resolved "https://github.com/forcedotcom/salesforcedx-vscode-einstein-shared#e705ac04828b2a20c805c2cdca3ba103ee0b3f75"
   dependencies:
     "@datastructures-js/priority-queue" "^6.3.0"
     diff "^5.1.0"

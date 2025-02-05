@@ -53,7 +53,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
     }
 
     private extractDiagnosticCode(diagnostic: vscode.Diagnostic) {
-        return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? String(diagnostic.code.value) : '';
+        return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? diagnostic.code.value.toString() : '';
     }
 
     public isSupportedViolationForCodeFix(diagnostic: vscode.Diagnostic): unknown {
@@ -194,8 +194,24 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         // Join the lines back into a single string
         return updatedLines.join(lineEnding);
     }
+
+
+    public removeDiagnosticsWithInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
+        const currentDiagnostics = diagnosticCollection.get(uri) || [];
+        // This filter looks for any overlap between the lines initially diagnostic was reported and the code fix is being suggested.
+        // This might result in some false positives when multiple violations are reported for the same lines.
+        // This is a known issue and we will fix this as we learn more about how the model sends the responses for other fixes.
+        const updatedDiagnostics = currentDiagnostics.filter(
+            diagnostic => (
+                !Constants.A4D_FIX_AVAILABLE_RULES.includes(this.extractDiagnosticCode(diagnostic)) || 
+                (diagnostic.range.end.line < range.start.line || diagnostic.range.start.line > range.end.line )
+            )
+        );
+        diagnosticCollection.set(uri, updatedDiagnostics);
+    }
 }
 
 export function getUniqueId(): string {
     return randomUUID();
 }
+
