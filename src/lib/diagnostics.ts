@@ -70,13 +70,22 @@ export class DiagnosticManager {
 
         // We always have the information we need to create the starting position.
         const startPosition: vscode.Position = new vscode.Position(line - 1, column - 1);
-        // We may or may not have the information for an end position.
-        const endPosition: vscode.Position = new vscode.Position(
-            // If we're missing an explicit end line, use the starting line.
-            (violation.endLine || line) - 1,
-            // If we're missing an explicit end column, just highlight everything through the end of the line.
-            violation.endColumn || Number.MAX_SAFE_INTEGER
-        );
+        let endPosition: vscode.Position;
+        // This is an interim solution until PMD fixes the bug: https://github.com/pmd/pmd/issues/5511
+        if (violation.ruleName === 'ApexSharingViolations' && violation.endLine && violation.endLine !== violation.line) {
+            endPosition = new vscode.Position(
+                line - 1,
+                Number.MAX_SAFE_INTEGER
+            );
+        } else {
+            // We may or may not have the information for an end position.
+            endPosition = new vscode.Position(
+                // If we're missing an explicit end line, use the starting line.
+                (violation.endLine || line) - 1,
+                // If we're missing an explicit end column, just highlight everything through the end of the line.
+                violation.endColumn || Number.MAX_SAFE_INTEGER
+            );
+        }
 
         const range: vscode.Range = new vscode.Range(startPosition, endPosition);
         const diagnostic: vscode.Diagnostic = new vscode.Diagnostic(

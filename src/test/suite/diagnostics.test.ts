@@ -228,6 +228,34 @@ suite('diagnostics.ts', () => {
                 expect(endingPosition.line).to.equal(0, 'Wrong end line');
                 expect(endingPosition.character).to.equal(Number.MAX_SAFE_INTEGER, 'Wrong end column');
             });
+
+            // This test is for an interim fix and can be removed after PMD fixes https://github.com/pmd/pmd/issues/5511
+            test('Generates positioning from violation WITH endLine and endColumn for ApexSharingViolations', () => {
+                // ===== SETUP =====
+                // Create our diagnostic manager and a copy of the violation.
+                const spoofedViolation: PathlessRuleViolation = JSON.parse(JSON.stringify(baseSpoofedViolation)) as PathlessRuleViolation;
+                const diagnosticManager: DiagnosticManager = new DiagnosticManager();
+                // Give the violation some end positioning.
+                spoofedViolation.endLine = 30;
+                spoofedViolation.endColumn = 23;
+                // Set the spoofedViolation to be a ApexSharingViolations
+                spoofedViolation.ruleName = 'ApexSharingViolations';
+
+                // ===== TEST =====
+                // Create a diagnostic using our fake violation.
+                const diagnostic: vscode.Diagnostic = (diagnosticManager as any).createDiagnostic("pmd", spoofedViolation);
+
+                // ===== ASSERTIONS =====
+                // Verify that the starting and ending position both use the explicit values.
+                // Bear in mind that start line, end line, and start column are all zero-indexed,
+                // but the end column is not.
+                const startingPosition: vscode.Position = diagnostic.range.start;
+                const endingPosition: vscode.Position = diagnostic.range.end;
+                expect(startingPosition.line).to.equal(spoofedViolation.line - 1, 'Wrong starting line');
+                expect(startingPosition.character).to.equal(spoofedViolation.column - 1, 'Wrong starting column');
+                expect(endingPosition.line).to.equal(spoofedViolation.line - 1, 'Wrong end line');
+                expect(endingPosition.character).to.equal(Number.MAX_SAFE_INTEGER, 'Wrong end column');
+            });
         });
 
         suite('DFA violations', () => {
