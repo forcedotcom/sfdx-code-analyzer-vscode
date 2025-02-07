@@ -230,7 +230,7 @@ suite('diagnostics.ts', () => {
             });
 
             // This test is for an interim fix and can be removed after PMD fixes https://github.com/pmd/pmd/issues/5511
-            test('Generates positioning from violation WITH endLine and endColumn for ApexSharingViolations', () => {
+            test('Resets endLine to startLine number for ApexSharingViolations', () => {
                 // ===== SETUP =====
                 // Create our diagnostic manager and a copy of the violation.
                 const spoofedViolation: PathlessRuleViolation = JSON.parse(JSON.stringify(baseSpoofedViolation)) as PathlessRuleViolation;
@@ -246,9 +246,7 @@ suite('diagnostics.ts', () => {
                 const diagnostic: vscode.Diagnostic = (diagnosticManager as any).createDiagnostic("pmd", spoofedViolation);
 
                 // ===== ASSERTIONS =====
-                // Verify that the starting and ending position both use the explicit values.
-                // Bear in mind that start line, end line, and start column are all zero-indexed,
-                // but the end column is not.
+                // Verify that the starting and ending position both are the same for ApexSharingViolations
                 const startingPosition: vscode.Position = diagnostic.range.start;
                 const endingPosition: vscode.Position = diagnostic.range.end;
                 expect(startingPosition.line).to.equal(spoofedViolation.line - 1, 'Wrong starting line');
