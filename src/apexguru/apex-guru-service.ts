@@ -7,11 +7,10 @@
 
 import * as vscode from 'vscode';
 import * as fspromises from 'fs/promises';
-import { CoreExtensionService, Connection, TelemetryService } from '../lib/core-extension-service';
+import { CoreExtensionService, Connection, TelemetryServiceImpl } from '../lib/core-extension-service';
 import * as Constants from '../lib/constants';
 import {messages} from '../lib/messages';
-import { RuleResult, ApexGuruViolation } from '../types';
-import { DiagnosticManager } from '../lib/diagnostics';
+import { DiagnosticManagerImpl, DiagnosticConvertible } from '../lib/diagnostics';
 import { RunInfo } from '../extension';
 
 export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChannel): Promise<boolean> {
@@ -53,15 +52,17 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 
 			const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
 
-			const ruleResult = transformStringToRuleResult(selection.fsPath, decodedReport);
-			new DiagnosticManager().displayDiagnostics([selection.fsPath], [ruleResult], diagnosticCollection);
-			TelemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
+			const convertibles: DiagnosticConvertible[] = transformStringToDiagnosticConvertibles(selection.fsPath, decodedReport);
+			// TODO: For testability, the diagnostic manager should probably be passed in, not instantiated here.
+			new DiagnosticManagerImpl(diagnosticCollection).displayAsDiagnostics([selection.fsPath], convertibles);
+			// TODO: For testability, the telemetry service should probably be passed in, not instantiated here.
+			new TelemetryServiceImpl().sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
 				executedCommand: commandName,
 				duration: (Date.now() - startTime).toString(),
-				violationsCount: ruleResult.violations.length.toString(),
-				violationsWithSuggestedCodeCount: getViolationsWithSuggestions(ruleResult).toString()
+				violationCount: convertibles.length.toString(),
+				violationsWithSuggestedCodeCount: getConvertiblesWithSuggestions(convertibles).toString()
 			});
-			void vscode.window.showInformationMessage(messages.apexGuru.finishedScan(ruleResult.violations.length));
+			void vscode.window.showInformationMessage(messages.apexGuru.finishedScan(convertibles.length));
 		});
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
@@ -70,9 +71,9 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
     }
 }
 
-export function getViolationsWithSuggestions(ruleResult: RuleResult): number {
-    // Filter violations that have a non-empty suggestedCode and get count
-    return ruleResult.violations.filter(violation => (violation as ApexGuruViolation).suggestedCode?.trim() !== '').length;
+export function getConvertiblesWithSuggestions(convertibles: DiagnosticConvertible[]): number {
+	// Filter convertibles that have a non-empty suggestedCode and get count
+	return convertibles.filter(convertible => convertible.suggestedCode !== '').length;
 }
 
 export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number): Promise<ApexGuruQueryResponse> {
@@ -88,7 +89,7 @@ export async function pollAndGetApexGuruResponse(connection: Connection, request
 			});
 			if (queryResponse.status == 'success') {
 				return queryResponse;
-			} 
+			}
 		} catch (error) {
 			lastErrorMessage = (error as Error).message;
         }
@@ -125,42 +126,39 @@ export const fileSystem = {
 	readFile: (path: string) => fspromises.readFile(path, 'utf8')
 };
 
-export function transformStringToRuleResult(fileName: string, jsonString: string): RuleResult {
-    const reports = JSON.parse(jsonString) as ApexGuruReport[];
+export function transformStringToDiagnosticConvertibles(fileName: string, jsonString: string): DiagnosticConvertible[] {
+	const reports: ApexGuruReport[] = JSON.parse(jsonString) as ApexGuruReport[];
 
-    const ruleResult: RuleResult = {
-        engine: 'apexguru',
-        fileName: fileName,
-        violations: []
-    };
+	const convertibles: DiagnosticConvertible[] = [];
 
 	reports.forEach(parsed => {
-		const encodedCodeBefore = 
-		parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value 
-		?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value 
-		?? '';
-		const encodedCodeAfter = 
-		parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value 
-		?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value 
-		?? '';
+		const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value
+			?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value
+			?? '';
+		const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value
+			?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value
+			?? '';
 		const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
 
-		const violation: ApexGuruViolation = {
-			ruleName: parsed.type,
+		convertibles.push({
+			rule: parsed.type,
+			engine: 'apexguru',
 			message: parsed.value,
 			severity: 1,
-			category: parsed.type, // Replace with actual category if available
-			line: lineNumber,
-			column: 1,
+			locations: [{
+				file: fileName,
+				startLine: lineNumber,
+				startColumn: 1
+			}],
+			primaryLocationIndex: 0,
+			resources: [
+				'https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'
+			],
 			currentCode: Buffer.from(encodedCodeBefore, 'base64').toString('utf8'),
-			suggestedCode: Buffer.from(encodedCodeAfter, 'base64').toString('utf8'),
-			url: 'https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'
-		};
-	
-		ruleResult.violations.push(violation);
+			suggestedCode: Buffer.from(encodedCodeAfter, 'base64').toString('utf8')
+		});
 	});
-
-	return ruleResult;
+	return convertibles;
 }
 
 export type ApexGuruAuthResponse = {

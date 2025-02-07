@@ -4,117 +4,127 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import { ApexGuruViolation, PathlessRuleViolation, RuleResult, RuleViolation } from '../types';
 import {messages} from './messages';
 import * as vscode from 'vscode';
 
-/**
- * Class that handles the creation, display, and removal of {@link vscode.Diagnostic}s.
- */
-export class DiagnosticManager {
+type DiagnosticConvertibleLocation = {
+	file: string;
+	startLine: number;
+	startColumn: number;
+	endLine?: number;
+	endColumn?: number;
+	comment?: string;
+}
 
-    /**
-     *
-     * @param {string[]} targets The names of ALL files targeted by a particular scan.
-     * @param {RuleResult[]} results The results of the scan.
-     * @param {vscode.DiagnosticCollection} diagnosticCollection The diagnostic collection to which new diagnostics should be added.
-     */
-    public displayDiagnostics(targets: string[], results: RuleResult[], diagnosticCollection: vscode.DiagnosticCollection): void {
-        const diagnosticsMap: Map<string, vscode.Diagnostic[]> = this.createDiagnosticsMap(results);
-        for (const target of targets) {
-            const uri = vscode.Uri.file(target);
-            diagnosticCollection.set(uri, diagnosticsMap.get(target) || []);
-        }
-    }
+export type DiagnosticConvertible = {
+	rule: string;
+	engine: string;
+	message: string;
+	severity: number;
+	locations: DiagnosticConvertibleLocation[];
+	primaryLocationIndex: number;
+	resources: string[];
+	currentCode?: string;
+	suggestedCode?: string;
+}
 
-    /**
-     * Turns the results of a Salesforce Code Analyzer execution into displayable {@link vscode.Diagnostic}s.
-     * @param {RuleResult[]} results An array of results returned by a Salesforce Code Analyzer execution
-     * @returns {Map<string, vscode.Diagnostic[]} A mapping from file names to the diagnostics created for those files
-     */
-    private createDiagnosticsMap(results: RuleResult[]): Map<string,vscode.Diagnostic[]> {
-        const diagnosticsMap: Map<string, vscode.Diagnostic[]> = new Map();
-        for (const result of results) {
-            const {
-                engine, fileName, violations
-            } = result;
-            let diagnostics: vscode.Diagnostic[] = diagnosticsMap.get(fileName) || [];
-            for (const violation of violations) {
+export interface DiagnosticManager {
+	displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void;
+}
 
-                diagnostics = [...diagnostics, this.createDiagnostic(engine, violation)];
-            }
-            diagnosticsMap.set(fileName, diagnostics);
-        }
-        return diagnosticsMap;
-    }
+export class DiagnosticManagerImpl implements DiagnosticManager {
+	private diagnosticCollection: vscode.DiagnosticCollection;
 
-    // TODO: Enhance to support both pathless and DFA violations.
-    /**
-     * @param {string} engine The name of an engine run by Salesforce Code Analyzer
-     * @param {RuleViolation} violation A violation thrown by the specified engine
-     * @returns A {@link vscode.Diagnostic} representing the violation
-     * @throws When provided a {@link DfaRuleViolation}, as this is not yet supported
-     */
-    private createDiagnostic(engine: string, violation: RuleViolation): vscode.Diagnostic {
-        // If the violation isn't pathless, throw an error.
-        // This should never happen in the wild, but best to validate our assumptions.
-        if (!this.isPathlessViolation(violation)) {
-            // Hardcoding this message should be fine, because it should only ever
-            // appear in response to developer error, not user error.
-            throw new Error('Diagnostics cannot be created from DFA violations');
-        }
+	public constructor(diagnosticCollection: vscode.DiagnosticCollection) {
+		this.diagnosticCollection = diagnosticCollection;
+	}
 
-        // Handle case where line or column is 0 by setting them to a default value (1-based index).
-        const line = violation.line > 0 ? violation.line : 1;
-        const column = violation.column > 0 ? violation.column : 1;
+	/**
+	 *
+	 * @param allTargets The names of EVERY file targeted by a particular scan
+	 * @param convertibles DiagnosticConvertibles created as a result of a scan
+	 */
+	public displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void {
+		const convertiblesByTarget: Map<string, DiagnosticConvertible[]> = this.mapConvertiblesByTarget(convertibles);
 
-        // We always have the information we need to create the starting position.
-        const startPosition: vscode.Position = new vscode.Position(line - 1, column - 1);
-        // We may or may not have the information for an end position.
-        const endPosition: vscode.Position = new vscode.Position(
-            // If we're missing an explicit end line, use the starting line.
-            (violation.endLine || line) - 1,
-            // If we're missing an explicit end column, just highlight everything through the end of the line.
-            violation.endColumn || Number.MAX_SAFE_INTEGER
-        );
+		for (const target of allTargets) {
+			const targetUri = vscode.Uri.file(target);
+			const convertiblesForTarget: DiagnosticConvertible[] = convertiblesByTarget.get(target) || [];
+			this.diagnosticCollection.set(targetUri, convertiblesForTarget.map((c) => this.convertToDiagnostic(c)));
+		}
+	}
 
-        const range: vscode.Range = new vscode.Range(startPosition, endPosition);
-        const diagnostic: vscode.Diagnostic = new vscode.Diagnostic(
-            range,
-            messages.diagnostics.messageGenerator(violation.severity, violation.message.trim()),
-            vscode.DiagnosticSeverity.Warning
-        );
-        diagnostic.source = messages.diagnostics.source.generator(engine);
-        diagnostic.code = violation.url ? {
-            target: vscode.Uri.parse(violation.url),
-            value: violation.ruleName
-        } : violation.ruleName;
-        if (engine === 'apexguru') {
-            const apexGuruViolation = violation as ApexGuruViolation;
-        
-            if (apexGuruViolation.suggestedCode) {
-                diagnostic.relatedInformation = [
+	private mapConvertiblesByTarget(convertibles: DiagnosticConvertible[]): Map<string, DiagnosticConvertible[]> {
+		const convertibleMap: Map<string, DiagnosticConvertible[]> = new Map();
+		for (const convertible of convertibles) {
+			const primaryLocation: DiagnosticConvertibleLocation = convertible.locations[convertible.primaryLocationIndex];
+			const primaryFile: string = primaryLocation.file;
+			const convertiblesMappedToPrimaryFile: DiagnosticConvertible[] = convertibleMap.get(primaryFile) || [];
+			convertibleMap.set(primaryFile, [...convertiblesMappedToPrimaryFile, convertible]);
+		}
+		return convertibleMap;
+	}
+
+	private convertToDiagnostic(convertible: DiagnosticConvertible): vscode.Diagnostic {
+		const primaryLocation: DiagnosticConvertibleLocation = convertible.locations[convertible.primaryLocationIndex];
+		const primaryLocationRange = this.convertToRange(primaryLocation);
+
+		const diagnostic: vscode.Diagnostic = new vscode.Diagnostic(
+			primaryLocationRange,
+			messages.diagnostics.messageGenerator(convertible.severity, convertible.message.trim()),
+			vscode.DiagnosticSeverity.Warning
+		);
+		diagnostic.source = messages.diagnostics.source.generator(convertible.engine);
+		diagnostic.code = convertible.resources.length > 0 ? {
+			target: vscode.Uri.parse(convertible.resources[0]),
+			value: convertible.rule
+		} : convertible.rule;
+
+		// TODO: If possible, convert this engine-specific handling to something more generalized.
+		if (convertible.engine === 'apexguru') {
+			if (convertible.suggestedCode) {
+				diagnostic.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
-                        new vscode.Location(vscode.Uri.parse(violation.url), range),
-                        `\n// Current Code: \n${apexGuruViolation.currentCode}`
+                        new vscode.Location(vscode.Uri.parse(convertible.resources[0]), primaryLocationRange),
+                        `\n// Current Code: \n${convertible.currentCode}`
                     ),
                     new vscode.DiagnosticRelatedInformation(
-                        new vscode.Location(vscode.Uri.parse(violation.url), range),
-                        `/*\n//ApexGuru Suggestions: \n${apexGuruViolation.suggestedCode}\n*/`
+                        new vscode.Location(vscode.Uri.parse(convertible.resources[0]), primaryLocationRange),
+                        `/*\n//ApexGuru Suggestions: \n${convertible.suggestedCode}\n*/`
                     )
-                ];
-            }
+                ]
+			}
+		}
 
-        }
-        return diagnostic;
-    }
+		if (convertible.locations.length > 1) {
+			const relatedLocations: vscode.DiagnosticRelatedInformation[] = [];
+			for (let i = 0 ; i < convertible.locations.length; i++) {
+				if (i !== convertible.primaryLocationIndex) {
+					const relatedLocation = convertible.locations[i];
+					const relatedRange = this.convertToRange(relatedLocation);
+					const vscodeLocation: vscode.Location = new vscode.Location(vscode.Uri.file(relatedLocation.file), relatedRange);
+					relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment));
+				}
+			}
+			diagnostic.relatedInformation = relatedLocations;
+		}
+		return diagnostic;
+	}
 
-    /**
-     * Type-guard for {@link PathlessRuleViolation}s.
-     * @param violation A violation that may or may not be a {@link PathlessRuleViolation}.
-     * @returns
-     */
-    private isPathlessViolation(violation: RuleViolation): violation is PathlessRuleViolation {
-        return 'line' in violation;
-    }
+	private convertToRange(locationConvertible: DiagnosticConvertibleLocation): vscode.Range {
+		// VSCode Positions are 0-indexed, so we need to subtract 1 from the violation's position information.
+		// However, in certain cases, a violation's location might be line/column 0 of a file, and we can't use negative
+		// numbers here. So don't let ourselves go below 0.
+		const startLine = Math.max(locationConvertible.startLine - 1, 0);
+		const startColumn = Math.max(locationConvertible.startColumn - 1, 0);
+		// If there's no explicit end line, just use the start line.
+		const endLine = locationConvertible.endLine != null ? locationConvertible.endLine - 1 : startLine;
+		// If there's no explicit end column, just highlight everything through the end of the line.
+		const endColumn = locationConvertible.endColumn != null ? locationConvertible.endColumn - 1 : Number.MAX_SAFE_INTEGER;
+
+		const startPosition: vscode.Position = new vscode.Position(startLine, startColumn);
+		const endPosition: vscode.Position = new vscode.Position(endLine, endColumn);
+
+		return new vscode.Range(startPosition, endPosition);
+	}
 }
