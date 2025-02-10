@@ -8,7 +8,7 @@
 import { expect } from 'chai';
 import * as Sinon from 'sinon';
 import * as vscode from 'vscode';
-import {SettingsManager} from '../../lib/settings';
+import {SettingsManagerImpl} from '../../lib/settings';
 
 suite('SettingsManager Test Suite', () => {
     let getConfigurationStub: Sinon.SinonStub;
@@ -29,7 +29,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getPmdCustomConfigFile();
+        const result = new SettingsManagerImpl().getPmdCustomConfigFile();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockCustomConfigFile);
@@ -44,7 +44,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getGraphEngineDisableWarningViolations();
+        const result = new SettingsManagerImpl().getGraphEngineDisableWarningViolations();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockDisableWarningViolations);
@@ -59,7 +59,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getGraphEngineThreadTimeout();
+        const result = new SettingsManagerImpl().getGraphEngineThreadTimeout();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockThreadTimeout);
@@ -74,7 +74,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getGraphEnginePathExpansionLimit();
+        const result = new SettingsManagerImpl().getGraphEnginePathExpansionLimit();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockPathExpansionLimit);
@@ -89,7 +89,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getGraphEngineJvmArgs();
+        const result = new SettingsManagerImpl().getGraphEngineJvmArgs();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockJvmArgs);
@@ -104,7 +104,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getAnalyzeOnSave();
+        const result = new SettingsManagerImpl().getAnalyzeOnSave();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
@@ -119,7 +119,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getAnalyzeOnOpen();
+        const result = new SettingsManagerImpl().getAnalyzeOnOpen();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnOpenEnabled);
@@ -134,7 +134,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getEnginesToRun();
+        const result = new SettingsManagerImpl().getEnginesToRun();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockEngines);
@@ -149,7 +149,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getNormalizeSeverityEnabled();
+        const result = new SettingsManagerImpl().getNormalizeSeverityEnabled();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockNormalizeSeverityEnabled);
@@ -164,7 +164,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getRulesCategory();
+        const result = new SettingsManagerImpl().getRulesCategory();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockRulesCategory);
@@ -179,7 +179,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getApexGuruEnabled();
+        const result = new SettingsManagerImpl().getApexGuruEnabled();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
@@ -194,7 +194,7 @@ suite('SettingsManager Test Suite', () => {
         });
 
         // ===== TEST =====
-        const result = SettingsManager.getSfgePartialSfgeRunsEnabled();
+        const result = new SettingsManagerImpl().getSfgePartialSfgeRunsEnabled();
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);

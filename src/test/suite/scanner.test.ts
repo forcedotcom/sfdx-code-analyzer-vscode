@@ -4,12 +4,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import Sinon = require('sinon');
 import path = require('path');
 import {expect} from 'chai';
 import {SettingsManager} from '../../lib/settings';
-import {messages} from '../../lib/messages';
-import * as File from '../../lib/file';
 import {ScanRunner} from '../../lib/scanner';
 import * as vscode from 'vscode';
 import * as Constants from '../../lib/constants';
@@ -17,202 +14,6 @@ import * as Constants from '../../lib/constants';
 import {ExecutionResult, RuleResult} from '../../types';
 
 suite('ScanRunner', () => {
-    suite('#createPathlessArgArray()', () => {
-        // Create a list of fake targets to use in our tests.
-        const targets: string[] = [
-            'these',
-            'are',
-            'all',
-            'dummy',
-            'targets'
-        ];
-        function invokeTestedMethod(): Promise<string[]> {
-            // ===== SETUP =====
-            // Create a scan runner.
-            const scanner: ScanRunner = new ScanRunner();
-
-            // ===== TEST =====
-            // Use the scan runner on our target list to create and return our arg array.
-            return (scanner as any).createPathlessArgArray(targets);
-        }
-
-        suite('Non Custom PMD Config, with various parameter options', () => {
-            teardown(() => {
-                // Revert any stubbing we did with Sinon.
-                Sinon.restore();
-            });
-
-            test('Creates array-ified sfdx-scanner command', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager methods.
-                Sinon.stub(SettingsManager, 'getEnginesToRun').returns("retire-js,pmd");
-                Sinon.stub(SettingsManager, 'getRulesCategory').returns("");
-                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(false);
-                
-                // ===== TEST =====
-                // Call the test method helper.
-                const args: string[] = await invokeTestedMethod();
-
-                // ===== ASSERTIONS =====
-                // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(7, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-				expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
-            });
-
-            test('Includes rulesCategory in the --category parameter if provided', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager methods.
-                const ruleCategory = 'security';
-                Sinon.stub(SettingsManager, 'getRulesCategory').returns(ruleCategory);
-                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(false);
-    
-                // ===== TEST =====
-                // Call the test method helper.
-                const args: string[] = await invokeTestedMethod();
-    
-                // ===== ASSERTIONS =====
-                // Verify that the right arguments were created.
-                // expect(args).to.have.lengthOf(9, 'Wrong number of args');
-                expect(args[7]).to.equal('--category', 'Wrong arg');
-                expect(args[8]).to.equal(ruleCategory, 'Wrong arg');
-            });
-
-            test('Includes --normalize-severity parameter if flag enabled', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager methods.
-                Sinon.stub(SettingsManager, 'getNormalizeSeverityEnabled').returns(true);
-    
-                // ===== TEST =====
-                // Call the test method helper.
-                const args: string[] = await invokeTestedMethod();
-    
-                // ===== ASSERTIONS =====
-                // Verify that the right arguments were created.
-                expect(args[7]).to.equal('--normalize-severity', 'Wrong arg');
-            });
-
-            test('Error thrown when codeAnalyzer.scanner.engines is empty', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager methods.
-                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('');
-    
-                // ===== TEST =====
-                let err:Error = null;
-                try {
-                    await invokeTestedMethod();
-                } catch (e) {
-                    err = e;
-                }
-    
-                // ===== ASSERTIONS =====
-                expect(err).to.exist;
-                expect(err.message).to.equal('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
-            });
-
-            test('Error thrown when codeAnalyzer.scanner.engines is undefined', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager methods.
-                Sinon.stub(SettingsManager, 'getEnginesToRun').returns(undefined);
-    
-                // ===== TEST =====
-                let err:Error = null;
-                try {
-                    await invokeTestedMethod();
-                } catch (e) {
-                    err = e;
-                }
-    
-                // ===== ASSERTIONS =====
-                expect(err).to.exist;
-                expect(err.message).to.equal('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
-            });
-        });
-
-        suite('Custom PMD config', () => {
-            teardown(() => {
-                // Revert any stubbing we did with Sinon.
-                Sinon.restore();
-            });
-
-            test('When custom PMD config exists, it is included in the array', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager and File methods to simulate the existence
-                // of a real config file.
-                const dummyConfigPath: string = '/Users/me/someconfig.xml';
-                Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns(dummyConfigPath);
-                Sinon.stub(File, 'exists').resolves(true);
-                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('retire-js,pmd');
-
-                // ===== TEST =====
-                // Call the test method helper.
-                const args: string[] = await invokeTestedMethod();
-
-                // ===== ASSERTIONS =====
-                // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(9, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-				expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
-                expect(args[7]).to.equal('--pmdconfig', 'Wrong arg');
-                expect(args[8]).to.equal(dummyConfigPath, 'Wrong arg');
-            });
-
-            test('When custom PMD config is non-existent, an error is thrown', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager method to simulate the non-existence of
-                // a config file.
-                const dummyConfigPath: string = '/Users/me/someconfig.xml';
-                Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns(dummyConfigPath);
-                Sinon.stub(File, 'exists').resolves(false);
-
-                // ===== TEST =====
-                // Call the test method helper, expecting an exception.
-                let err: Error = null;
-                try {
-                    const args: string[] = await invokeTestedMethod();
-                } catch (e) {
-                    err = e;
-                }
-
-                // ===== ASSERTIONS =====
-                expect(err).to.exist;
-                expect(err.message).to.equal(messages.error.pmdConfigNotFoundGenerator(dummyConfigPath), 'Wrong error message');
-
-            });
-
-            test('When custom PMD config is empty string, it is not included in the array', async () => {
-                // ===== SETUP =====
-                // Stub out the appropriate SettingsManager method to return an empty string.
-                Sinon.stub(SettingsManager, 'getPmdCustomConfigFile').returns("");
-                Sinon.stub(SettingsManager, 'getEnginesToRun').returns('retire-js,pmd');
-
-                // ===== TEST =====
-                // Call the test method helper.
-                const args: string[] = await invokeTestedMethod();
-
-                // ===== ASSERTIONS =====
-                // Verify that the right arguments were created.
-                expect(args).to.have.lengthOf(7, 'Wrong number of args');
-                expect(args[0]).to.equal('scanner', 'Wrong arg');
-				expect(args[1]).to.equal('run', 'Wrong arg');
-                expect(args[2]).to.equal('--target', 'Wrong arg');
-                expect(args[3]).to.equal(targets.join(','), 'Wrong arg');
-                expect(args[4]).to.equal('--engine', 'Wrong arg');
-                expect(args[5]).to.equal('retire-js,pmd', 'Wrong arg');
-                expect(args[6]).to.equal('--json', 'Wrong arg');
-            });
-        });
-    });
 
     suite('#createDfaArgArray()', () => {
         // Create a list of fake t argets to use in our tests.
@@ -225,10 +26,10 @@ suite('ScanRunner', () => {
         ];
         // Create a fake projectdir value for our tests too.
         const projectDir: string = path.join('this', 'path', 'does', 'not', 'matter');
-        function invokeTestedMethod(): string[] {
+        function invokeTestedMethod(settingsManager: StubSettingsManager): string[] {
             // ===== SETUP =====
             // Create a scan runner.
-            const scanner: ScanRunner = new ScanRunner();
+            const scanner: ScanRunner = new ScanRunner(settingsManager);
 
             // ===== TEST =====
             // Use the scan runner on our target list to create and return our arg array.
@@ -253,22 +54,19 @@ suite('ScanRunner', () => {
         }
 
         suite('Simple cases', () => {
-            teardown(() => {
-                // Revert any stubbing we did with Sinon.
-                Sinon.restore();
-            });
 
             test('Creates array-ified sfdx-scanner dfa command', () => {
                 // ===== SETUP =====
                 // Stub out all the settings methods to return null/false values.
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
+				settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: string[] = invokeTestedMethod(settingsManager);
 
                 // ===== ASSERTIONS =====
                 // Assert we got the right number of args. Everything else has been checked already.
@@ -277,22 +75,19 @@ suite('ScanRunner', () => {
         });
 
         suite('Settings values', () => {
-            teardown(() => {
-                // Revert any stubbing we did with Sinon.
-                Sinon.restore();
-            });
 
             test('Ignore target when it is empty', () => {
                 // ===== SETUP =====
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
+				settingsManager.setGraphEngineJvmArgs(null);
                 const emptyTargets = [];
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const scanner: ScanRunner = new ScanRunner();
+                const scanner: ScanRunner = new ScanRunner(settingsManager);
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
 
                 // ===== ASSERTIONS =====
@@ -302,15 +97,16 @@ suite('ScanRunner', () => {
 
             test('Ignore target when it contains only null entries', () => {
                 // ===== SETUP =====
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
+				settingsManager.setGraphEngineJvmArgs(null);
                 const emptyTargets = [null];
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const scanner: ScanRunner = new ScanRunner();
+                const scanner: ScanRunner = new ScanRunner(settingsManager);
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
 
                 // ===== ASSERTIONS =====
@@ -320,16 +116,17 @@ suite('ScanRunner', () => {
 
             test('Disable Warning Violations', () => {
                 // ===== SETUP =====
-                // Stub the Disable Warning Violations method to return true.
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(true);
-                // Stub out the other settings methods to return null/false values.
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				// Stub the Disable Warning Violations method to return true.
+				settingsManager.setGraphEngineDisableWarningViolations(true);
+				// Stub out the other settings methods to return null/false values.
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
+				settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: string[] = invokeTestedMethod(settingsManager);
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
@@ -339,17 +136,18 @@ suite('ScanRunner', () => {
 
             test('Thread Timeout', () => {
                 // ===== SETUP =====
-                // Stub out the Thread Timeout method to return some unusual number.
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				// Stub out the Thread Timeout method to return some unusual number.
                 const timeout: number = 234123;
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(timeout);
-                // Stub out the other settings methods to return null/false values.
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				settingsManager.setGraphEngineThreadTimeout(timeout);
+				// Stub out the other settings methods to return null/false values.
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
+				settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: string[] = invokeTestedMethod(settingsManager);
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
@@ -360,17 +158,18 @@ suite('ScanRunner', () => {
 
             test('Path Expansion Limit', () => {
                 // ===== SETUP =====
-                // Stub out the Path Expansion Limit method to return some unusual number.
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				// Stub out the Path Expansion Limit method to return some unusual number.
                 const limit: number = 38832;
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(limit);
-                // Stub out the other settings methods to return null/false values.
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				settingsManager.setGraphEnginePathExpansionLimit(limit);
+				// Stub out the other settings methods to return null/false values.
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: string[] = invokeTestedMethod(settingsManager);
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
@@ -381,17 +180,18 @@ suite('ScanRunner', () => {
 
             test('JVM Args', () => {
                 // ===== SETUP =====
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
                 // Stub out the JVM Args method to return some non-standard value.
-                const jvmArgs = '-Xmx25g';
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(jvmArgs);
+				const jvmArgs = '-Xmx25g';
+				settingsManager.setGraphEngineJvmArgs(jvmArgs);
                 // Stub out the other settings methods to return null/false values.
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const args: string[] = invokeTestedMethod();
+                const args: string[] = invokeTestedMethod(settingsManager);
 
                 // ===== ASSERTIONS =====
                 // Verify that the right arguments were created.
@@ -399,18 +199,19 @@ suite('ScanRunner', () => {
                 expect(args[10]).to.equal('--sfgejvmargs', 'Wrong arg');
                 expect(args[11]).to.equal(jvmArgs, 'Wrong arg');
             });
-            
+
             test('Enable caching and include cache path', () => {
                 // ===== SETUP =====
-                Sinon.stub(SettingsManager, 'getGraphEngineDisableWarningViolations').returns(false);
-                Sinon.stub(SettingsManager, 'getGraphEngineThreadTimeout').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEnginePathExpansionLimit').returns(null);
-                Sinon.stub(SettingsManager, 'getGraphEngineJvmArgs').returns(null);
+				const settingsManager: StubSettingsManager = new StubSettingsManager();
+				settingsManager.setGraphEngineDisableWarningViolations(false);
+				settingsManager.setGraphEngineThreadTimeout(null);
+				settingsManager.setGraphEnginePathExpansionLimit(null);
+				settingsManager.setGraphEngineJvmArgs(null);
                 const emptyTargets = [];
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const scanner: ScanRunner = new ScanRunner();
+                const scanner: ScanRunner = new ScanRunner(settingsManager);
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir, 'some/path/file.json');
 
                 // ===== ASSERTIONS =====
@@ -420,94 +221,6 @@ suite('ScanRunner', () => {
                 expect(args[9]).to.equal('some/path/file.json', 'Wrong arg');
                 expect(args[10]).to.equal('--enablecaching', 'Wrong arg');
             });
-        });
-    });
-
-    suite('#processPathlessResults()', () => {
-        test('Returns violations found during successful scan', () => {
-            // ===== SETUP =====
-            // Create a spoofed result with some violations.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                result: [{
-                    engine: "pmd",
-                    fileName: "fakefile1",
-                    violations: [{
-                        ruleName: "fakeRule1",
-                        message: "fake message",
-                        severity: 0,
-                        category: "fake category",
-                        line: 1,
-                        column: 5,
-                        endLine: 5,
-                        endColumn: 50
-                    }]
-                }, {
-                    engine: "retire-js",
-                    fileName: "fakefile2",
-                    violations: [{
-                        ruleName: "fakeRule2",
-                        message: "fake message",
-                        severity: 0,
-                        category: "fake category",
-                        line: 1,
-                        column: 5,
-                        endLine: 5,
-                        endColumn: 50
-                    }]
-                }]
-            };
-
-            // ===== TEST =====
-            // Feed the results into the processor.
-            const scanner = new ScanRunner();
-            const processedResults: RuleResult[] = (scanner as any).processPathlessResults(spoofedOutput);
-
-            // ===== ASSERTIONS =====
-            // Verify that the right number of results were returned.
-            expect(processedResults).to.have.lengthOf(2, 'Wrong number of results returned');
-        });
-
-        test('Returns empty array after violation-less scan', () => {
-            // ===== SETUP =====
-            // Create spoofed result without any violations.
-            const spoofedOutput: ExecutionResult = {
-                status: 0,
-                // TODO: This string may change with time.
-                result: "Executed engines: pmd, retire-js. No rule violations found"
-            };
-
-            // ===== TEST =====
-            // Feed the results into the processor.
-            const scanner = new ScanRunner();
-            const processedResults: RuleResult[] = (scanner as any).processPathlessResults(spoofedOutput);
-
-            // ===== ASSERTIONS =====
-            // Verify that the right number of results were returned.
-            expect(processedResults).to.have.lengthOf(0, 'Wrong number of results returned');
-        });
-
-        test('Throws error message from failed scan', () => {
-            // ===== SETUP =====
-            // Create spoofed output indicating an error.
-            const spoofedOutput: ExecutionResult = {
-                status: 50,
-                message: "Some error occurred. OH NO!"
-            };
-
-            // ===== TEST =====
-            // Feed the output into the processor, expecting an error.
-            const scanner = new ScanRunner();
-            let err: Error = null;
-            try {
-                const processedResults: RuleResult[] = (scanner as any).processPathlessResults(spoofedOutput);
-            } catch (e) {
-                err = e;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err).to.exist;
-            expect(err.message).to.equal(spoofedOutput.message);
         });
     });
 
@@ -630,15 +343,91 @@ suite('ScanRunner', () => {
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.not.undefined;
         });
     });
-
-    suite('#invokeAnalyzer()', () => {
-        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-		let context: vscode.ExtensionContext;
-
-		suiteSetup(async function () {
-			this.timeout(10000);
-			// Activate the extension.
-			context = await ext.activate();
-		});
-    });
 });
+
+class StubSettingsManager implements SettingsManager {
+	private graphEngineDisableWarningViolations: boolean = false;
+	private graphEngineThreadTimeout: number = 900000;
+	private graphEnginePathExpansionLimit: number = null;
+	private graphEngineJvmArgs: string = null;
+
+	constructor() {
+		this.resetSettings();
+	}
+
+	public resetSettings(): void {
+		this.graphEngineDisableWarningViolations = false;
+		this.graphEngineThreadTimeout = 900000;
+		this.graphEnginePathExpansionLimit = null;
+		this.graphEngineJvmArgs = null;
+	}
+
+	getCodeAnalyzerV5Enabled(): boolean {
+		throw new Error('Method not implemented.');
+	}
+
+	getPmdCustomConfigFile(): string {
+		throw new Error('Method not implemented.');
+	}
+
+	setGraphEngineDisableWarningViolations(b: boolean): void {
+		this.graphEngineDisableWarningViolations = b;
+	}
+
+	getGraphEngineDisableWarningViolations(): boolean {
+		return this.graphEngineDisableWarningViolations;
+	}
+
+	setGraphEngineThreadTimeout(n: number): void {
+		this.graphEngineThreadTimeout = n;
+	}
+
+	getGraphEngineThreadTimeout(): number {
+		return this.graphEngineThreadTimeout;
+	}
+
+	setGraphEnginePathExpansionLimit(n: number): void {
+		this.graphEnginePathExpansionLimit = n;
+	}
+
+	getGraphEnginePathExpansionLimit(): number {
+		return this.graphEnginePathExpansionLimit;
+	}
+
+	setGraphEngineJvmArgs(s: string): void {
+		this.graphEngineJvmArgs = s;
+	}
+
+	getGraphEngineJvmArgs(): string {
+		return this.graphEngineJvmArgs;
+	}
+
+	getAnalyzeOnSave(): boolean {
+		throw new Error('Method not implemented.');
+	}
+
+	getAnalyzeOnOpen(): boolean {
+		throw new Error('Method not implemented.');
+	}
+
+	getEnginesToRun(): string {
+		throw new Error('Method not implemented.');
+	}
+
+	getNormalizeSeverityEnabled(): boolean {
+		throw new Error('Method not implemented.');
+	}
+
+	getRulesCategory(): string {
+		throw new Error('Method not implemented.');
+	}
+
+	getApexGuruEnabled(): boolean {
+		throw new Error('Method not implemented.');
+	}
+
+	getSfgePartialSfgeRunsEnabled(): boolean {
+		throw new Error('Method not implemented.');
+	}
+
+}
