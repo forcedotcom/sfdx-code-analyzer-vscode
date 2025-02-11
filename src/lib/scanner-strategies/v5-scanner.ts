@@ -41,7 +41,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 				stdout += data;
 			});
 
-			cp.on('exit', code => {
+			cp.on('exit', () => {
 				console.log(`===\nstdout for pwd was: ${stdout}\n===`);
 				return res();
 			});
