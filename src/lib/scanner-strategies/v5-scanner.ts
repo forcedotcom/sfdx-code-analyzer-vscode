@@ -42,7 +42,8 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 			cp.on('exit', code => {
 				console.log(`===\nsf plugins stdout was \n${stdout}`);
 				console.log(`code is 0? ${code === 0 ? 'yes' : 'no'}`);
-				console.log(`stdout has string? ${stdout.includes('code-analyzer 5.0.0-beta') ? 'yes' : 'no'}\n===`)
+				console.log(`stdout has string? ${stdout.includes('code-analyzer 5.0.0-beta') ? 'yes' : 'no'}`)
+				console.log(`success with regex? ${/code-analyzer\s*5\.0\.0-beta/.test(stdout) ? 'yes' : 'no'}\n===`)
 				return res(code === 0 && stdout.includes('code-analyzer 5.0.0-beta'));
 			});
 		});
