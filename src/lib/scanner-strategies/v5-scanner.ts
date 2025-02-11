@@ -31,6 +31,22 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 		// @salesforce/plugin-code-analyzer is a JIT plugin, but the output format only stabilized
 		// in the beta release, so we need to make sure that the beta release is either already installed,
 		// or the version that will be installed via JIT installation.
+
+		await new Promise<void>(res => {
+			const cp = cspawn.spawn('pwd');
+
+			let stdout = '';
+
+			cp.stdout.on('data', data => {
+				stdout += data;
+			});
+
+			cp.on('exit', code => {
+				console.log(`===\nstdout for pwd was: ${stdout}\n===`);
+				return res();
+			});
+		})
+
 		const codeAnalyzerIsInstalled: boolean = await new Promise((res) => {
 			const cp = cspawn.spawn('sf', ['plugins']);
 
