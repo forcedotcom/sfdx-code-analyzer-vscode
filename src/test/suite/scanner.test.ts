@@ -366,6 +366,10 @@ class StubSettingsManager implements SettingsManager {
 		throw new Error('Method not implemented.');
 	}
 
+	getCodeAnalyzerTags(): string {
+		throw new Error('Method not implemented');
+	}
+
 	getPmdCustomConfigFile(): string {
 		throw new Error('Method not implemented.');
 	}

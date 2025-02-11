@@ -16,6 +16,7 @@ import {Displayable, ProgressNotification, UxDisplay} from './lib/display';
 import {DiagnosticManager, DiagnosticConvertible, DiagnosticManagerImpl} from './lib/diagnostics';
 import {ScannerAction} from './lib/actions/scanner-action';
 import { CliScannerV4Strategy } from './lib/scanner-strategies/v4-scanner';
+import { CliScannerV5Strategy } from './lib/scanner-strategies/v5-scanner';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import { CoreExtensionService, TelemetryService, TelemetryServiceImpl } from './lib/core-extension-service';
@@ -28,7 +29,6 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { VSCodeUnifiedDiff, DiffHunk } from 'einstein-shared';
 import { ApexPmdViolationsFixer } from './modelBasedFixers/apex-pmd-violations-fixer'
-import { NoOpScannerStrategy } from './lib/scanner-strategies/scanner-strategy';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -467,7 +467,9 @@ export async function _runAndDisplayScanner(commandName: string, targets: string
 		}, async (progress) => {
 			const display: UxDisplay = new UxDisplay(new VSCodeDisplayable((notif: ProgressNotification) => progress.report(notif)));
 			const scannerStrategy = settingsManager.getCodeAnalyzerV5Enabled()
-				? new NoOpScannerStrategy()
+				? new CliScannerV5Strategy({
+					tags: settingsManager.getCodeAnalyzerTags()
+				})
 				: new CliScannerV4Strategy({
 					engines: settingsManager.getEnginesToRun(),
 					pmdCustomConfigFile: settingsManager.getPmdCustomConfigFile(),
