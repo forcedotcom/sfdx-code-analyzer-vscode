@@ -3,6 +3,7 @@ import { DiagnosticConvertible } from '../diagnostics';
 import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
 import { tmpFileWithCleanup } from '../file';
+import * as ansis from 'ansis';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -43,8 +44,8 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 				console.log(`===\nsf plugins stdout was \n${stdout}`);
 				console.log(`code is 0? ${code === 0 ? 'yes' : 'no'}`);
 				console.log(`bytes are ${Array.from(Buffer.from(stdout)).join(' ')}`);
-				console.log(`stdout has string? ${stdout.includes('code-analyzer 5.0.0-beta') ? 'yes' : 'no'}`)
-				console.log(`success with regex? ${/code-analyzer\s*5\.0\.0-beta/.test(stdout) ? 'yes' : 'no'}\n===`)
+				console.log(`stdout has string? ${ansis.strip(stdout).includes('code-analyzer 5.0.0-beta') ? 'yes' : 'no'}`)
+				console.log(`success with regex? ${/code-analyzer\s*5\.0\.0-beta/.test(ansis.strip(stdout)) ? 'yes' : 'no'}\n===`)
 				return res(code === 0 && stdout.includes('code-analyzer 5.0.0-beta'));
 			});
 		});
