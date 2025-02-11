@@ -4,6 +4,7 @@ import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
 import { tmpFileWithCleanup } from '../file';
 import { stripAnsi } from '../string-utils';
+import { CODE_ANALYZER_V5_BETA_TEMPLATE } from '../constants';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -33,7 +34,6 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 		// or the version that will be installed via JIT installation.
 		const codeAnalyzerIsInstalled: boolean = await new Promise((res) => {
 			const cp = cspawn.spawn('sf', ['plugins']);
-
 			let stdout = '';
 
 			cp.stdout.on('data', data => {
@@ -41,7 +41,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 			});
 
 			cp.on('exit', code => {
-				return res(code === 0 && stripAnsi(stdout).includes('code-analyzer 5.0.0-beta'));
+				return res(code === 0 && stripAnsi(stdout).includes(CODE_ANALYZER_V5_BETA_TEMPLATE));
 			});
 		});
 		if (!codeAnalyzerIsInstalled) {
@@ -141,7 +141,12 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 
 		for (const violation of resultsJson.violations) {
 			for (const location of violation.locations) {
-				location.file = path.join(resultsJson.runDir, location.file);
+				// If the path isn't already absolute, it needs to be made absolute.
+				if (path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+					// Relative paths are relative to the RunDir results property.
+					location.file = path.join(resultsJson.runDir, location.file);
+				}
+
 			}
 			processedConvertibles.push(violation);
 		}

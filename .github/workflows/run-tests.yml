@@ -45,6 +45,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11' # Always use Java v11 for running tests.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
       - name: Configure Git for private repo access
         run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: 'Install node module dependencies'

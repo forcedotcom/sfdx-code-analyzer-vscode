@@ -31,6 +31,7 @@ export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
+export const CODE_ANALYZER_V5_BETA_TEMPLATE = 'code-analyzer 5.0.0-beta';
 
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
