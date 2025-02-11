@@ -113,13 +113,8 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 
 		await new Promise<void>((res, rej) => {
 			const cp = cspawn.spawn('sf', args);
-			let stdout = '';
 			let stderr = '';
 
-
-			cp.stdout.on('data', data => {
-				stdout += data;
-			})
 			cp.stderr.on('data', data => {
 				stderr += data;
 			});
