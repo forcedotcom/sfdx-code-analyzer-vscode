@@ -65,13 +65,13 @@ jobs:
           name: scanner-tarball-${{ inputs.v4-tarball-suffix}}
           # Download the tarball to a subdirectory of HOME, so it's guaranteed
           # to be somewhere the installation command can see.
-          path: ~/downloads/tarball
+          path: ~/downloads/tarball-v4
       - name: Install v4 Scanner Tarball
         if: ${{ inputs.use-scanner-tarballs == true }}
         shell: bash
         run: |
           # Determine the tarball's name.
-          TARBALL_NAME=$(ls ~/downloads/tarball/sfdx-scanner | grep salesforce-.*\\.tgz)
+          TARBALL_NAME=$(ls ~/downloads/tarball-v4/sfdx-scanner | grep salesforce-.*\\.tgz)
           echo $TARBALL_NAME
           # Figure out where the tarball was downloaded to.
           # To allow compatibility with Windows, replace backslashes with forward slashes
@@ -90,13 +90,13 @@ jobs:
           name: scanner-tarball-${{ inputs.v5-tarball-suffix }}
           # Download the tarball to a subdirectory of HOME, so it's guaranteed
           # to be somewhere the installation command can see.
-          path: ~/downloads/tarball
-      - name: Install v4 Scanner Tarball
+          path: ~/downloads/tarball-v5
+      - name: Install v5 Scanner Tarball
         if: ${{ inputs.use-scanner-tarballs == true }}
         shell: bash
         run: |
           # Determine the tarball's name.
-          TARBALL_NAME=$(ls ~/downloads/tarball/sfdx-scanner | grep salesforce-.*\\.tgz)
+          TARBALL_NAME=$(ls ~/downloads/tarball-v5/sfdx-scanner | grep salesforce-.*\\.tgz)
           echo $TARBALL_NAME
           # Figure out where the tarball was downloaded to.
           # To allow compatibility with Windows, replace backslashes with forward slashes
