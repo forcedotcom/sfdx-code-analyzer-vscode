@@ -119,8 +119,8 @@ jobs:
         run: sf plugins install code-analyzer
       - name: list plugins
         run: sf plugins
-      - name: Check if python is here
-        run: py --version
+      #- name: Check if python is here
+      #  run: py --version
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
