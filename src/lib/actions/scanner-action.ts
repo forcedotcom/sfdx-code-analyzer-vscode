@@ -38,6 +38,8 @@ export class ScannerAction {
 
 		const results: DiagnosticConvertible[] = await this.scannerStrategy.scan(workspaceTargets);
 
+		console.log(`results are ${JSON.stringify(results)}`);
+
 		this.display.displayProgress(messages.scanProgressReport.processingResults);
 
 		this.diagnosticManager.displayAsDiagnostics(workspaceTargets, results);
