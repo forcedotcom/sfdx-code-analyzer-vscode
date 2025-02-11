@@ -113,6 +113,8 @@ jobs:
       - name: Install Production scanner v5
         if: ${{ inputs.use-scanner-tarballs == false }}
         run: sf plugins install code-analyzer
+      - name: list plugins
+        run: sf plugins
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test
