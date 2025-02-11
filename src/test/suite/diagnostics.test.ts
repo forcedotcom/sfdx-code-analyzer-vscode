@@ -9,7 +9,7 @@ import {expect} from 'chai';
 import path = require('path');
 import {DiagnosticConvertible, DiagnosticManagerImpl} from '../../lib/diagnostics';
 
-suite.skip('diagnostics.ts', () => {
+suite('diagnostics.ts', () => {
     suite('#displayAsDiagnostics()', () => {
         // Note: __dirname is used here because it's consistent across file systems.
         const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
@@ -23,6 +23,21 @@ suite.skip('diagnostics.ts', () => {
 				file: pathToFirstFile,
 				startLine: 12,
 				startColumn: 2
+			}],
+			primaryLocationIndex: 0,
+			resources: []
+		}]
+        const firstFileApexSharingViolationsConvertibles: DiagnosticConvertible[] = [{
+			rule: 'ApexSharingViolations',
+			engine: 'pmd',
+			message: 'fakeMessage',
+			severity: 1,
+			locations: [{
+				file: pathToFirstFile,
+				startLine: 12,
+				startColumn: 2,
+                endLine: 13,
+                endColumn: 3
 			}],
 			primaryLocationIndex: 0,
 			resources: []
@@ -79,6 +94,22 @@ suite.skip('diagnostics.ts', () => {
             // ===== ASSERTIONS =====
             // Validate that the file now has one violation.
             expect(diagnosticCollection.get(vscode.Uri.file(pathToFirstFile))).to.have.lengthOf(1, 'Wrong number of diagnostics');
+        });
+
+        test('Changes ApexSharingViolations end lines to be start lines', () => {
+            // ===== SETUP =====
+            // Create a diagnostic manager.
+            const diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+
+            // ===== TEST =====
+            // Simulate a run against target 1 that returned some results.
+            diagnosticManager.displayAsDiagnostics([pathToFirstFile], firstFileApexSharingViolationsConvertibles);
+
+            // ===== ASSERTIONS =====
+            // Validate that the file now has one violation.
+            expect(diagnosticCollection.get(vscode.Uri.file(pathToFirstFile))).to.have.lengthOf(1, 'Wrong number of diagnostics');
+            expect(diagnosticCollection.get(vscode.Uri.file(pathToFirstFile))[0].range.start).to.deep.equal(new vscode.Position(11,1), 'Incorrect start position');
+            expect(diagnosticCollection.get(vscode.Uri.file(pathToFirstFile))[0].range.end).to.deep.equal(new vscode.Position(11, Number.MAX_SAFE_INTEGER), 'Incorrect end position');
         });
 
         test('Refreshes stale violations on second-time target', () => {

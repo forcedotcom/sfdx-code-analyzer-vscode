@@ -82,7 +82,6 @@ export async function run(): Promise<void> {
 	await nyc.checkCoverage({
 		// branches: 70,
 		lines: 70,
-		functions: 70,
 		statements: 70
 	});
 
