@@ -9,21 +9,28 @@ on:
     - cron: "30 17 * * 1-5"
 
 jobs:
-  # Step 1: Build the scanner tarball so it can be installed locally.
-  build-scanner-tarball:
-    name: 'Build scanner tarball'
+  # Step 1: Build the scanner tarballs so they can be installed locally.
+  build-v4-scanner-tarball:
+    name: 'Build v4 scanner tarball'
     uses: ./.github/workflows/build-scanner-tarball.yml
     with:
       target-branch: 'dev-4'
+  build-v5-scanner-tarball:
+    name: 'Build v5 scanner tarball'
+    uses: ./.github/workflows/build-scanner-tarball.yml
+    with:
+      target-branch: 'dev'
   # Step 2: Actually run the tests.
   smoke-test:
     name: 'Run smoke tests'
-    needs: build-scanner-tarball
+    needs: [build-v4-scanner-tarball, build-v5-scanner-tarball]
     uses: ./.github/workflows/run-tests.yml
     with:
       # For daily builds, we want to make sure we haven't pushed a breaking change
       # to the scanner's `dev-4` branch.
-      use-scanner-tarball: true
+      use-scanner-tarballs: true
+      v4-tarball-suffix: 'dev-4'
+      v5-tarball-suffix: 'dev'
     secrets: inherit
   # Step 3: Build a VSIX artifact for use if needed.
   create-vsix-artifact:
@@ -34,7 +41,7 @@ jobs:
   report-problems:
     name: 'Report problems'
     runs-on: ubuntu-latest
-    needs: [build-scanner-tarball, smoke-test, create-vsix-artifact]
+    needs: [build-v4-scanner-tarball, build-v5-scanner-tarball, smoke-test, create-vsix-artifact]
     if: ${{ failure() || cancelled() }}
     steps:
       - name: Report problems

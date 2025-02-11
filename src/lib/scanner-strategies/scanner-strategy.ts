@@ -20,17 +20,3 @@ export abstract class CliScannerStrategy extends ScannerStrategy {
 
 	protected abstract validatePlugin(): Promise<void>;
 }
-
-
-export class NoOpScannerStrategy extends ScannerStrategy {
-	public override validateEnvironment(): Promise<void> {
-		return Promise.resolve();
-	}
-
-	public override scan(_targets: string[]): Promise<DiagnosticConvertible[]> {
-		const results: DiagnosticConvertible[] = [];
-		return Promise.resolve(results);
-	}
-}
-
-
