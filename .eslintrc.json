@@ -20,5 +20,8 @@
         "**/*.d.ts",
         "src/test",
         "esbuild.js"
-    ]
+    ],
+	"rules": {
+		"@typescript-eslint/no-unused-vars": ["error", {"argsIgnorePattern": "^_"}]
+	}
 }

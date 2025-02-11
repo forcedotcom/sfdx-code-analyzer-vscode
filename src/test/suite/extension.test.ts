@@ -103,7 +103,7 @@ suite('Extension Test Suite', () => {
 
 			// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
 			// (Arrow functions bind lexical `this` and we don't want that.)
-			test.skip('Adds proper diagnostics when running with v5', async function() {
+			test('Adds proper diagnostics when running with v5', async function() {
 				// Set the timeout to a frankly absurd value, just to make sure Github Actions
 				// can finish it in time.
 				this.timeout(90000);
@@ -154,7 +154,7 @@ suite('Extension Test Suite', () => {
 
 				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
 				// (Arrow functions bind lexical `this` and we don't want that.)
-				test.skip('Adds proper diagnostics when running with v5', async function() {
+				test('Adds proper diagnostics when running with v5', async function() {
 					// Set the timeout to a frankly absurd value, just to make sure Github Actions
 					// can finish it in time.
 					this.timeout(90000);
@@ -171,7 +171,7 @@ suite('Extension Test Suite', () => {
 
 				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
 				// (Arrow functions bind lexical `this` and we don't want that.)
-				test.skip('Adds proper diagnostics when running with v5', async function() {
+				test('Adds proper diagnostics when running with v5', async function() {
 					// TODO: WRITE THIS TEST
 				});
 			});
@@ -223,7 +223,7 @@ suite('Extension Test Suite', () => {
 
 				// The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
 				// (Arrow functions bind lexical `this` and we don't want that.)
-				test.skip('Adds proper diagnostics when running with v5', async function() {
+				test('Adds proper diagnostics when running with v5', async function() {
 					// Set the timeout to a frankly absurd value, just to make sure Github Actions
 					// can finish it in time.
 					this.timeout(90000);

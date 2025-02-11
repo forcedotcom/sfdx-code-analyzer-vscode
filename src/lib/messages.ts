@@ -71,6 +71,7 @@ export const messages = {
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use this extension, first install Salesforce CLI `sf` or `sfdx` commands.",
         sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`.",
+		codeAnalyzerMissing: "**To use this extension, first install `code-analyzer` by running `sf install code-analyzer@latest-beta`.**",
 		coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     }
 };

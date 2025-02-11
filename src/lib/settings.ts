@@ -9,6 +9,8 @@ import * as vscode from 'vscode';
 export interface SettingsManager {
 	getCodeAnalyzerV5Enabled(): boolean;
 
+	getCodeAnalyzerTags(): string;
+
     getPmdCustomConfigFile(): string;
 
     getGraphEngineDisableWarningViolations(): boolean;
@@ -37,6 +39,10 @@ export interface SettingsManager {
 export class SettingsManagerImpl implements SettingsManager {
 	public getCodeAnalyzerV5Enabled(): boolean {
 		return vscode.workspace.getConfiguration('codeAnalyzer').get('enableV5');
+	}
+
+	public getCodeAnalyzerTags(): string {
+		return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
 	}
 
     public getPmdCustomConfigFile(): string {
