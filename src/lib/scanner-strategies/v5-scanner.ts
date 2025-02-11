@@ -3,6 +3,7 @@ import { DiagnosticConvertible } from '../diagnostics';
 import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
 import { tmpFileWithCleanup } from '../file';
+import { stripAnsi } from '../string-utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -40,7 +41,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 			});
 
 			cp.on('exit', code => {
-				return res(code === 0 && stdout.includes('code-analyzer 5.0.0-beta'));
+				return res(code === 0 && stripAnsi(stdout).includes('code-analyzer 5.0.0-beta'));
 			});
 		});
 		if (!codeAnalyzerIsInstalled) {
