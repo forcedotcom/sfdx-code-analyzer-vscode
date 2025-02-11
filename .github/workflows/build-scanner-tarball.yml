@@ -35,5 +35,5 @@ jobs:
       # Upload the tarball as an artifact so it's usable elsewhere.
       - uses: actions/upload-artifact@v4
         with:
-          name: scanner-tarball
-          path: ./**/salesforce-sfdx-scanner-*.tgz
+          name: scanner-tarball-${{ inputs.target-branch }}
+          path: ./**/salesforce-*.tgz

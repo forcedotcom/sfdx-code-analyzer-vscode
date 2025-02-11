@@ -58,7 +58,7 @@ jobs:
     with:
       # Before publishing, we want to test the extension against whatever
       # version of the scanner is currently live.
-      use-scanner-tarball: false
+      use-scanner-tarballs: false
     secrets: inherit
 
   publish-vscode:
