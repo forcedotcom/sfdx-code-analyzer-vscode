@@ -128,7 +128,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         const promptFormatter = new PromptBuilder(PromptConstants.SYSTEM_PROMPT.concat(PromptConstants.BASE_USER_PROMPT));
         promptFormatter.withViolationCode(this.extractCodeFromFile(document.getText(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1))
         .withViolationMessage(diagnostic.message)
-        .withAdditionalPrompt(PromptConstants.APEX_CRUD_VIOLATION_PROMPT);
+        .withAdditionalPrompt(PromptConstants.NO_ADDITIONAL_PROMPT);
         return promptFormatter.build();
     }
 

@@ -42,4 +42,3 @@ give the fixed code without the violation{{###ADDITIONAL_PROMPT###}}
 <|endofprompt|>
 <|assistant|>`;
 export const NO_ADDITIONAL_PROMPT = '.';
-export const APEX_CRUD_VIOLATION_PROMPT = ' by adding USER_MODE in the SOQL.';
