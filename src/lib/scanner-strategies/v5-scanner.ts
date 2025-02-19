@@ -22,10 +22,15 @@ const POTENTIALLY_LONG_RUNNING_RULES: string[] = [];
 
 export class CliScannerV5Strategy extends CliScannerStrategy {
 	private readonly options: CliScannerV5StrategyOptions;
+	private readonly name: string = '@salesforce/plugin-code-analyzer@^5 via CLI';
 
 	public constructor(options: CliScannerV5StrategyOptions) {
 		super();
 		this.options = options;
+	}
+
+	public override getScannerName(): string {
+		return this.name;
 	}
 
 	protected override async validatePlugin(): Promise<void> {

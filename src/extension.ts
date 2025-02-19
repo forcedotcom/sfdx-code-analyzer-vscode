@@ -470,7 +470,7 @@ export async function _runAndDisplayScanner(commandName: string, targets: string
 		return await vscode.window.withProgress({
 			location: vscode.ProgressLocation.Notification
 		}, async (progress) => {
-			const display: UxDisplay = new UxDisplay(new VSCodeDisplayable((notif: ProgressNotification) => progress.report(notif)));
+			const display: UxDisplay = new UxDisplay(new VSCodeDisplayable((notif: ProgressNotification) => progress.report(notif), outputChannel));
 			const scannerStrategy = settingsManager.getCodeAnalyzerV5Enabled()
 				? new CliScannerV5Strategy({
 					tags: settingsManager.getCodeAnalyzerTags()
@@ -618,10 +618,12 @@ export function _isValidFileForAnalysis(documentUri: vscode.Uri) {
 }
 
 class VSCodeDisplayable implements Displayable {
-	private readonly progressCallback: (ProgressNotification) => void;
+	private readonly progressCallback: (notif: ProgressNotification) => void;
+	private readonly outputChannel: vscode.LogOutputChannel;
 
-	public constructor(progressCallback: (ProgressNotification) => void) {
+	public constructor(progressCallback: (notif: ProgressNotification) => void, outputChannel: vscode.LogOutputChannel) {
 		this.progressCallback = progressCallback;
+		this.outputChannel = outputChannel;
 	}
 
 	public progress(notification: ProgressNotification): void {
@@ -639,5 +641,9 @@ class VSCodeDisplayable implements Displayable {
 			uniqueFiles.add(result.locations[result.primaryLocationIndex].file);
 		}
 		await vscode.window.showInformationMessage(messages.info.finishedScan(allTargets.length, uniqueFiles.size, results.length));
+	}
+
+	public log(msg: string): void {
+		this.outputChannel.appendLine(msg);
 	}
 }

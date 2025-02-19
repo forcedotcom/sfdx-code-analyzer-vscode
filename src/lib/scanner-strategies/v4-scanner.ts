@@ -14,10 +14,15 @@ export type CliScannerV4StrategyOptions = {
 
 export class CliScannerV4Strategy extends CliScannerStrategy {
 	private readonly options: CliScannerV4StrategyOptions;
+	private readonly name: string = '@salesforce/sfdx-scanner@^4 via CLI';
 
 	public constructor(options: CliScannerV4StrategyOptions) {
 		super();
 		this.options = options;
+	}
+
+	public override getScannerName(): string {
+		return this.name;
 	}
 
 	protected override validatePlugin(): Promise<void> {

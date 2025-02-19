@@ -36,6 +36,8 @@ export class ScannerAction {
 
 		this.display.displayProgress(messages.scanProgressReport.analyzingTargets);
 
+		this.display.displayLog(messages.info.scanningWith(this.scannerStrategy.getScannerName()));
+
 		const results: DiagnosticConvertible[] = await this.scannerStrategy.scan(workspaceTargets);
 
 		this.display.displayProgress(messages.scanProgressReport.processingResults);

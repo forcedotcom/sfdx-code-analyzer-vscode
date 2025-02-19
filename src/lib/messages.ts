@@ -26,6 +26,7 @@ export const messages = {
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
     },
     info: {
+		scanningWith: (scannerName: string) => `Scanning with ${scannerName}`,
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
     },
     graphEngine: {
