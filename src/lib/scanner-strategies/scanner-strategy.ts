@@ -7,6 +7,8 @@ export abstract class ScannerStrategy {
 	public abstract validateEnvironment(): Promise<void>;
 
 	public abstract scan(targets: string[]): Promise<DiagnosticConvertible[]>;
+
+	public abstract getScannerName(): string;
 }
 
 
