@@ -213,9 +213,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		context.subscriptions.push(runDfaOnWorkspaceCmd);
 	}
 
-	if (!settingsManager.getCodeAnalyzerV5Enabled()) {
-		await vscode.commands.executeCommand('setContext', 'sfca.codeAnalyzerV4Enabled', true);
-	}
+	await vscode.commands.executeCommand('setContext', 'sfca.codeAnalyzerV4Enabled', !settingsManager.getCodeAnalyzerV5Enabled());
+	vscode.workspace.onDidChangeConfiguration(async () => {
+		await vscode.commands.executeCommand('setContext', 'sfca.codeAnalyzerV4Enabled', !settingsManager.getCodeAnalyzerV5Enabled());
+	})
 
 	const documentSaveListener = vscode.workspace.onDidSaveTextDocument(document => {
         const filePath = document.uri.fsPath;
