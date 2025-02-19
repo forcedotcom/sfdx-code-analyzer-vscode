@@ -213,6 +213,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 		context.subscriptions.push(runDfaOnWorkspaceCmd);
 	}
 
+	if (!settingsManager.getCodeAnalyzerV5Enabled()) {
+		await vscode.commands.executeCommand('setContext', 'sfca.codeAnalyzerV4Enabled', true);
+	}
+
 	const documentSaveListener = vscode.workspace.onDidSaveTextDocument(document => {
         const filePath = document.uri.fsPath;
         savedFilesCache.add(filePath);
