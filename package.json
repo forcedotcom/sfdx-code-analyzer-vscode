@@ -218,7 +218,7 @@
                 },
                 {
                     "command": "sfca.runDfa",
-                    "when": "sfca.partialRunsEnabled"
+                    "when": "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
@@ -242,7 +242,8 @@
                     "command": "sfca.runOnActiveFile"
                 },
                 {
-                    "command": "sfca.runDfaOnSelectedMethod"
+                    "command": "sfca.runDfaOnSelectedMethod",
+					"when": "sfca.codeAnalyzerV4Enabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile"
