@@ -56,10 +56,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'dev'
+          token: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
       # We need to set up Node and install our Node dependencies.
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*' # Always use Node LTS for building dependencies.
+      - name: Configure Git for private repo access
+        run: git config --global --add url."https://${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - run: yarn install --frozen-lockfile
       # Increment the version as desired locally, without actually committing anything.
       - name: Locally increment version
