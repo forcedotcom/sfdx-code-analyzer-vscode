@@ -69,7 +69,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 	private async getLongRunningRules(): Promise<string[]> {
 		const args: string[] = [
 			'code-analyzer', 'rules',
-			'-r', this.options.tags
+			'-r', this.options.tags || 'Recommended'
 		];
 
 		const output: string = await new Promise((res, rej) => {
@@ -109,7 +109,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 	private async invokeAnalyzer(targets: string[]): Promise<ResultsJson> {
 		const args: string[] = [
 			'code-analyzer', 'run',
-			'-r', this.options.tags,
+			'-r', this.options.tags || 'Recommended',
 			'-w', `"${targets.join('","')}"`
 		];
 
