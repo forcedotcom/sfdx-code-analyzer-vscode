@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target-branch }}
-       - name: 'Set up NodeJS'
+      - name: 'Set up NodeJS'
         uses: actions/setup-node@v4
         with:
           node-version: 'lts/*' # Node LTS should always be fine.
