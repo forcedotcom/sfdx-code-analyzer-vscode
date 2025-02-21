@@ -82,6 +82,8 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11'
+      - name: Configure Git for private repo access
+        run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
@@ -115,6 +117,8 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11'
+      - name: Configure Git for private repo access
+        run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - run: yarn install --frozen-lockfile
       # Download the .vsix attached to the release.
       - name: Download Extension From Release
