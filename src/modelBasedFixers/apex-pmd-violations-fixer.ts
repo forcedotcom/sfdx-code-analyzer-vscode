@@ -28,7 +28,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         const filteredDiagnostics = context.diagnostics.filter(
             diagnostic => messages.diagnostics.source
               && messages.diagnostics.source.isSource(diagnostic.source)
-              && diagnostic.range.isEqual(range)
+              && range.contains(diagnostic.range)
               && this.isSupportedViolationForCodeFix(diagnostic));
 
         // Loop through diagnostics in the context
@@ -82,7 +82,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 const llmResponse = await llmService.callLLM(prompt, getUniqueId());
                 const codeSnippet = this.extractCodeFromResponse(llmResponse);
 
-                const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1);
+                const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1, document);
                 // Update the command arguments with the resolved code snippet
                 codeAction.command.arguments = [updatedFileContent, document.uri];
 
@@ -158,7 +158,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         fileContent: string,
         replaceCode: string,
         startLine: number,
-        endLine: number
+        endLine: number,
+        document?: vscode.TextDocument
 ): string {
         const lineEndingMatch = fileContent.match(/(\r\n|\r|\n)/);
         const lineEnding = lineEndingMatch ? lineEndingMatch[0] : '\n';
@@ -177,12 +178,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 throw new Error('Invalid startLine or endLine values.');
         }
 
-        // Determine the leading spaces of the first line being replaced
-        const leadingSpaces = lines[startLine - 1].match(/^\s*/)?.[0] || '';
-
-        // Add the leading spaces to only the first line of the replaceCode
-        const [firstLine, ...remainingLines] = replaceCode.split('\n');
-        const indentedReplaceCode = [leadingSpaces + firstLine, ...remainingLines].join(lineEnding);
+        const indentedReplaceCode = this.formatCode(replaceCode, document, new vscode.Range(new vscode.Position(startLine, 0), new vscode.Position(endLine, Number.MAX_SAFE_INTEGER)));
 
         // Replace the specified lines with the new code
         const updatedLines = [
@@ -195,6 +191,65 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         return updatedLines.join(lineEnding);
     }
 
+    private formatCode(
+        replaceCode: string,
+        document?: vscode.TextDocument,
+        range?: vscode.Range
+    ): string {
+        if (!document) {
+            return replaceCode;
+        }
+    
+        // Get the indentation of the first line in the range
+        const startLine = range ? range.start.line : 0;
+        const baseIndentation = this.getLineIndentation(document, startLine);
+        
+        // Split the replacement code into lines
+        const lines = replaceCode.split(/\r?\n/);
+        
+        // First, normalize the code by removing all existing indentation
+        const normalizedLines = lines.map(line => line.trimStart());
+        
+        // Process each line to match the document's indentation style
+        const formattedLines = normalizedLines.map((line, index) => {
+            if (line.trim() === '') {
+                // Preserve empty lines without indentation
+                return '';
+            }
+            
+            // Calculate indentation level based on code structure
+            let indentLevel = 0;
+            
+            // Count net brace depth up to this line
+            for (let i = 0; i < index; i++) {
+                const currentLine = normalizedLines[i];
+                if (currentLine.includes('{')) {
+                    indentLevel++;
+                }
+                if (currentLine.includes('}')) {
+                    indentLevel--;
+                }
+            }
+            
+            // Adjust for current line
+            if (line.startsWith('}')) {
+                indentLevel--;
+            }
+            
+            // Apply document's base indentation plus additional levels
+            const indentation = baseIndentation + '    '.repeat(Math.max(0, indentLevel));
+            return indentation + line;
+        });
+        
+        return formattedLines.join(document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n');
+    }
+    
+    // Helper to get the indentation of a specific line
+    private getLineIndentation(document: vscode.TextDocument, lineNumber: number): string {
+        const line = document.lineAt(lineNumber);
+        const match = line.text.match(/^\s*/);
+        return match ? match[0] : '';
+    }
 
     public removeDiagnosticsWithInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
         const currentDiagnostics = diagnosticCollection.get(uri) || [];
