@@ -3247,7 +3247,6 @@ safe-buffer@~5.1.0, safe-buffer@~5.1.1:
 
 "salesforcedx-vscode-einstein-shared@forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10":
   version "0.3.10"
-  resolved "git+ssh://git@github.com/forcedotcom/salesforcedx-vscode-einstein-shared.git#e705ac04828b2a20c805c2cdca3ba103ee0b3f75"
   dependencies:
     "@datastructures-js/priority-queue" "^6.3.0"
     diff "^5.1.0"
