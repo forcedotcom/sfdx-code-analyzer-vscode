@@ -38,7 +38,7 @@
         "cross-spawn": "^7.0.3",
         "glob": "^8.0.3",
         "globby": "^11.0.0",
-        "salesforcedx-vscode-einstein-shared": "forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10",
+        "salesforcedx-vscode-einstein-shared": "https://github.com/forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10",
         "semver": "^7.5.4",
         "tmp": "^0.2.3"
     },
