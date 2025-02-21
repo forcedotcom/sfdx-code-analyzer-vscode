@@ -48,6 +48,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
+      - name: Configure Git for private repo access
+        run: git config --global --add url."https://${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: 'Install node module dependencies'
         run: yarn install --frozen-lockfile
       # We'll need to install the CLI tool, since some of the tests
