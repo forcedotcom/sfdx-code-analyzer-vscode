@@ -47,6 +47,7 @@ jobs:
     if: ${{ needs.verify-should-run.outputs.should-run == 'true' }}
     env:
       GH_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     permissions:
       contents: write
     outputs:
@@ -56,14 +57,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'dev'
-          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
+          token: ${{ env.GITHUB_TOKEN }}
       # We need to set up Node and install our Node dependencies.
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*' # Always use Node LTS for building dependencies.
-      - name: Configure Git for private repo access
-        run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
-      - run: yarn install --frozen-lockfile
+      - name: 'Force fetch the private repo dependency'
+        run: yarn add https://${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}@github.com/forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10 --no-save --no-lockfile
+      - run: yarn install
       # Increment the version as desired locally, without actually committing anything.
       - name: Locally increment version
         run: |

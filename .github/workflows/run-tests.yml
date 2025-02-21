@@ -30,12 +30,14 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: 'Check out the code'
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target-branch }}
-          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
+          token: ${{ env.GITHUB_TOKEN }}
       - name: 'Set up NodeJS'
         uses: actions/setup-node@v4
         with:
@@ -48,10 +50,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
-      - name: Configure Git for private repo access
-        run: git config --global --add url."https://${{ secrets.IDEE_GH_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      - name: 'Force fetch the private repo dependency'
+        run: yarn add https://${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}@github.com/forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10 --no-save --no-lockfile
       - name: 'Install node module dependencies'
-        run: yarn install --frozen-lockfile
+        run: yarn install
       # We'll need to install the CLI tool, since some of the tests
       # are integration tests.
       - name: Install SF CLI

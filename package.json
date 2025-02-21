@@ -36,7 +36,7 @@
         "@salesforce/vscode-service-provider": "^1.3.0-rc.6.2",
         "@types/tmp": "^0.2.6",
         "cross-spawn": "^7.0.3",
-        "einstein-shared": "https://github.com/forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10",
+        "salesforcedx-vscode-einstein-shared": "forcedotcom/salesforcedx-vscode-einstein-shared#semver:0.3.10",
         "glob": "^8.0.3",
         "globby": "^11.0.0",
         "semver": "^7.5.4",
