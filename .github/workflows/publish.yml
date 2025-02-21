@@ -67,13 +67,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VSCE_PERSONAL_ACCESS_TOKEN: ${{ secrets.VSCE_PERSONAL_ACCESS_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       # Set up node and install dependencies.
       - uses: actions/setup-node@v4
         with:
@@ -102,13 +101,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDEE_OVSX_PAT: ${{ secrets.IDEE_OVSX_PAT }}
-      GITHUB_TOKEN: ${{ secrets.SVC_CLI_BOT_GITHUB_TOKEN }}
     steps:
       - name: Checkout the release tag
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-          token: ${{ env.GITHUB_TOKEN }}
+          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       # Set up node and install dependencies.
       - uses: actions/setup-node@v4
         with:
