@@ -27,7 +27,7 @@ import * as ApexGuruFunctions from './apexguru/apex-guru-service';
 import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
-import { VSCodeUnifiedDiff, DiffHunk } from 'einstein-shared';
+import { VSCodeUnifiedDiff, DiffHunk } from 'salesforcedx-vscode-einstein-shared';
 import { ApexPmdViolationsFixer } from './modelBasedFixers/apex-pmd-violations-fixer'
 
 export type RunInfo = {
