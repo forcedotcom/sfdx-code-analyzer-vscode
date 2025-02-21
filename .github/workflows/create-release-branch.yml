@@ -56,7 +56,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'dev'
-          token: ${{ secrets.IDEE_GH_TOKEN }} # So we can access internal repo to pull shared ui components
       # We need to set up Node and install our Node dependencies.
       - uses: actions/setup-node@v4
         with:
