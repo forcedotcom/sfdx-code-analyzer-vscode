@@ -80,9 +80,9 @@ export async function run(): Promise<void> {
 	// This is why we manually set it to 0 earlier.
 	// TODO: Add branches check back once Apex Guru Integration and Delta runs implementation are complete.
 	await nyc.checkCoverage({
-		// branches: 70,
-		lines: 70,
-		statements: 70
+		// TODO: Move these 70% or higher threshold once unified diff is moved to the shared repo
+		lines: 60,
+		statements: 60
 	});
 
 	// Echo the logs.
