@@ -38,10 +38,8 @@ jobs:
       use-scanner-tarballs: true
       v4-tarball-suffix: 'dev-4'
       v5-tarball-suffix: 'dev'
-    secrets: inherit
   # BUILD A VSIX ARTIFACT
   # Additionally, build a VSIX that can be downloaded by the user if needed.
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
-    secrets: inherit
