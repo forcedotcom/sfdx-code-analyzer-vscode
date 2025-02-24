@@ -42,8 +42,8 @@ export async function run(): Promise<void> {
 		hookRunInContext: true,
 		hookRunInThisContext: true,
 		include: ['out/**/*.js'],
-		'check-coverage': true,
-		exclude: ['out/test/**']
+		exclude: ['out/test/**', 'out/shared/**'],
+		'check-coverage': true
 	});
 	await nyc.reset();
 	await nyc.wrap();
@@ -80,9 +80,9 @@ export async function run(): Promise<void> {
 	// This is why we manually set it to 0 earlier.
 	// TODO: Add branches check back once Apex Guru Integration and Delta runs implementation are complete.
 	await nyc.checkCoverage({
-		// TODO: Move these 70% or higher threshold once unified diff is moved to the shared repo
-		lines: 60,
-		statements: 60
+		lines: 70,
+		statements: 70,
+		exclude: ['out/shared/**']
 	});
 
 	// Echo the logs.
