@@ -160,7 +160,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         startLine: number,
         endLine: number,
         document?: vscode.TextDocument
-): string {
+    ): string {
         const lineEndingMatch = fileContent.match(/(\r\n|\r|\n)/);
         const lineEnding = lineEndingMatch ? lineEndingMatch[0] : '\n';
         // Split the file content into an array of lines
@@ -201,8 +201,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         }
     
         // Get the indentation of the first line in the range
-        const startLine = range ? range.start.line : 0;
-        const baseIndentation = this.getLineIndentation(document, startLine - 1);
+        const startLine = range && range.start.line > 0 ? range.start.line - 1 : 0;
+        const baseIndentation = this.getLineIndentation(document, startLine);
         
         // Split the replacement code into lines
         const lines = replaceCode.split(/\r?\n/);
@@ -226,7 +226,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 if (currentLine.includes('{')) {
                     indentLevel++;
                 }
-                if (currentLine.includes('}')) {
+                else if (currentLine.includes('}')) {
                     indentLevel--;
                 }
             }
@@ -235,7 +235,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
             if (line.startsWith('}')) {
                 indentLevel--;
             }
-            
+
             // Apply document's base indentation plus additional levels
             const indentation = baseIndentation + '    '.repeat(Math.max(0, indentLevel));
             return indentation + line;
@@ -246,9 +246,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
     
     // Helper to get the indentation of a specific line
     private getLineIndentation(document: vscode.TextDocument, lineNumber: number): string {
-        const line = document.lineAt(lineNumber);
-        const match = line.text.match(/^\s*/);
-        return match ? match[0] : '';
+        const lineText = document.lineAt(lineNumber).text;
+        return lineText.slice(0, lineText.length - lineText.trimStart().length);
     }
 
     public removeDiagnosticsWithInRange(uri: vscode.Uri, range: vscode.Range, diagnosticCollection: vscode.DiagnosticCollection) {
