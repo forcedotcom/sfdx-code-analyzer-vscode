@@ -13,7 +13,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "1.3.0",
+    "version": "1.4.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
@@ -242,7 +242,7 @@
                 },
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
-					"when": "sfca.codeAnalyzerV4Enabled"
+                    "when": "sfca.codeAnalyzerV4Enabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile"
