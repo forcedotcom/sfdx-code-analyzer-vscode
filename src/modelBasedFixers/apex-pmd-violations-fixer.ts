@@ -202,7 +202,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
     
         // Get the indentation of the first line in the range
         const startLine = range ? range.start.line : 0;
-        const baseIndentation = this.getLineIndentation(document, startLine);
+        const baseIndentation = this.getLineIndentation(document, startLine - 1);
         
         // Split the replacement code into lines
         const lines = replaceCode.split(/\r?\n/);
