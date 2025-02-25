@@ -6,6 +6,7 @@
  */
 
 // extension names
+export const EXTENSION_ID = 'salesforce.sfdx-code-analyzer-vscode';
 export const CORE_EXTENSION_ID = 'salesforce.salesforcedx-vscode-core';
 export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
 
@@ -30,6 +31,7 @@ export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
+export const CODE_ANALYZER_V5_BETA_TEMPLATE = 'code-analyzer 5.0.0-beta';
 
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
@@ -37,7 +39,14 @@ export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
 // apex guru APIS
 export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
 export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
-
-// feature gates
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
+
+// A4D Integration
+export const ENABLE_A4D_INTEGRATION = false;
+export const A4D_FIX_AVAILABLE_RULES = ['ApexCRUDViolation', 'ApexSharingViolations', 'EmptyCatchBlock', 'EmptyTryOrFinallyBlock', 'EmptyWhileStmt', 'EmptyIfStmt'];
+export const UNIFIED_DIFF = 'unifiedDiff';
+export const UNIFIED_DIFF_ACCEPT = 'unifiedDiff.accept';
+export const UNIFIED_DIFF_REJECT = 'unifiedDiff.reject';
+export const UNIFIED_DIFF_ACCEPT_ALL = 'unifiedDiff.acceptAll';
+export const UNIFIED_DIFF_REJECT_ALL = 'unifiedDiff.rejectAll';

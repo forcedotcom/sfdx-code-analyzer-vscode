@@ -60,7 +60,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 'lts/*' # Always use Node LTS for building dependencies.
-      - run: yarn
+      - run: yarn install --frozen-lockfile
       # Increment the version as desired locally, without actually committing anything.
       - name: Locally increment version
         run: |
@@ -141,9 +141,19 @@ jobs:
           git push -d origin ${NEW_VERSION}-interim
           # Output the release branch name so we can use it in later jobs.
           echo "branch_name=release-$NEW_VERSION" >> "$GITHUB_OUTPUT"
-  # Build the scanner tarball so it can be installed locally when we run tests.
-  build-scanner-tarball:
-    name: 'Build scanner tarball'
+  # Build the scanner tarballs so they can be installed locally when we run tests.
+  build-v4-scanner-tarball:
+    name: 'Build v4 scanner tarball'
+    needs: verify-should-run
+    uses: ./.github/workflows/build-scanner-tarball.yml
+    with:
+      # Note: Using `dev-4` here is technically incorrect. For full completeness's sake, we should probably be
+      # using the branch corresponding to the upcoming scanner release. However, identifying that branch is
+      # non-trivial, and there are unlikely to be major differences between the two that appear in the few days
+      # between creating the branch and releasing it, so it _should_ be fine.
+      target-branch: 'dev-4'
+  build-v5-scanner-tarball:
+    name: 'Build v5 scanner tarball'
     needs: verify-should-run
     uses: ./.github/workflows/build-scanner-tarball.yml
     with:
@@ -155,10 +165,12 @@ jobs:
   # Run all the various tests against the newly created branch.
   test-release-branch:
     name: 'Run unit tests'
-    needs: [build-scanner-tarball, create-release-branch]
+    needs: [build-v4-scanner-tarball, build-v5-scanner-tarball, create-release-branch]
     uses: ./.github/workflows/run-tests.yml
     with:
       # We want to validate the extension against whatever version of the scanner we *plan* to publish,
       # not what's *already* published.
-      use-scanner-tarball: true
+      use-scanner-tarballs: true
+      v4-tarball-suffix: 'dev-4'
+      v5-tarball-suffix: 'dev'
       target-branch: ${{ needs.create-release-branch.outputs.branch-name }}

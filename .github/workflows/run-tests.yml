@@ -2,11 +2,21 @@ name: run-tests
 on:
   workflow_call:
     inputs:
-      use-scanner-tarball:
+      use-scanner-tarballs:
         description: 'If true, install scanner via tarball'
         required: false
         type: boolean
         default: false
+      v4-tarball-suffix:
+        description: 'The suffix attached to the name of the v4 tarball'
+        required: false
+        type: string
+        default: 'dev-4'
+      v5-tarball-suffix:
+        description: 'The suffix attached to the name of the v5 tarball'
+        required: false
+        type: string
+        default: 'dev'
       target-branch:
         description: "What branch should be checked out?"
         required: false
@@ -34,6 +44,9 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11' # Always use Java v11 for running tests.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
       - name: 'Install node module dependencies'
         run: yarn install --frozen-lockfile
       # We'll need to install the CLI tool, since some of the tests
@@ -44,34 +57,62 @@ jobs:
       # of the tests are integration tests.
       # NOTE: SFCA can come from a tarball built in a previous step,
       #       or be installed as the currently-latest version.
-      - name: Download Scanner Tarball
-        if: ${{ inputs.use-scanner-tarball == true }}
-        id: download
+      - name: Download v4 Scanner Tarball
+        if: ${{ inputs.use-scanner-tarballs == true }}
+        id: download-v4
         uses: actions/download-artifact@v4
         with:
-          name: scanner-tarball
+          name: scanner-tarball-${{ inputs.v4-tarball-suffix}}
           # Download the tarball to a subdirectory of HOME, so it's guaranteed
           # to be somewhere the installation command can see.
-          path: ~/downloads/tarball
-      - name: Install Scanner Tarball
-        if: ${{ inputs.use-scanner-tarball == true }}
+          path: ~/downloads/tarball-v4
+      - name: Install v4 Scanner Tarball
+        if: ${{ inputs.use-scanner-tarballs == true }}
         shell: bash
         run: |
           # Determine the tarball's name.
-          TARBALL_NAME=$(ls ~/downloads/tarball/sfdx-scanner | grep salesforce-sfdx-scanner-[0-9]*\\.[0-9]*\\.[0-9]*\\.tgz)
+          TARBALL_NAME=$(ls ~/downloads/tarball-v4/sfdx-scanner | grep salesforce-.*\\.tgz)
           echo $TARBALL_NAME
           # Figure out where the tarball was downloaded to.
           # To allow compatibility with Windows, replace backslashes with forward slashes
           # and rip off a leading `C:` if present.
-          DOWNLOAD_PATH=`echo '${{ steps.download.outputs.download-path }}' | tr '\\' '/'`
+          DOWNLOAD_PATH=`echo '${{ steps.download-v4.outputs.download-path }}' | tr '\\' '/'`
           echo $DOWNLOAD_PATH
           DOWNLOAD_PATH=`[[ $DOWNLOAD_PATH = C* ]] && echo $DOWNLOAD_PATH | cut -d':' -f 2 || echo $DOWNLOAD_PATH`
           echo $DOWNLOAD_PATH
           # Pipe in a `y` to simulate agreeing to install an unsigned package. Use a URI of the file's full path.
           echo y | sf plugins install "file://${DOWNLOAD_PATH}/sfdx-scanner/${TARBALL_NAME}"
-      - name: Install Production scanner
-        if: ${{ inputs.use-scanner-tarball == false }}
+      - name: Download v5 Scanner Tarball
+        if: ${{ inputs.use-scanner-tarballs == true }}
+        id: download-v5
+        uses: actions/download-artifact@v4
+        with:
+          name: scanner-tarball-${{ inputs.v5-tarball-suffix }}
+          # Download the tarball to a subdirectory of HOME, so it's guaranteed
+          # to be somewhere the installation command can see.
+          path: ~/downloads/tarball-v5
+      - name: Install v5 Scanner Tarball
+        if: ${{ inputs.use-scanner-tarballs == true }}
+        shell: bash
+        run: |
+          # Determine the tarball's name.
+          TARBALL_NAME=$(ls ~/downloads/tarball-v5/sfdx-scanner | grep salesforce-.*\\.tgz)
+          echo $TARBALL_NAME
+          # Figure out where the tarball was downloaded to.
+          # To allow compatibility with Windows, replace backslashes with forward slashes
+          # and rip off a leading `C:` if present.
+          DOWNLOAD_PATH=`echo '${{ steps.download-v5.outputs.download-path }}' | tr '\\' '/'`
+          echo $DOWNLOAD_PATH
+          DOWNLOAD_PATH=`[[ $DOWNLOAD_PATH = C* ]] && echo $DOWNLOAD_PATH | cut -d':' -f 2 || echo $DOWNLOAD_PATH`
+          echo $DOWNLOAD_PATH
+          # Pipe in a `y` to simulate agreeing to install an unsigned package. Use a URI of the file's full path.
+          echo y | sf plugins install "file://${DOWNLOAD_PATH}/sfdx-scanner/${TARBALL_NAME}"
+      - name: Install Production scanner v4
+        if: ${{ inputs.use-scanner-tarballs == false }}
         run: sf  plugins install @salesforce/sfdx-scanner
+      - name: Install Production scanner v5
+        if: ${{ inputs.use-scanner-tarballs == false }}
+        run: sf plugins install code-analyzer
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
         run: xvfb-run -a yarn test

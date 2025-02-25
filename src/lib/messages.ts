@@ -26,11 +26,12 @@ export const messages = {
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
     },
     info: {
+		scanningWith: (scannerName: string) => `Scanning with ${scannerName}`,
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
     },
     graphEngine: {
         noViolationsFound: "Scan was completed. No violations found.",
-        noViolationsFoundForPartialRuns: "Partial Salesforce Graph Engine scan of the changed code completed, and no violations found.  IMPORTANT: You might still have violations in the code that you haven't changed since the previous full scan.",  
+        noViolationsFoundForPartialRuns: "Partial Salesforce Graph Engine scan of the changed code completed, and no violations found.  IMPORTANT: You might still have violations in the code that you haven't changed since the previous full scan.",
         resultsTab: "Graph Engine Results",
         spinnerText: 'Running Graph Engine analysis...',
         statusBarName: "Graph Engine Analysis",
@@ -71,6 +72,7 @@ export const messages = {
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use this extension, first install Salesforce CLI `sf` or `sfdx` commands.",
         sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`.",
+		codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
 		coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     }
 };

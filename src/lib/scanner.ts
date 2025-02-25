@@ -5,10 +5,8 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import {SettingsManager} from './settings';
-import {ExecutionResult, RuleResult} from '../types';
-import {exists} from './file';
-import {messages} from './messages';
+import {SettingsManager, SettingsManagerImpl} from './settings';
+import {ExecutionResult} from '../types';
 import * as Constants from './constants';
 import cspawn = require('cross-spawn');
 
@@ -16,22 +14,11 @@ import cspawn = require('cross-spawn');
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
  */
 export class ScanRunner {
-    /**
-     * Run the non-DFA rules against the specified target files
-     * @param targets A list of files to be targeted by the scan
-     * @returns The results of the scan
-     */
-    
-    public async run(targets: string[]): Promise<RuleResult[]> {
-        // Create the arg array.
-        const args: string[] = await this.createPathlessArgArray(targets);
+	private readonly settingsManager: SettingsManager;
 
-        // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeAnalyzer(args);
-
-        // Process the results.
-        return this.processPathlessResults(executionResult);
-    }
+	public constructor(settingsManager?: SettingsManager) {
+		this.settingsManager = settingsManager ?? new SettingsManagerImpl();
+	}
 
     /**
      * Run the DFA rules against the specified targets
@@ -81,21 +68,21 @@ export class ScanRunner {
 
         // There are a number of custom settings that we need to check too.
         // First we should check whether warning violations are disabled.
-        if (SettingsManager.getGraphEngineDisableWarningViolations()) {
+        if (this.settingsManager.getGraphEngineDisableWarningViolations()) {
             args.push('--rule-disable-warning-violation');
         }
         // Then we should check whether a custom timeout was specified.
-        const threadTimeout: number = SettingsManager.getGraphEngineThreadTimeout();
+        const threadTimeout: number = this.settingsManager.getGraphEngineThreadTimeout();
         if (threadTimeout != null) {
             args.push('--rule-thread-timeout', `${threadTimeout}`);
         }
         // Then we should check whether a custom path expansion limit is set.
-        const pathExpansionLimit: number = SettingsManager.getGraphEnginePathExpansionLimit();
+        const pathExpansionLimit: number = this.settingsManager.getGraphEnginePathExpansionLimit();
         if (pathExpansionLimit != null) {
             args.push('--pathexplimit', `${pathExpansionLimit}`);
         }
         // Then we should check whether custom JVM args were specified.
-        const jvmArgs: string = SettingsManager.getGraphEngineJvmArgs();
+        const jvmArgs: string = this.settingsManager.getGraphEngineJvmArgs();
         if (jvmArgs) {
             args.push('--sfgejvmargs', jvmArgs);
         }
@@ -104,64 +91,6 @@ export class ScanRunner {
         //       threadcount.
         // TODO: Once RemoveUnusedMethod is made less noisy, add a setting for enabling Pilot rules.
         return args;
-    }
-
-    /**
-     * Creates the arguments for an execution of {@code sf scanner run}.
-     * @param targets The files to be scanned.
-     */
-    private async createPathlessArgArray(targets: string[]): Promise<string[]> {
-        const engines = SettingsManager.getEnginesToRun();
-    
-        if (!engines || engines.length === 0) {
-            throw new Error('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
-        }
-
-        const args: string[] = [
-            'scanner', 'run',
-            '--target', `${targets.join(',')}`,
-            '--engine', engines,
-            '--json'
-        ];
-        const customPmdConfig: string = SettingsManager.getPmdCustomConfigFile();
-        // If there's a non-null, non-empty PMD config file specified, use it.
-        if (customPmdConfig && customPmdConfig.length > 0) {
-            if (!(await exists(customPmdConfig))) {
-                throw new Error(messages.error.pmdConfigNotFoundGenerator(customPmdConfig));
-            }
-            args.push('--pmdconfig', customPmdConfig);
-        }
-
-        const rulesCategory = SettingsManager.getRulesCategory();
-        if (rulesCategory) {
-            args.push('--category', rulesCategory);
-        }
-
-        if (SettingsManager.getNormalizeSeverityEnabled()) {
-            args.push('--normalize-severity')
-        }
-        return args;
-    }
-
-    /**
-     * Uses the provided arguments to run a Salesforce Code Analyzer command.
-     * @param args The arguments to be supplied
-     */
-    private async invokeAnalyzer(args: string[]): Promise<ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
-
-            let stdout = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', () => {
-                // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as ExecutionResult);
-            });
-        });
     }
 
     /**
@@ -184,7 +113,7 @@ export class ScanRunner {
                 res(JSON.parse(stdout) as ExecutionResult);
                 void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             });
-            
+
         });
     }
 
@@ -232,29 +161,6 @@ export class ScanRunner {
 
                 // Otherwise, violations weren't found. Return an empty string.
                 return "";
-            }
-        } else {
-            // Any other status code indicates an error of some kind.
-            throw new Error(executionResult.message);
-        }
-    }
-
-    /**
-     *
-     * @param executionResult The results from a scan.
-     * @returns The Rule Results pulled out of the execution results, or an empty array.
-     * @throws if {@coder executionResult.status} is non-zero
-     */
-    private processPathlessResults(executionResult: ExecutionResult): RuleResult[] {
-        // 0 is the status code indicating a successful analysis.
-        if (executionResult.status === 0) {
-            // If the results were a string, that indicates that no results were found.
-            // TODO: Maybe change the plugin to return an empty array instead?
-            //       If that happens, this needs to change.
-            if (typeof executionResult.result === 'string') {
-                return [];
-            } else {
-                return executionResult.result;
             }
         } else {
             // Any other status code indicates an error of some kind.

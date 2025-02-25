@@ -9,7 +9,7 @@ import { Event } from 'vscode';
 import { satisfies } from 'semver';
 import { messages } from './messages';
 import { AuthFields } from '../types';
-import {SettingsManager} from '../lib/settings';
+import {SettingsManagerImpl} from '../lib/settings';
 
 import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
 /**
@@ -26,7 +26,8 @@ export class CoreExtensionService {
 			const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
 			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context, outputChannel);
-			if (SettingsManager.getApexGuruEnabled()) {
+			// TODO: For testability, this should probably be passed in, instead of instantiated.
+			if (new SettingsManagerImpl().getApexGuruEnabled()) {
 				CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
 			}
 			CoreExtensionService.initialized = true;
@@ -117,22 +118,29 @@ export class CoreExtensionService {
 	}
 }
 
-export class TelemetryService {
+export interface TelemetryService {
+	sendExtensionActivationEvent(hrStart: [number, number]): void;
+	sendCommandEvent(key: string, data: Properties): void;
+	sendException(name: string, message: string, data?: Record<string, string>): void;
+	dispose(): void;
+}
 
-	public static sendExtensionActivationEvent(hrStart: [number, number]): void {
+export class TelemetryServiceImpl implements TelemetryService {
+
+	public sendExtensionActivationEvent(hrStart: [number, number]): void {
 		CoreExtensionService._getTelemetryService()?.sendExtensionActivationEvent(hrStart);
 	}
 
-	public static sendCommandEvent(key: string, data: Properties): void {
+	public sendCommandEvent(key: string, data: Properties): void {
 		CoreExtensionService._getTelemetryService()?.sendCommandEvent(key, undefined, data);
 	}
 
-	public static sendException(name: string, message: string, data?: Record<string, string>): void {
+	public sendException(name: string, message: string, data?: Record<string, string>): void {
 		const fullMessage = data ? message + JSON.stringify(data) : message;
 		CoreExtensionService._getTelemetryService()?.sendException(name, fullMessage);
 	}
 
-	public static dispose(): void {
+	public dispose(): void {
 		CoreExtensionService._getTelemetryService()?.dispose();
 	}
 }
@@ -191,5 +199,3 @@ export interface Connection {
 	getAuthInfoFields(): AuthFields;
 	request<T>(options: { method: string; url: string; body: string; headers?: Record<string, string> }): Promise<T>;
 }
-  
-  

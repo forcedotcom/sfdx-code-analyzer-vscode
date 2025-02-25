@@ -118,23 +118,13 @@ jobs:
         if: ${{ failure() || cancelled() }}
         shell: bash
         env:
-          # If we're here because steps failed or were skipped, then that's a critical problem. Otherwise it's a normal one.
-          # We can't use the `failure()` or `cancelled()` convenience methods outside of the `if` condition, hence the
-          # `contains()` calls.
-          IS_CRITICAL: ${{ contains(join(steps.*.outcome), 'failure') || contains(join(steps.*.outcome), 'skipped') }}
           # A link to this run, so the PagerDuty assignee can quickly get here.
           RUN_LINK: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
         run: |
 
-          if [[ ${{ env.IS_CRITICAL }} == true ]]; then
-            ALERT_SEV="critical"
-            ALERT_SUMMARY="Production heartbeat script failed on ${{ runner.os }}"
-          else
-            # Leaving the else part here to help with running end-to-end sanity test with real alerts being created.
-            ALERT_SEV="info"
-            ALERT_SUMMARY="Production heartbeat script succeeded with retries on ${{ runner.os }}"
-          fi
+          ALERT_SEV="critical"
+          ALERT_SUMMARY="Production heartbeat script failed on ${{ runner.os }}"
           # Define a helper function to create our POST request's data, to sidestep issues with nested quotations.
           generate_post_data() {
           # This is known as a HereDoc, and it lets us declare multi-line input ending when the specified limit string,

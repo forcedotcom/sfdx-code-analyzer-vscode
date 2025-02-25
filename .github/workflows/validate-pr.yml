@@ -17,20 +17,27 @@ jobs:
         id: verify_pr_title
   # RUN TESTS
   # Step 1: Build the scanner tarball so it can be installed locally.
-  build_scanner_tarball:
-    name: 'Build scanner tarball'
+  build_v4_scanner_tarball:
+    name: 'Build v4 scanner tarball'
+    uses: ./.github/workflows/build-scanner-tarball.yml
+    with:
+      target-branch: 'dev-4'
+  build_v5_scanner_tarball:
+    name: 'Build v5 scanner tarball'
     uses: ./.github/workflows/build-scanner-tarball.yml
     with:
       target-branch: 'dev'
   # Step 2: Actually run the tests.
   run_tests:
     name: 'Run unit tests'
-    needs: build_scanner_tarball
+    needs: [build_v4_scanner_tarball, build_v5_scanner_tarball]
     uses: ./.github/workflows/run-tests.yml
     with:
       # We want to validate the extension against whatever version of the scanner we
       # *plan* to publish, not what's *already* published.
-      use-scanner-tarball: true
+      use-scanner-tarballs: true
+      v4-tarball-suffix: 'dev-4'
+      v5-tarball-suffix: 'dev'
   # BUILD A VSIX ARTIFACT
   # Additionally, build a VSIX that can be downloaded by the user if needed.
   create-vsix-artifact:
