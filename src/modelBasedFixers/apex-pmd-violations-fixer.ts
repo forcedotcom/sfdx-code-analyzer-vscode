@@ -210,34 +210,25 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         // First, normalize the code by removing all existing indentation
         const normalizedLines = lines.map(line => line.trimStart());
         
+        let indentLevel = 0;
+
         // Process each line to match the document's indentation style
-        const formattedLines = normalizedLines.map((line, index) => {
+        const formattedLines = normalizedLines.map((line) => {
             if (line.trim() === '') {
                 // Preserve empty lines without indentation
                 return '';
             }
-            
-            // Calculate indentation level based on code structure
-            let indentLevel = 0;
-            
-            // Count net brace depth up to this line
-            for (let i = 0; i < index; i++) {
-                const currentLine = normalizedLines[i];
-                if (currentLine.includes('{')) {
-                    indentLevel++;
-                }
-                else if (currentLine.includes('}')) {
-                    indentLevel--;
-                }
-            }
-            
-            // Adjust for current line
             if (line.startsWith('}')) {
-                indentLevel--;
+                indentLevel = Math.max(0, indentLevel - 1);
             }
 
-            // Apply document's base indentation plus additional levels
-            const indentation = baseIndentation + '    '.repeat(Math.max(0, indentLevel));
+            const indentation = baseIndentation + '    '.repeat(indentLevel);
+
+            // Adjust for next lines, this line needs no changes
+            if (line.includes('{')) {
+                indentLevel++;
+            }
+
             return indentation + line;
         });
         
