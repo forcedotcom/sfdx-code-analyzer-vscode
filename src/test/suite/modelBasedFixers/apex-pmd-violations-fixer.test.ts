@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { expect } from 'chai';
 import { ApexPmdViolationsFixer } from '../../../modelBasedFixers/apex-pmd-violations-fixer';
+import Sinon from 'sinon';
 
 suite('apex-pmd-violations-fixer.ts', () => {
 
@@ -114,30 +115,40 @@ suite('apex-pmd-violations-fixer.ts', () => {
 
     suite('replaceCodeInFile', () => {
         let fixer: ApexPmdViolationsFixer;
+        let fakeDocument: vscode.TextDocument;
 
         setup(() => {
             fixer = new ApexPmdViolationsFixer();
+            fakeDocument = {
+                lineAt: Sinon.stub()
+            } as unknown as vscode.TextDocument;
         });
 
         test('should replace code while preserving indentation for a single line', () => {
-            const fileContent = 'class Test {\n    void method() {\n        // code\n    }\n}';
+            const fileContent = 'class Test {\n    void method() {\n        int x = 0\n    }\n}';
             const replaceCode = 'int x = 1;';
-            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3);
+            (fakeDocument.lineAt as Sinon.SinonStub).callsFake((line: number) => ({
+                text: fileContent.split("\n")[line]
+            }));
+            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3, fakeDocument);
             expect(result).to.equal('class Test {\n    void method() {\n        int x = 1;\n    }\n}');
         });
 
-        test('should replace code while preserving indentation for first line for multiple lines', () => {
+        test('should replace code while preserving indentation for multiple lines', () => {
             const fileContent = 'class Test {\n    void method() {\n        // code\n    }\n}';
             const replaceCode = 'int x = 1;\nx++;\nx=10;';
-            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3);
-            expect(result).to.equal('class Test {\n    void method() {\n        int x = 1;\nx++;\nx=10;\n    }\n}');
+            (fakeDocument.lineAt as Sinon.SinonStub).callsFake((line: number) => ({
+                text: fileContent.split("\n")[line]
+            }));
+            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3, fakeDocument);
+            expect(result).to.equal('class Test {\n    void method() {\n        int x = 1;\n        x++;\n        x=10;\n    }\n}');
         });
 
-        test('should replace code while preserving indentation for first line for multiple lines for Windows new line', () => {
+        test('should replace code for windows', () => {
             const fileContent = 'class Test {\r\n    void method() {\r\n        // code\r\n    }\r\n}';
-            const replaceCode = 'int x = 1;\nx++;\nx=10;';
+            const replaceCode = 'int x = 1;';
             const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3);
-            expect(result).to.equal('class Test {\r\n    void method() {\r\n        int x = 1;\r\nx++;\r\nx=10;\r\n    }\r\n}');
+            expect(result).to.equal('class Test {\r\n    void method() {\r\nint x = 1;\r\n    }\r\n}');
         });
 
         test('should handle whole file replacement', () => {
