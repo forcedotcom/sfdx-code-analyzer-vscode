@@ -225,7 +225,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
             const indentation = baseIndentation + '    '.repeat(indentLevel);
 
             // Adjust for next lines, this line needs no changes
-            if (line.includes('{')) {
+            if (line.endsWith('{')) {
                 indentLevel++;
             }
 
