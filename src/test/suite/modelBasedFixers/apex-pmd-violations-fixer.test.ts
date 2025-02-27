@@ -144,6 +144,26 @@ suite('apex-pmd-violations-fixer.ts', () => {
             expect(result).to.equal('class Test {\n    void method() {\n        int x = 1;\n        x++;\n        x=10;\n    }\n}');
         });
 
+        test('should replace code while preserving indentation for multiple lines for brackets', () => {
+            const fileContent = 'class Test {\n    String soql =  [\n        // soql\n    ]\n}';
+            const replaceCode = 'SELECT ID\nFROM\nACCOUNT';
+            (fakeDocument.lineAt as Sinon.SinonStub).callsFake((line: number) => ({
+                text: fileContent.split("\n")[line]
+            }));
+            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3, fakeDocument);
+            expect(result).to.equal('class Test {\n    String soql =  [\n        SELECT ID\n        FROM\n        ACCOUNT\n    ]\n}');
+        });
+
+        test('should replace code while preserving indentation for multiple lines for paranthesis', () => {
+            const fileContent = 'class Test {\n    String soql =  (\n        // soql\n    )\n}';
+            const replaceCode = 'SELECT ID\nFROM\nACCOUNT';
+            (fakeDocument.lineAt as Sinon.SinonStub).callsFake((line: number) => ({
+                text: fileContent.split("\n")[line]
+            }));
+            const result = fixer.replaceCodeInFile(fileContent, replaceCode, 3, 3, fakeDocument);
+            expect(result).to.equal('class Test {\n    String soql =  (\n        SELECT ID\n        FROM\n        ACCOUNT\n    )\n}');
+        });
+
         test('should replace code for windows', () => {
             const fileContent = 'class Test {\r\n    void method() {\r\n        // code\r\n    }\r\n}';
             const replaceCode = 'int x = 1;';
