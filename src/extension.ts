@@ -241,6 +241,14 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk, range: vscode.Range) => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(hunk);
 				apexPmdFixer.removeDiagnosticsWithInRange(vscode.window.activeTextEditor.document.uri, range, diagnosticCollection);
+				// For accept & accept all, it is tricky to track the diagnostics and the changed lines as multiple fixes are requested.
+				// Hence, we save the file and rerun the scan instead.
+				await vscode.window.activeTextEditor.document.save();
+				return _runAndDisplayScanner(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName], {
+					telemetryService,
+					diagnosticManager,
+					settingsManager
+				});
 			})
 	);
 	context.subscriptions.push(
@@ -251,8 +259,6 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll();
-				// For accept all, it is tricky to get all the code that gets accepted and to remove them from diagnostic.
-				// Hence, we save the file and rerun the scan instead.
 				await vscode.window.activeTextEditor.document.save();
 				return _runAndDisplayScanner(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName], {
 					telemetryService,
