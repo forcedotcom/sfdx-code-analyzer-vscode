@@ -28,7 +28,7 @@ import * as DeltaRunFunctions from './deltarun/delta-run-service';
 import * as os from 'os';
 import * as fs from 'fs';
 import { ApexPmdViolationsFixer } from './modelBasedFixers/apex-pmd-violations-fixer'
-import { VSCodeUnifiedDiff, DiffHunk } from './shared/UnifiedDiff';
+import { VSCodeUnifiedDiff, DiffHunk, CODEGENIE_UNIFIED_DIFF_ACCEPT, CODEGENIE_UNIFIED_DIFF_REJECT, CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, CODEGENIE_UNIFIED_DIFF_REJECT_ALL } from './shared/UnifiedDiff';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -238,18 +238,18 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk, range: vscode.Range) => {
+			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk, range: vscode.Range) => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(hunk);
 				apexPmdFixer.removeDiagnosticsWithInRange(vscode.window.activeTextEditor.document.uri, range, diagnosticCollection);
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
+			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffReject(hunk);
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_ACCEPT_ALL, async () => {
+			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll();
 				// For accept all, it is tricky to get all the code that gets accepted and to remove them from diagnostic.
 				// Hence, we save the file and rerun the scan instead.
@@ -262,7 +262,7 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 			})
 	);
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.UNIFIED_DIFF_REJECT_ALL, async () => {
+			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
 				await VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll();
 			})
 	);

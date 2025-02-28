@@ -211,6 +211,9 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         const normalizedLines = lines.map(line => line.trimStart());
         
         let indentLevel = 0;
+        let braceLevel = 0;
+        let parenLevel = 0;
+        let bracketLevel = 0;
 
         // Process each line to match the document's indentation style
         const formattedLines = normalizedLines.map((line) => {
@@ -218,7 +221,20 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 // Preserve empty lines without indentation
                 return '';
             }
+            indentLevel = braceLevel + parenLevel + bracketLevel;
+
             if (line.startsWith('}')) {
+                braceLevel = Math.max(0, braceLevel - 1);
+                indentLevel = Math.max(0, indentLevel - 1);
+            }
+
+            if (line.startsWith(')')) {
+                parenLevel = Math.max(0, parenLevel - 1);
+                indentLevel = Math.max(0, indentLevel - 1);
+            }
+
+            if (line.startsWith(']')) {
+                bracketLevel = Math.max(0, bracketLevel - 1);
                 indentLevel = Math.max(0, indentLevel - 1);
             }
 
@@ -226,7 +242,11 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
 
             // Adjust for next lines, this line needs no changes
             if (line.endsWith('{')) {
-                indentLevel++;
+                braceLevel++;
+            } else if (line.endsWith('(')) {
+                parenLevel++;
+            } else if (line.endsWith('[')) {
+                braceLevel++;
             }
 
             return indentation + line;
