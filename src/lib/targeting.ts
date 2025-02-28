@@ -5,7 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import globby = require('globby');
+import {glob} from 'glob';
 import {exists, isDir} from './file';
 import {ApexLsp, GenericSymbol} from './apex-lsp';
 import {messages} from './messages';
@@ -30,9 +30,10 @@ export async function getTargets(selections: vscode.Uri[]): Promise<string[]> {
 				// Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
 				// latter into the former.
 				const globbablePath = selection.fsPath.replace(/\\/g, '/');
-                const globOut: string[] = await globby(`${globbablePath}/**/*`);
+                const globOut: string[] = await glob(`${globbablePath}/**/*`, {nodir: true});
 				// Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
 				// to its expected form.
+
                 globOut.forEach(o => targets.add(vscode.Uri.file(o).fsPath));
             } else {
                 targets.add(selection.fsPath);

@@ -79,9 +79,9 @@ suite('targeting.ts', () => {
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
-            expect(targets).to.have.lengthOf(2, 'Wrong number of targets returned');
-            expect(targets[0]).to.equal(path.join(folderPath, "MyClassA1i.cls"), 'Wrong file returned');
-            expect(targets[1]).to.equal(path.join(folderPath, "MyClassA1ii.cls"), 'Wrong file returned');
+            expect(targets).to.have.lengthOf(2, 'Wrong number of targets returned: ' + JSON.stringify(targets, null, 2));
+            expect(targets).to.contain(path.join(folderPath, "MyClassA1i.cls"), 'Wrong file returned');
+            expect(targets).to.contain(path.join(folderPath, "MyClassA1ii.cls"), 'Wrong file returned');
         });
 
         test('Given a real folder with subfolders, returns contents deeply', async () => {
@@ -96,12 +96,12 @@ suite('targeting.ts', () => {
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
-            expect(targets).to.have.lengthOf(5, 'Wrong number of targets returned');
-            expect(targets[0]).to.equal(path.join(folderPath, "MyClassA1.cls"), "Wrong file returned");
-            expect(targets[1]).to.equal(path.join(folderPath, "MyClassA2.cls"), "Wrong file returned");
-            expect(targets[2]).to.equal(path.join(folderPath, "MyClassA3.cls"), "Wrong file returned");
-            expect(targets[3]).to.equal(path.join(folderPath, "subfolder-a1", "MyClassA1i.cls"), "Wrong file returned");
-            expect(targets[4]).to.equal(path.join(folderPath, "subfolder-a1", "MyClassA1ii.cls"), "Wrong file returned");
+            expect(targets).to.have.lengthOf(5, 'Wrong number of targets returned: ' + JSON.stringify(targets, null, 2));
+            expect(targets).to.contain(path.join(folderPath, "MyClassA1.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "MyClassA2.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "MyClassA3.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "subfolder-a1", "MyClassA1i.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "subfolder-a1", "MyClassA1ii.cls"), "Wrong file returned");
         });
 
         test('Given a non-existent file, throws error', async () => {

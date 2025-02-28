@@ -43,6 +43,5 @@ export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
 
 // A4D Integration
-export const ENABLE_A4D_INTEGRATION = false;
 export const A4D_FIX_AVAILABLE_RULES = ['ApexCRUDViolation', 'ApexSharingViolations', 'EmptyCatchBlock', 'EmptyTryOrFinallyBlock', 'EmptyWhileStmt', 'EmptyIfStmt'];
 export const UNIFIED_DIFF = 'unifiedDiff';
