@@ -33,12 +33,13 @@
         "SFCA"
     ],
     "dependencies": {
-        "@salesforce/vscode-service-provider": "^1.3.0-rc.6.2",
+        "@salesforce/vscode-service-provider": "^1.3.0-rc.6.4",
         "@types/tmp": "^0.2.6",
         "cross-spawn": "^7.0.6",
         "glob": "^11.0.1",
         "semver": "^7.7.1",
-        "tmp": "^0.2.3"
+        "tmp": "^0.2.3",
+        "js-yaml": "^4.1.0"
     },
     "devDependencies": {
         "@istanbuljs/nyc-config-typescript": "^1.0.2",
@@ -81,6 +82,10 @@
     "main": "./out/extension.js",
     "contributes": {
         "commands": [
+            {
+                "command": "sfca.runPOC",
+                "title": "WIP: Run POC on Active File"
+            },
             {
                 "command": "sfca.runOnActiveFile",
                 "title": "SFDX: Scan Current File with Code Analyzer"

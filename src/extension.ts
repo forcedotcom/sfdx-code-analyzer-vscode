@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/restrict-template-expressions */
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
@@ -11,6 +12,8 @@ import * as targeting from './lib/targeting';
 import {ScanRunner} from './lib/scanner';
 import {SettingsManagerImpl, SettingsManager} from './lib/settings';
 import {SfCli} from './lib/sf-cli';
+
+import { ServiceProvider, ServiceType, CallLLMOptions } from '@salesforce/vscode-service-provider';
 
 import {Displayable, ProgressNotification, UxDisplay} from './lib/display';
 import {DiagnosticManager, DiagnosticConvertible, DiagnosticManagerImpl} from './lib/diagnostics';
@@ -29,6 +32,8 @@ import * as os from 'os';
 import * as fs from 'fs';
 import { ApexPmdViolationsFixer } from './modelBasedFixers/apex-pmd-violations-fixer'
 import { VSCodeUnifiedDiff, DiffHunk, CODEGENIE_UNIFIED_DIFF_ACCEPT, CODEGENIE_UNIFIED_DIFF_REJECT, CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, CODEGENIE_UNIFIED_DIFF_REJECT_ALL } from './shared/UnifiedDiff';
+import * as yaml from 'js-yaml';
+import { randomUUID } from 'crypto';
 
 export type RunInfo = {
 	diagnosticCollection?: vscode.DiagnosticCollection;
@@ -105,6 +110,80 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 			providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]
 		})
 	);
+
+
+
+
+
+
+
+
+
+	const disposable = vscode.commands.registerCommand('sfca.runPOC', async () => {
+        // Get the active editor and its text content
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            await vscode.window.showErrorMessage("No active editor found.");
+            return;
+        }
+
+        const documentText = editor.document.getText();
+
+        // Try to parse the document content as YAML
+        let parsedData: Record<string, any>;
+        try {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+            parsedData = yaml.load(documentText) as Record<string, any>;
+        } catch (error) {
+			const errMsg: string = error instanceof Error ? error.message : String(error);
+            await vscode.window.showErrorMessage("Failed to parse YAML: " + errMsg);
+            return;
+        }
+
+        // If no data was parsed, show an error
+        if (!parsedData || Object.keys(parsedData).length === 0) {
+            await vscode.window.showErrorMessage("No extractable data found.");
+            return;
+        }
+
+        // Call the async function with the parsed YAML data
+        try {
+			const result = await vscode.window.withProgress(
+				{
+					location: vscode.ProgressLocation.Notification,
+					title: "Running A4D Fix...",
+					cancellable: false // Set to true if you want to allow cancellation
+				},
+				async (progress, _token) => {
+					// Simulate an async task with progress update
+					progress.report({ increment: 0, message: "Processing..." });
+	
+					// Call the async function with the parsed YAML data
+					const result = await runA4DFix(parsedData);
+	
+					// Return the result when the task is completed
+					return result;
+				}
+			);
+
+            // Show the result in the output window
+            const outputChannel = vscode.window.createOutputChannel("A4D Fix Output");
+            outputChannel.show();
+            outputChannel.appendLine(result);
+        } catch (error) {
+			const errMsg: string = error instanceof Error ? error.message : String(error);
+            await vscode.window.showErrorMessage(`Error: ${errMsg}`);
+        }
+    });
+
+    context.subscriptions.push(disposable);
+
+
+
+
+
+
+
 
 	// Declare our commands.
 	const runOnActiveFile = vscode.commands.registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
@@ -644,4 +723,52 @@ class VSCodeDisplayable implements Displayable {
 	public log(msg: string): void {
 		this.outputChannel.appendLine(msg);
 	}
+}
+
+
+
+
+
+// Define the async function that processes the extracted data
+async function runA4DFix(parsedData: Record<string, any>): Promise<string> {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	let prompt: string = parsedData['prompt'];
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const guidedJson: string = parsedData['guidedJson'];
+
+	// Remove prompt and guidedJson from the parsed data
+	const remainingData = { ...parsedData };
+	delete remainingData['prompt'];
+	delete remainingData['guidedJson'];
+	const remainingDataJson: string = JSON.stringify(remainingData, null, 2);
+
+	prompt = prompt.replace('{{jsonData}}', remainingDataJson.replace(/\n/g,'\n    '));
+	// Create the result string
+	let result = "A4D Fix Result:\n";
+	result += `=== GuidedJson ===\n${guidedJson || 'N/A'}\n\n`;
+	result += `=== Prompt ===\n${prompt || 'N/A'}\n\n`;
+	
+
+
+	// Get the LLM service instance
+	const llmService = await ServiceProvider.getService(ServiceType.LLMService, Constants.EXTENSION_ID);
+
+	// Call the LLM service with the generated prompt
+	const options: CallLLMOptions = {
+		parameters: {
+			guided_json: guidedJson
+		}
+	}
+	const llmResponse = await llmService.callLLM(prompt, randomUUID(), undefined, options);
+
+	result += `=== RESPONSE ===\n${llmResponse}\n\n`
+
+	result += `=== BEFORE CODE FIX ===\n${remainingData['codeContext']}\n\n`
+
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const parsedResponse: {fixedCodeAvailable: boolean, fixedCode: string, explanation: string} = JSON.parse(llmResponse);
+
+	result += `=== AFTER CODE FIX ===\n${parsedResponse['fixedCode']}\n\n`
+
+	return result;
 }
