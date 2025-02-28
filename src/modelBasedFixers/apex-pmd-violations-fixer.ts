@@ -35,7 +35,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         filteredDiagnostics.forEach((diagnostic) => {
             // Create a code action for each diagnostic
             const fixAction = new vscode.CodeAction(
-                `*** Fix with A4D: ${this.extractDiagnosticCode(diagnostic)} ***`,
+                `Fix ${this.extractDiagnosticCode(diagnostic)} using Agentforce.`,
                 vscode.CodeActionKind.QuickFix
             );
 
