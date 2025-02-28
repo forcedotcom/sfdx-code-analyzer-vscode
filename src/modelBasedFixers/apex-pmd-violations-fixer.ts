@@ -242,7 +242,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
 
             // Adjust for next lines, this line needs no changes
             if (line.endsWith('{')) {
-                indentLevel++;
+                braceLevel++;
             } else if (line.endsWith('(')) {
                 parenLevel++;
             } else if (line.endsWith('[')) {
