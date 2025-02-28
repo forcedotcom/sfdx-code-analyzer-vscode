@@ -6,7 +6,7 @@
  */
 import * as vscode from 'vscode';
 import {expect} from 'chai';
-import path = require('path');
+import * as path from 'path';
 import * as Constants from '../../lib/constants';
 import {_NoOpFixGenerator, _PmdFixGenerator, _ApexGuruFixGenerator} from '../../lib/fixer';
 
@@ -68,7 +68,6 @@ suite('fixer.ts', () => {
             });
 
             suite('Apex doc', () => {
-                let originalFileContents: string;
                 const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
 
                 let doc: vscode.TextDocument;
@@ -76,7 +75,6 @@ suite('fixer.ts', () => {
                 setup(async () => {
                     doc = await vscode.workspace.openTextDocument(fileUri);
 					await vscode.window.showTextDocument(doc);
-                    originalFileContents = doc.getText();
                 });
 
                 suite('Line-level suppression', () => {
@@ -160,8 +158,7 @@ suite('fixer.ts', () => {
                         test('Should find class start position above the diagnostic line', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(7, 4),
@@ -185,8 +182,7 @@ suite('fixer.ts', () => {
                         test('Should ignore class defined in single line comment', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(10, 0),
@@ -210,8 +206,7 @@ suite('fixer.ts', () => {
                         test('Should ignore class defined in a block comment comment', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(17, 0),
@@ -235,8 +230,7 @@ suite('fixer.ts', () => {
                         test('Should ignore class defined as a string', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(23, 0),
@@ -259,8 +253,7 @@ suite('fixer.ts', () => {
                         test('Should ignore inner class', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(27, 0),
@@ -426,65 +419,65 @@ suite('fixer.ts', () => {
                 const pattern = fixGenerator.singleLineCommentPattern;
     
                 // Matching cases
-                expect(pattern.test('// This is a single-line comment')).to.be.true;
+                expect(pattern.test('// This is a single-line comment')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a comment')).to.be.false;
-                expect(pattern.test('/* This is a block comment start */')).to.be.false;
+                expect(pattern.test('This is not a comment')).to.equal(false);
+                expect(pattern.test('/* This is a block comment start */')).to.equal(false);
             });
     
             test('blockCommentStartPattern matches block comment starts', () => {
                 const pattern = fixGenerator.blockCommentStartPattern;
     
                 // Matching cases
-                expect(pattern.test('/* This is a block comment start')).to.be.true;
-                expect(pattern.test('    /* This is an indented block comment start')).to.be.true;
+                expect(pattern.test('/* This is a block comment start')).to.equal(true);
+                expect(pattern.test('    /* This is an indented block comment start')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a comment')).to.be.false;
-                expect(pattern.test('// This is a single-line comment')).to.be.false;
-                expect(pattern.test('*/ This is a block comment end')).to.be.false;
+                expect(pattern.test('This is not a comment')).to.equal(false);
+                expect(pattern.test('// This is a single-line comment')).to.equal(false);
+                expect(pattern.test('*/ This is a block comment end')).to.equal(false);
             });
     
             test('blockCommentEndPattern matches block comment ends', () => {
                 const pattern = fixGenerator.blockCommentEndPattern;
     
                 // Matching cases
-                expect(pattern.test('*/')).to.be.true;
-                expect(pattern.test('    */ This is an indented block comment end')).to.be.true;
+                expect(pattern.test('*/')).to.equal(true);
+                expect(pattern.test('    */ This is an indented block comment end')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a comment')).to.be.false;
-                expect(pattern.test('// This is a single-line comment')).to.be.false;
-                expect(pattern.test('/* This is a block comment start')).to.be.false;
+                expect(pattern.test('This is not a comment')).to.equal(false);
+                expect(pattern.test('// This is a single-line comment')).to.equal(false);
+                expect(pattern.test('/* This is a block comment start')).to.equal(false);
             });
     
             test('classDeclarationPattern matches class declarations', () => {
                 const pattern = fixGenerator.classDeclarationPattern;
     
                 // Matching cases
-                expect(pattern.test('public class MyClass')).to.be.true;
-                expect(pattern.test('final public class MyClass')).to.be.true;
-                expect(pattern.test('   private static class MyClass')).to.be.true;
+                expect(pattern.test('public class MyClass')).to.equal(true);
+                expect(pattern.test('final public class MyClass')).to.equal(true);
+                expect(pattern.test('   private static class MyClass')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('class="MyClass"')).to.be.false; // HTML-like attribute
-                expect(pattern.test('String myClass = "some value"')).to.be.false;
+                expect(pattern.test('class="MyClass"')).to.equal(false); // HTML-like attribute
+                expect(pattern.test('String myClass = "some value"')).to.equal(false);
             });
     
             test('suppressionRegex matches @SuppressWarnings annotations', () => {
                 const pattern = fixGenerator.suppressionRegex;
     
                 // Matching cases
-                expect(pattern.test("@SuppressWarnings('PMD.Rule')")).to.be.true;
-                expect(pattern.test("@suppresswarnings('pmd.rule')")).to.be.true;
-                expect(pattern.test("@suppresswarnings('PMD.Rule')")).to.be.true;
-                expect(pattern.test('@SuppressWarnings("PMD.Rule")')).to.be.true;
+                expect(pattern.test("@SuppressWarnings('PMD.Rule')")).to.equal(true);
+                expect(pattern.test("@suppresswarnings('pmd.rule')")).to.equal(true);
+                expect(pattern.test("@suppresswarnings('PMD.Rule')")).to.equal(true);
+                expect(pattern.test('@SuppressWarnings("PMD.Rule")')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a suppression annotation')).to.be.false;
-                expect(pattern.test('@SuppressWarnings')).to.be.false;
-                expect(pattern.test('SuppressWarnings("PMD.Rule")')).to.be.false; // Missing '@'
+                expect(pattern.test('This is not a suppression annotation')).to.equal(false);
+                expect(pattern.test('@SuppressWarnings')).to.equal(false);
+                expect(pattern.test('SuppressWarnings("PMD.Rule")')).to.equal(false); // Missing '@'
             });
         });    
     });

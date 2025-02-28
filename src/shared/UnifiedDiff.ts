@@ -1,10 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 /**
  * Copyright (c) 2023, salesforce.com, inc.
  * All rights reserved.
@@ -415,7 +409,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    */
   public provideCodeLenses(
     document: vscode.TextDocument,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken
   ): vscode.CodeLens[] {
     const diff = this.unifiedDiffs.get(document.uri.toString());
@@ -431,7 +424,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    */
   public resolveCodeLens(
     codeLens: vscode.CodeLens,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken
   ) {
     return codeLens;
@@ -542,7 +534,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    * Document opened.
    * @param _document Document that was opened.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected onDocumentOpened(_document: vscode.TextDocument) {
     // noop
   }

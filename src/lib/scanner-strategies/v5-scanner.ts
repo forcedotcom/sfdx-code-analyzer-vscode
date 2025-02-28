@@ -90,7 +90,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 				if (status === 0) {
 					return res(stdout);
 				} else {
-					return rej(stderr);
+					return rej(new Error(stderr));
 				}
 			});
 		});
@@ -129,7 +129,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 				if (status === 0) {
 					res();
 				} else {
-					rej(stderr);
+					rej(new Error(stderr));
 				}
 			});
 		});

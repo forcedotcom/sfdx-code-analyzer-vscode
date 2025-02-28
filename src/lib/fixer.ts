@@ -94,7 +94,6 @@ export class _ApexGuruFixGenerator extends FixGenerator {
      * Generate an array of fixes, if possible.
      * @returns
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public generateFixes(processedLines: Set<number>, document: vscode.TextDocument, diagnostic: vscode.Diagnostic): vscode.CodeAction[] {
         console.log(diagnostic);
         const fixes: vscode.CodeAction[] = [];

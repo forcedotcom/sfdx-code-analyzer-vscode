@@ -33,7 +33,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockCustomConfigFile);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.pMD')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.pMD')).to.equal(true);
     });
 
     test('getGraphEngineDisableWarningViolations should return the disableWarningViolations setting', () => {
@@ -48,7 +48,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockDisableWarningViolations);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.equal(true);
     });
 
     test('getGraphEngineThreadTimeout should return the threadTimeout setting', () => {
@@ -63,7 +63,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockThreadTimeout);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.equal(true);
     });
 
     test('getGraphEnginePathExpansionLimit should return the pathExpansionLimit setting', () => {
@@ -78,7 +78,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockPathExpansionLimit);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.equal(true);
     });
 
     test('getGraphEngineJvmArgs should return the jvmArgs setting', () => {
@@ -93,7 +93,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockJvmArgs);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.graphEngine')).to.equal(true);
     });
 
     test('getAnalyzeOnSave should return the analyzeOnSave enabled setting', () => {
@@ -108,7 +108,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.analyzeOnSave')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.analyzeOnSave')).to.equal(true);
     });
 
     test('getAnalyzeOnOpen should return the analyzeOnOpen enabled setting', () => {
@@ -123,7 +123,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnOpenEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.analyzeOnOpen')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.analyzeOnOpen')).to.equal(true);
     });
 
     test('getEnginesToRun should return the engines setting', () => {
@@ -138,7 +138,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockEngines);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.scanner')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.scanner')).to.equal(true);
     });
 
     test('getNormalizeSeverityEnabled should return the normalizeSeverity enabled setting', () => {
@@ -153,7 +153,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockNormalizeSeverityEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.normalizeSeverity')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.normalizeSeverity')).to.equal(true);
     });
 
     test('getRulesCategory should return the rules category setting', () => {
@@ -168,7 +168,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockRulesCategory);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.rules')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.rules')).to.equal(true);
     });
 
     test('getApexGuruEnabled should return the apexGuru enabled setting', () => {
@@ -183,7 +183,7 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.apexGuru')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.apexGuru')).to.equal(true);
     });
 
     test('getSfgeDeltaRunsEnabled should return the delta runs enabled setting', () => {
@@ -198,6 +198,6 @@ suite('SettingsManager Test Suite', () => {
 
         // ===== ASSERTIONS =====
         expect(result).to.equal(mockAnalyzeOnSaveEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.partialGraphEngineScans')).to.be.true;
+        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.partialGraphEngineScans')).to.equal(true);
     });
 });

@@ -6,7 +6,6 @@
  */
 
 import {expect} from 'chai';
-import path = require('path');
 import {CoreExtensionService} from '../../lib/core-extension-service';
 
 suite('core-extension-service.ts', () => {

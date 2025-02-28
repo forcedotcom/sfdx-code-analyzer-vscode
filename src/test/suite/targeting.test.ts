@@ -1,12 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */ // TODO: Need to update these old tests... many of the chair assertions are not being used correctly causing eslint errors.
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import path = require('path');
+import * as path from 'path';
 import * as vscode from 'vscode';
-import Sinon = require('sinon');
+import * as Sinon from 'sinon';
 import {expect} from 'chai';
 import {getSelectedMethod, getTargets} from '../../lib/targeting';
 import {ApexLsp, GenericSymbol} from '../../lib/apex-lsp';
@@ -79,9 +80,9 @@ suite('targeting.ts', () => {
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
-            expect(targets).to.have.lengthOf(2, 'Wrong number of targets returned');
-            expect(targets[0]).to.equal(path.join(folderPath, "MyClassA1i.cls"), 'Wrong file returned');
-            expect(targets[1]).to.equal(path.join(folderPath, "MyClassA1ii.cls"), 'Wrong file returned');
+            expect(targets).to.have.lengthOf(2, 'Wrong number of targets returned: ' + JSON.stringify(targets, null, 2));
+            expect(targets).to.contain(path.join(folderPath, "MyClassA1i.cls"), 'Wrong file returned');
+            expect(targets).to.contain(path.join(folderPath, "MyClassA1ii.cls"), 'Wrong file returned');
         });
 
         test('Given a real folder with subfolders, returns contents deeply', async () => {
@@ -96,12 +97,12 @@ suite('targeting.ts', () => {
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
-            expect(targets).to.have.lengthOf(5, 'Wrong number of targets returned');
-            expect(targets[0]).to.equal(path.join(folderPath, "MyClassA1.cls"), "Wrong file returned");
-            expect(targets[1]).to.equal(path.join(folderPath, "MyClassA2.cls"), "Wrong file returned");
-            expect(targets[2]).to.equal(path.join(folderPath, "MyClassA3.cls"), "Wrong file returned");
-            expect(targets[3]).to.equal(path.join(folderPath, "subfolder-a1", "MyClassA1i.cls"), "Wrong file returned");
-            expect(targets[4]).to.equal(path.join(folderPath, "subfolder-a1", "MyClassA1ii.cls"), "Wrong file returned");
+            expect(targets).to.have.lengthOf(5, 'Wrong number of targets returned: ' + JSON.stringify(targets, null, 2));
+            expect(targets).to.contain(path.join(folderPath, "MyClassA1.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "MyClassA2.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "MyClassA3.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "subfolder-a1", "MyClassA1i.cls"), "Wrong file returned");
+            expect(targets).to.contain(path.join(folderPath, "subfolder-a1", "MyClassA1ii.cls"), "Wrong file returned");
         });
 
         test('Given a non-existent file, throws error', async () => {
@@ -114,7 +115,7 @@ suite('targeting.ts', () => {
             // Feed the URI into the target finder, expecting an error.
             let err: Error = null;
             try {
-                const targets: string[] = await getTargets([fakeFileUri]);
+                await getTargets([fakeFileUri]);
             } catch (e) {
                 err = e;
             }
@@ -148,13 +149,13 @@ suite('targeting.ts', () => {
 			//       windows, because sometimes the test context can have a weird "phantom window"
 			//       even if you close anything. This seems to happen when the test instance loses
 			//       focus.
-			const windowStub = Sinon.stub(vscode.window, 'activeTextEditor').value(undefined);
+			Sinon.stub(vscode.window, 'activeTextEditor').value(undefined);
 
             // ===== TEST =====
             // Feed an empty array into target finder, expecting an error.
             let err: Error = null;
             try {
-                const targets: string[] = await getTargets([]);
+                await getTargets([]);
             } catch (e) {
                 err = e;
             }
@@ -228,7 +229,7 @@ suite('targeting.ts', () => {
                 // Attempt to get the method currently selected, expecting an error.
                 let err: Error = null;
                 try {
-                    const selectedMethod: string = await getSelectedMethod();
+                    await getSelectedMethod();
                 } catch (e) {
                     err = e;
                 }

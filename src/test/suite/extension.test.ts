@@ -1,14 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */ // TODO: Need to update these old tests... many of the chair assertions are not being used correctly causing eslint errors.
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import * as assert from 'assert';
 import {expect} from 'chai';
-import path = require('path');
+import * as path from 'path';
 import {SfCli} from '../../lib/sf-cli';
-import Sinon = require('sinon');
+import * as Sinon from 'sinon';
 import { _runAndDisplayScanner, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
 import {SettingsManagerImpl} from '../../lib/settings';
@@ -27,12 +27,11 @@ suite('Extension Test Suite', () => {
 	const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
 
 	suite('E2E', () => {
-		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-		let context: vscode.ExtensionContext;
+		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
-			context = await ext.activate();
+			await ext.activate();
 		});
 
 		setup(function () {
@@ -40,7 +39,7 @@ suite('Extension Test Suite', () => {
 			// Verify that there are no existing diagnostics floating around.
 			const diagnosticsArrays = vscode.languages.getDiagnostics();
 			for (const [uri, diagnostics] of diagnosticsArrays) {
-				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.be.empty;
+				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.equal
 			}
 			// Set custom settings
 			const configuration = vscode.workspace.getConfiguration();
@@ -313,14 +312,12 @@ suite('Extension Test Suite', () => {
 				const fakeTelemetryName = 'FakeName';
 
 				// ===== TEST =====
-				// Attempt to run the appropriate extension command, expecting an error.
-				let err: Error = null;
 				try {
 					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName
 					}, null, ['someMethod'], 'some/project/dir', stubTelemetryService);
-				} catch (e) {
-					err = e;
+				} catch (_e) {
+					// Spy will check the error
 				}
 
 				// ===== ASSERTIONS =====
@@ -380,7 +377,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_shouldProceedWithDfaRun()', () => {
-		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
 
 		suiteSetup(async function () {
@@ -415,7 +412,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_stopExistingDfaRun()', () => {
-        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
         suiteSetup(async function () {
@@ -661,11 +658,11 @@ class StubTelemetryService implements TelemetryService {
 
 	private exceptionCalls: TelemetryExceptionData[] = [];
 
-	public sendExtensionActivationEvent(hrStart: [number, number]): void {
+	public sendExtensionActivationEvent(_hrStart: [number, number]): void {
 		// NO-OP
 	}
 
-	public sendCommandEvent(key: string, data: Properties): void {
+	public sendCommandEvent(_key: string, _data: Properties): void {
 		// NO-OP
 	}
 
@@ -687,7 +684,7 @@ class StubTelemetryService implements TelemetryService {
 }
 
 class StubDiagnosticManager implements DiagnosticManager {
-	public displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void {
+	public displayAsDiagnostics(_allTargets: string[], _convertibles: DiagnosticConvertible[]): void {
 		// NO-OP
 	}
 }
