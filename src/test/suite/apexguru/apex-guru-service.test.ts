@@ -6,7 +6,7 @@
  */
 
 import {expect} from 'chai';
-import Sinon = require('sinon');
+import * as Sinon from 'sinon';
 import {DiagnosticConvertible} from '../../../lib/diagnostics';
 import {CoreExtensionService} from '../../../lib/core-extension-service';
 import * as Constants from '../../../lib/constants';
@@ -18,7 +18,7 @@ import { Connection } from '../../../lib/core-extension-service';
 import * as vscode from 'vscode';
 
 suite('Apex Guru Test Suite', () => {
-    let outputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
+    const outputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
 
 	  suite('#_isApexGuruEnabledInOrg', () => {
         let getConnectionStub: Sinon.SinonStub;
@@ -43,7 +43,7 @@ suite('Apex Guru Test Suite', () => {
             const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
 
             // ===== ASSERTIONS =====
-            expect(result).to.be.true;
+            expect(result).to.equal(true);
             Sinon.assert.calledOnce(getConnectionStub);
             Sinon.assert.calledOnce(requestStub);
             Sinon.assert.calledWith(requestStub, {
@@ -63,7 +63,7 @@ suite('Apex Guru Test Suite', () => {
             const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
 
             // ===== ASSERTIONS =====
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
             Sinon.assert.calledOnce(getConnectionStub);
             Sinon.assert.calledOnce(requestStub);
             Sinon.assert.calledWith(requestStub, {
@@ -83,7 +83,7 @@ suite('Apex Guru Test Suite', () => {
             const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
 
             // ===== ASSERTIONS =====
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
             Sinon.assert.calledOnce(getConnectionStub);
             Sinon.assert.calledOnce(requestStub);
             Sinon.assert.calledWith(requestStub, {
@@ -144,7 +144,7 @@ suite('Apex Guru Test Suite', () => {
             // ===== TEST =====
             try {
               await ApexGuruFunctions.initiateApexGuruRequest(vscode.Uri.file('dummyPath'), outputChannel, connection);
-            } catch (e) {
+            } catch (_e) {
               // ===== ASSERTIONS =====
               Sinon.assert.calledOnce(outputChannelSpy);
               Sinon.assert.calledWith(outputChannelSpy, Sinon.match.string);
@@ -288,7 +288,7 @@ suite('Apex Guru Test Suite', () => {
 
             // ===== ASSERTIONS =====
             expect(response).to.deep.equal(queryResponse);
-            expect(connectionStub.request.calledOnce).to.be.true;
+            expect(connectionStub.request.calledOnce).to.equal(true);
         });
 
         test('Retries until successful response within timeout', async () => {

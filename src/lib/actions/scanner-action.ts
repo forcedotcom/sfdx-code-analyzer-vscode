@@ -50,7 +50,6 @@ export class ScannerAction {
 		});
 
 		// This has to be a floating promise, because progress bars won't disappear otherwise.
-		// eslint-disable-next-line @typescript-eslint/no-floating-promises
 		this.display.displayResults(workspaceTargets, results);
 	}
 }

@@ -8,7 +8,7 @@ import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './settings';
 import {ExecutionResult} from '../types';
 import * as Constants from './constants';
-import cspawn = require('cross-spawn');
+import * as cspawn from 'cross-spawn';
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.

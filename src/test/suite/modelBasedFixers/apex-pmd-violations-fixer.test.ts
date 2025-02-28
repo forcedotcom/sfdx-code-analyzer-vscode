@@ -29,7 +29,7 @@ suite('apex-pmd-violations-fixer.ts', () => {
             const codeAction = new vscode.CodeAction('Test Action', vscode.CodeActionKind.QuickFix);
             
             const result = await fixer.resolveCodeAction(codeAction, token);
-            expect(result).to.be.null;
+            expect(result).to.equal(null);
         });
     });
 
@@ -199,7 +199,7 @@ suite('apex-pmd-violations-fixer.ts', () => {
             } as vscode.Diagnostic;
     
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
-            expect(result).to.be.true;
+            expect(result).to.equal(true);
         });
     
         test('returns true for supported rule as string', () => {
@@ -208,7 +208,7 @@ suite('apex-pmd-violations-fixer.ts', () => {
             } as vscode.Diagnostic;
     
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
         });
     
         test('returns false for unsupported rule', () => {
@@ -217,14 +217,14 @@ suite('apex-pmd-violations-fixer.ts', () => {
             } as vscode.Diagnostic;
     
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
         });
     
         test('returns false for diagnostic without code', () => {
             const diagnostic: vscode.Diagnostic = {} as vscode.Diagnostic;
     
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
         });
     });
 

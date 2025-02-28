@@ -1,17 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */ // TODO: Need to update these old tests... many of the chair assertions are not being used correctly causing eslint errors.
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import path = require('path');
+import * as path from 'path';
 import {expect} from 'chai';
 import {SettingsManager} from '../../lib/settings';
 import {ScanRunner} from '../../lib/scanner';
 import * as vscode from 'vscode';
 import * as Constants from '../../lib/constants';
 
-import {ExecutionResult, RuleResult} from '../../types';
+import {ExecutionResult} from '../../types';
 
 suite('ScanRunner', () => {
 
@@ -33,6 +34,8 @@ suite('ScanRunner', () => {
 
             // ===== TEST =====
             // Use the scan runner on our target list to create and return our arg array.
+            
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             const args: string[] = (scanner as any).createDfaArgArray(targets, projectDir);
 
             // ===== ASSERTIONS =====
@@ -88,6 +91,7 @@ suite('ScanRunner', () => {
                 // ===== TEST =====
                 // Call the test method helper.
                 const scanner: ScanRunner = new ScanRunner(settingsManager);
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
 
                 // ===== ASSERTIONS =====
@@ -107,6 +111,7 @@ suite('ScanRunner', () => {
                 // ===== TEST =====
                 // Call the test method helper.
                 const scanner: ScanRunner = new ScanRunner(settingsManager);
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
 
                 // ===== ASSERTIONS =====
@@ -212,6 +217,7 @@ suite('ScanRunner', () => {
                 // ===== TEST =====
                 // Call the test method helper.
                 const scanner: ScanRunner = new ScanRunner(settingsManager);
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?c
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir, 'some/path/file.json');
 
                 // ===== ASSERTIONS =====
@@ -241,6 +247,7 @@ suite('ScanRunner', () => {
             // ===== TEST =====
             // Feed the results into the processor.
             const scanner = new ScanRunner();
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
 
             // ===== ASSERTIONS =====
@@ -260,6 +267,7 @@ suite('ScanRunner', () => {
             // ===== TEST =====
             // Feed the results into the processor.
             const scanner = new ScanRunner();
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
 
             // ===== ASSERTIONS =====
@@ -286,7 +294,8 @@ suite('ScanRunner', () => {
             const scanner = new ScanRunner();
             let err: Error = null;
             try {
-                const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
+                (scanner as any).processDfaResults(spoofedOutput);
             } catch (e) {
                 err = e;
             }
@@ -309,7 +318,8 @@ suite('ScanRunner', () => {
             const scanner = new ScanRunner();
             let err: Error = null;
             try {
-                const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
+                /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
+                (scanner as any).processDfaResults(spoofedOutput);
             } catch (e) {
                 err = e;
             }
@@ -321,7 +331,7 @@ suite('ScanRunner', () => {
     });
 
     suite('#invokeDfaAnalyzer()', () => {
-        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
 
 		suiteSetup(async function () {
@@ -337,6 +347,7 @@ suite('ScanRunner', () => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
             // ===== TEST =====
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             (scanner as any).invokeDfaAnalyzer(args, context);
 
             // ===== ASSERTIONS =====

@@ -6,7 +6,7 @@
  */
 import * as vscode from 'vscode';
 import {expect} from 'chai';
-import path = require('path');
+import * as path from 'path';
 import {DiagnosticConvertible, DiagnosticManagerImpl} from '../../lib/diagnostics';
 
 suite('diagnostics.ts', () => {

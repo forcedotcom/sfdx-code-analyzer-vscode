@@ -42,7 +42,6 @@ export class CoreExtensionService {
 		}
 
 		// We know that there has to be a `version` property on the package.json object.
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 		const coreExtensionVersion = (coreExtension.packageJSON.version) as string;
 		if (!this.isAboveMinimumRequiredVersion(MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, coreExtensionVersion)) {
 			console.log(`${CORE_EXTENSION_ID} below minimum viable version; cannot load core dependencies. Returning undefined instead.`);

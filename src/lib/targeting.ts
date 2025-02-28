@@ -93,7 +93,6 @@ export async function getSelectedMethod(): Promise<string> {
     } else {
         // Without the Apex Language Server, we'll take the quick-and-dirty route
         // of just identifying the exact word the user selected, and assuming that's the name of a method.
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         vscode.window.showWarningMessage(messages.targeting.warnings.apexLspUnavailable);
         const wordRange: vscode.Range = textDocument.getWordRangeAtPosition(cursorPosition);
         return `${fileName}#${textDocument.getText(wordRange)}`;
