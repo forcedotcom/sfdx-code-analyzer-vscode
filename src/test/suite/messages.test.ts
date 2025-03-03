@@ -12,7 +12,7 @@ suite('messages Test Suite', () => {
             const result = messages.diagnostics.source.isSource(source);
 
             // ===== ASSERTIONS =====
-            expect(result).to.be.true;
+            expect(result).to.equal(true);
         });
 
         test('isSource should return false if the source does not end with " via Code Analyzer"', () => {
@@ -23,18 +23,18 @@ suite('messages Test Suite', () => {
             const result = messages.diagnostics.source.isSource(source);
 
             // ===== ASSERTIONS =====
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
         });
 
         test('isSource should return false if the source is undefined', () => {
             // ===== SETUP =====
-            const source = undefined;
+            const source: string = undefined;
 
             // ===== TEST =====
             const result = messages.diagnostics.source.isSource(source);
 
             // ===== ASSERTIONS =====
-            expect(result).to.be.false;
+            expect(result).to.equal(false);
         });
     });
     suite('#extractEngine()', () => {
@@ -51,13 +51,13 @@ suite('messages Test Suite', () => {
     
         test('extractEngine should return undefined if the source is undefined', () => {
             // ===== SETUP =====
-            const source = undefined;
+            const source: string = undefined;
     
             // ===== TEST =====
             const result = messages.diagnostics.source.extractEngine(source);
     
             // ===== ASSERTIONS =====
-            expect(result).to.be.undefined;
+            expect(result).to.equal(undefined);
         });
     
         test('extractEngine should return an empty string if the source is an empty string', () => {

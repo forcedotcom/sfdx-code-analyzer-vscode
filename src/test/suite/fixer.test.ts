@@ -6,7 +6,7 @@
  */
 import * as vscode from 'vscode';
 import {expect} from 'chai';
-import path = require('path');
+import * as path from 'path';
 import * as Constants from '../../lib/constants';
 import {_NoOpFixGenerator, _PmdFixGenerator, _ApexGuruFixGenerator} from '../../lib/fixer';
 
@@ -68,7 +68,6 @@ suite('fixer.ts', () => {
             });
 
             suite('Apex doc', () => {
-                let originalFileContents: string;
                 const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
 
                 let doc: vscode.TextDocument;
@@ -76,12 +75,11 @@ suite('fixer.ts', () => {
                 setup(async () => {
                     doc = await vscode.workspace.openTextDocument(fileUri);
 					await vscode.window.showTextDocument(doc);
-                    originalFileContents = doc.getText();
                 });
 
                 suite('Line-level suppression', () => {
                     const existingFixes = new Set<number>(); 
-                    test('Appends suppression to end of commentless line', async () => {
+                    test('Appends suppression to end of commentless line', () => {
                         // Create our fake diagnostic, positioned at the line with no comment at the end.
                         const diag = new vscode.Diagnostic(
                             new vscode.Range(
@@ -105,7 +103,7 @@ suite('fixer.ts', () => {
                         expect(fix.range.start.isEqual(new vscode.Position(7, Number.MAX_SAFE_INTEGER))).to.equal(true, 'Should be at the end of the violation line');
                     });
 
-                    test('Does not add suppression if suppression for that same line already exists', async () => {
+                    test('Does not add suppression if suppression for that same line already exists', () => {
                         existingFixes.add(7);
                         // Create our fake diagnostic whose start position is the same as the existing fix already added
                         const diag = new vscode.Diagnostic(
@@ -160,8 +158,7 @@ suite('fixer.ts', () => {
                         test('Should find class start position above the diagnostic line', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(7, 4),
@@ -185,8 +182,7 @@ suite('fixer.ts', () => {
                         test('Should ignore class defined in single line comment', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(10, 0),
@@ -210,8 +206,7 @@ suite('fixer.ts', () => {
                         test('Should ignore class defined in a block comment comment', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(17, 0),
@@ -235,8 +230,7 @@ suite('fixer.ts', () => {
                         test('Should ignore class defined as a string', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(23, 0),
@@ -259,8 +253,7 @@ suite('fixer.ts', () => {
                         test('Should ignore inner class', async () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
 
-                            let doc: vscode.TextDocument;
-                            doc = await vscode.workspace.openTextDocument(fileUri);
+                            await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
                                 new vscode.Range(
                                     new vscode.Position(27, 0),
@@ -286,21 +279,21 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
 
-                    test('Should generate the correct suppression tag for Apex language', async () => {
+                    test('Should generate the correct suppression tag for Apex language', () => {
                         const suppressionRule = 'rule1';
                         const lang = 'apex';
                         const expectedSuppressionTag = `@SuppressWarnings('${suppressionRule}')\n`;
                         expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should generate the correct suppression tag for Java language', async () => {
+                    test('Should generate the correct suppression tag for Java language', () => {
                         const suppressionRule = 'rule2';
                         const lang = 'java';
                         const expectedSuppressionTag = `@SuppressWarnings("${suppressionRule}")\n`;
                         expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should return an empty string for unsupported languages', async () => {
+                    test('Should return an empty string for unsupported languages', () => {
                         const suppressionRule = 'rule3';
                         const lang = 'python'; // Assuming python as an unsupported language
                         expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal('');
@@ -310,21 +303,21 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
                 
-                    test('Should generate the correct suppression tag for Apex language with single quotes', async () => {
+                    test('Should generate the correct suppression tag for Apex language with single quotes', () => {
                         const updatedRules = 'rule1';
                         const lang = 'apex';
                         const expectedSuppressionTag = `@SuppressWarnings('${updatedRules}')`;
                         expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should generate the correct suppression tag for Java language with double quotes', async () => {
+                    test('Should generate the correct suppression tag for Java language with double quotes', () => {
                         const updatedRules = 'rule2';
                         const lang = 'java';
                         const expectedSuppressionTag = `@SuppressWarnings("${updatedRules}")`;
                         expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should return an empty string for unsupported languages', async () => {
+                    test('Should return an empty string for unsupported languages', () => {
                         const updatedRules = 'rule3';
                         const lang = 'python'; // Assuming python as an unsupported language
                         expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal('');
@@ -334,7 +327,7 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
                 
-                    test('Should find the correct line before class start declaration when it is not the first line', async () => {
+                    test('Should find the correct line before class start declaration when it is not the first line', () => {
                         const classStartPosition = new vscode.Position(2, 0);
                         const document = {
                             lineAt: (lineNumber: number) => {
@@ -352,7 +345,7 @@ suite('fixer.ts', () => {
                         expect(line).to.equal('This is line 1');
                     });
 
-                    test('Should return empty string when class declaration is the first line', async () => {
+                    test('Should return empty string when class declaration is the first line', () => {
                         const classStartPosition = new vscode.Position(0, 0);
                         const document = {
                             lineAt: (lineNumber: number) => {
@@ -374,35 +367,35 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
                 
-                    test('Should return true if the match is within single quotes', async () => {
+                    test('Should return true if the match is within single quotes', () => {
                         const line = "This is 'a matching string'";
                         const matchIndex = 15; // Index where match occurs within the string
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(true);
                     });
                 
-                    test('Should return true if the match is within double quotes', async () => {
+                    test('Should return true if the match is within double quotes', () => {
                         const line = 'This is "a matching string"';
                         const matchIndex = 21; // Index where match occurs within the string
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(true);
                     });
                 
-                    test('Should return false if the match is not within quotes', async () => {
+                    test('Should return false if the match is not within quotes', () => {
                         const line = 'This is a line without quotes';
                         const matchIndex = 5; // Index where match occurs within the string
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(false);
                     });
                 
-                    test('Should return false if the match is at the start of a string within quotes', async () => {
+                    test('Should return false if the match is at the start of a string within quotes', () => {
                         const line = "'quotes' is at the start of a string";
                         const matchIndex = 10; // Index where match occurs within the string and it is after the quotes
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(false);
                     });
                 
-                    test('Should return true if the match is at the start of a string but quotes is not closed', async () => {
+                    test('Should return true if the match is at the start of a string but quotes is not closed', () => {
                         // This is an extreme case where someone opens a quote and has class defined in it
                         // and the closure of the quote is not on the same line.
                         const line = "'quotes is at the start of a string";
@@ -426,65 +419,65 @@ suite('fixer.ts', () => {
                 const pattern = fixGenerator.singleLineCommentPattern;
     
                 // Matching cases
-                expect(pattern.test('// This is a single-line comment')).to.be.true;
+                expect(pattern.test('// This is a single-line comment')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a comment')).to.be.false;
-                expect(pattern.test('/* This is a block comment start */')).to.be.false;
+                expect(pattern.test('This is not a comment')).to.equal(false);
+                expect(pattern.test('/* This is a block comment start */')).to.equal(false);
             });
     
             test('blockCommentStartPattern matches block comment starts', () => {
                 const pattern = fixGenerator.blockCommentStartPattern;
     
                 // Matching cases
-                expect(pattern.test('/* This is a block comment start')).to.be.true;
-                expect(pattern.test('    /* This is an indented block comment start')).to.be.true;
+                expect(pattern.test('/* This is a block comment start')).to.equal(true);
+                expect(pattern.test('    /* This is an indented block comment start')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a comment')).to.be.false;
-                expect(pattern.test('// This is a single-line comment')).to.be.false;
-                expect(pattern.test('*/ This is a block comment end')).to.be.false;
+                expect(pattern.test('This is not a comment')).to.equal(false);
+                expect(pattern.test('// This is a single-line comment')).to.equal(false);
+                expect(pattern.test('*/ This is a block comment end')).to.equal(false);
             });
     
             test('blockCommentEndPattern matches block comment ends', () => {
                 const pattern = fixGenerator.blockCommentEndPattern;
     
                 // Matching cases
-                expect(pattern.test('*/')).to.be.true;
-                expect(pattern.test('    */ This is an indented block comment end')).to.be.true;
+                expect(pattern.test('*/')).to.equal(true);
+                expect(pattern.test('    */ This is an indented block comment end')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a comment')).to.be.false;
-                expect(pattern.test('// This is a single-line comment')).to.be.false;
-                expect(pattern.test('/* This is a block comment start')).to.be.false;
+                expect(pattern.test('This is not a comment')).to.equal(false);
+                expect(pattern.test('// This is a single-line comment')).to.equal(false);
+                expect(pattern.test('/* This is a block comment start')).to.equal(false);
             });
     
             test('classDeclarationPattern matches class declarations', () => {
                 const pattern = fixGenerator.classDeclarationPattern;
     
                 // Matching cases
-                expect(pattern.test('public class MyClass')).to.be.true;
-                expect(pattern.test('final public class MyClass')).to.be.true;
-                expect(pattern.test('   private static class MyClass')).to.be.true;
+                expect(pattern.test('public class MyClass')).to.equal(true);
+                expect(pattern.test('final public class MyClass')).to.equal(true);
+                expect(pattern.test('   private static class MyClass')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('class="MyClass"')).to.be.false; // HTML-like attribute
-                expect(pattern.test('String myClass = "some value"')).to.be.false;
+                expect(pattern.test('class="MyClass"')).to.equal(false); // HTML-like attribute
+                expect(pattern.test('String myClass = "some value"')).to.equal(false);
             });
     
             test('suppressionRegex matches @SuppressWarnings annotations', () => {
                 const pattern = fixGenerator.suppressionRegex;
     
                 // Matching cases
-                expect(pattern.test("@SuppressWarnings('PMD.Rule')")).to.be.true;
-                expect(pattern.test("@suppresswarnings('pmd.rule')")).to.be.true;
-                expect(pattern.test("@suppresswarnings('PMD.Rule')")).to.be.true;
-                expect(pattern.test('@SuppressWarnings("PMD.Rule")')).to.be.true;
+                expect(pattern.test("@SuppressWarnings('PMD.Rule')")).to.equal(true);
+                expect(pattern.test("@suppresswarnings('pmd.rule')")).to.equal(true);
+                expect(pattern.test("@suppresswarnings('PMD.Rule')")).to.equal(true);
+                expect(pattern.test('@SuppressWarnings("PMD.Rule")')).to.equal(true);
     
                 // Non-matching cases
-                expect(pattern.test('This is not a suppression annotation')).to.be.false;
-                expect(pattern.test('@SuppressWarnings')).to.be.false;
-                expect(pattern.test('SuppressWarnings("PMD.Rule")')).to.be.false; // Missing '@'
+                expect(pattern.test('This is not a suppression annotation')).to.equal(false);
+                expect(pattern.test('@SuppressWarnings')).to.equal(false);
+                expect(pattern.test('SuppressWarnings("PMD.Rule")')).to.equal(false); // Missing '@'
             });
         });    
     });
@@ -501,7 +494,7 @@ suite('fixer.ts', () => {
                 await vscode.window.showTextDocument(doc);
             });
     
-            test('Should generate a suppression fix if line is not processed', async () => {
+            test('Should generate a suppression fix if line is not processed', () => {
                 // Create a fake diagnostic.
                 const diag = new vscode.Diagnostic(
                     new vscode.Range(
@@ -533,7 +526,7 @@ suite('fixer.ts', () => {
                 expect(fixes[0].command.command).to.equal(Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS);
             });
     
-            test('Should not generate a suppression fix if line is already processed', async () => {
+            test('Should not generate a suppression fix if line is already processed', () => {
                 processedLines.add(7);
     
                 // Create a fake diagnostic.
@@ -575,7 +568,7 @@ suite('fixer.ts', () => {
                 await vscode.window.showTextDocument(doc);
             });
 
-            test('Should generate the correct ApexGuru suppression code action', async () => {
+            test('Should generate the correct ApexGuru suppression code action', () => {
                 // Create a fake diagnostic.
                 const diag = new vscode.Diagnostic(
                     new vscode.Range(

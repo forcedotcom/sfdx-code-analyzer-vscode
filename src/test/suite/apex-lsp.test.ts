@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import Sinon = require('sinon');
+import * as Sinon from 'sinon';
 import {expect} from 'chai';
 import * as vscode from 'vscode';
 import { ApexLsp } from '../../lib/apex-lsp';
 
 suite('ScanRunner', () => {
-    let executeCommandStub: sinon.SinonStub;
+    let executeCommandStub: Sinon.SinonStub;
 
     setup(() => {
         executeCommandStub = Sinon.stub(vscode.commands, 'executeCommand');
@@ -36,7 +36,7 @@ suite('ScanRunner', () => {
 
         const result = await ApexLsp.getSymbols(documentUri);
 
-        expect(executeCommandStub.calledOnceWith('vscode.executeDocumentSymbolProvider', documentUri)).to.be.true;
+        expect(executeCommandStub.calledOnceWith('vscode.executeDocumentSymbolProvider', documentUri)).to.equal(true);
         expect(result).to.deep.equal(symbols);
     });
 });

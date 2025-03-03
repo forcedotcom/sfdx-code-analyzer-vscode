@@ -6,23 +6,20 @@
  */
 
 import {expect} from 'chai';
-import Sinon = require('sinon');
+import * as Sinon from 'sinon';
 import proxyquire from 'proxyquire';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
-import * as vscode from 'vscode';
 
 suite('Delta Run Test Suite', () => {
   suite('#getDeltaRunTarget', () => {
     let readFileSyncStub: Sinon.SinonStub;
-    let getDeltaRunTarget: Function;
-  
+    let getDeltaRunTarget: (sfgecachepath: string, savedFilesCache :Set<string>) => void;
+   
     // Set up stubs and mock the fs module
     setup(() => {
       readFileSyncStub = Sinon.stub();
   
       // Load the module with the mocked fs dependency
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const mockedModule = proxyquire('../../../deltarun/delta-run-service', {
         fs: {
           readFileSync: readFileSyncStub
@@ -30,6 +27,7 @@ suite('Delta Run Test Suite', () => {
       });
   
       // Get the function from the module
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       getDeltaRunTarget = mockedModule.getDeltaRunTarget;
     });
   

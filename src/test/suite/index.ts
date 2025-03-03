@@ -1,3 +1,4 @@
+/* eslint-disable */
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
@@ -5,8 +6,8 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as path from 'path';
-import Mocha = require('mocha');
-import NYC = require('nyc');
+import * as Mocha from 'mocha';
+import * as NYC from 'nyc';
 import * as glob from 'glob';
 
 // Simulates the recommended config option for NYC,
@@ -21,7 +22,7 @@ import "source-map-support/register";
 // Linux: Preventing a weird NPE when Mocah on Linux requires the Window Size
 // from the TTY. Since we're not running in a TTY environment, just statically
 // implement the method.
-import tty = require('tty');
+import * as tty from 'tty';
 if (!('getWindowSize' in tty)) {
 	tty['getWindowSize'] = (): number[] => {
 		return [80, 75];
@@ -31,7 +32,7 @@ if (!('getWindowSize' in tty)) {
 export async function run(): Promise<void> {
 
 	// Set up coverage pre-test, including post-test hook to report.
-	const nyc = new NYC({
+	const nyc = new NYC.default({
 		...baseConfig,
 		cwd: path.join(__dirname, '..', '..', '..'),
 		reporter: ['text-summary', 'html'],
@@ -55,12 +56,12 @@ export async function run(): Promise<void> {
 	Object.keys(require.cache).filter(f => nyc.exclude.shouldInstrument(f)).forEach(m => {
 		console.warn('Module loaded before NYC, invalidating: ', m);
 		delete require.cache[m];
-		require(m);
+		import(m);
 	});
 
 
 	// Create the mocha test
-	const mocha = new Mocha({
+	const mocha = new Mocha.default({
 		ui: 'tdd',
 		color: true
 	});
@@ -98,8 +99,9 @@ export async function run(): Promise<void> {
 	}
 }
 
-async function captureStdout(fn) {
-	let w = process.stdout.write, buffer = '';
+async function captureStdout(fn: () => Promise<void>): Promise<string> {
+	const w = process.stdout.write;
+	let buffer = '';
 	process.stdout.write = (s) => {buffer = buffer + s; return true;}
 	await fn();
 	process.stdout.write = w;

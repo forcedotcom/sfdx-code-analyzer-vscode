@@ -16,7 +16,7 @@ export async function exists(fileName: string): Promise<boolean> {
     try {
         await fs.access(fileName, fsConstants.F_OK);
         return true;
-    } catch (e) {
+    } catch (_e) {
         return false;
     }
 }
@@ -30,7 +30,7 @@ export async function isDir(fileName: string): Promise<boolean> {
     try {
         await fs.access(fileName, fsConstants.F_OK);
         return (await fs.stat(fileName)).isDirectory();
-    } catch (e) {
+    } catch (_e) {
         return false;
     }
 }

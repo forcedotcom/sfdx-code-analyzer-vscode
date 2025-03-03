@@ -6,7 +6,7 @@
  */
 
 import {expect} from 'chai';
-import path = require('path');
+import * as path from 'path';
 import {exists, isDir} from '../../lib/file';
 
 suite('file.ts', () => {
@@ -15,26 +15,26 @@ suite('file.ts', () => {
     suite('#exists()', () => {
         
         test('Returns true when file exists.', async () => {
-         expect(await exists(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.be.true;
+         expect(await exists(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.equal(true);
         });
 
         test('Returns true when file exists.', async () => {
-            expect(await exists(path.join(codeFixturesPath, 'folder-a', 'UnknownFile.cls'))).to.be.false;
+            expect(await exists(path.join(codeFixturesPath, 'folder-a', 'UnknownFile.cls'))).to.equal(false);
         });
     });
 
     suite('#isDir()', () => {
         
         test('Returns true when dir exists.', async () => {
-         expect(await isDir(path.join(codeFixturesPath, 'folder-a'))).to.be.true;
+         expect(await isDir(path.join(codeFixturesPath, 'folder-a'))).to.equal(true);
         });
 
         test('Returns true when dir not exists.', async () => {
-            expect(await isDir(path.join(codeFixturesPath, 'unknown-folder-a'))).to.be.false;
+            expect(await isDir(path.join(codeFixturesPath, 'unknown-folder-a'))).to.equal(false);
         });
 
         test('Returns false for a file.', async () => {
-            expect(await isDir(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.be.false;
+            expect(await isDir(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.equal(false);
         });
     });
 });

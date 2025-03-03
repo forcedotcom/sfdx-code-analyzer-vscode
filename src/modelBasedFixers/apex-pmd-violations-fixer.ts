@@ -19,7 +19,6 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         document: vscode.TextDocument,
         range: vscode.Range,
         context: vscode.CodeActionContext,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _token: vscode.CancellationToken
     ): vscode.CodeAction[] {
         const codeActions: vscode.CodeAction[] = [];

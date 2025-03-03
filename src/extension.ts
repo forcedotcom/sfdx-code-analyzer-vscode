@@ -306,7 +306,8 @@ export function createTempDirectory(): string {
 		const folder = fs.mkdtempSync(tempFolderPrefix);
 		return folder;
 	} catch (err) {
-		throw new Error('Failed to create temporary directory');
+		const errMsg: string = err instanceof Error ? err.message : String(err);
+		throw new Error(`Failed to create temporary directory:\n${errMsg}`);
 	}
 }
 
@@ -504,7 +505,6 @@ export async function _runAndDisplayScanner(commandName: string, targets: string
 		});
 		// This has to be a floating promise, since the command won't complete until
 		// the error is dismissed.
-		// eslint-disable-next-line @typescript-eslint/no-floating-promises
 		vscode.window.showErrorMessage(messages.error.analysisFailedGenerator(errMsg));
 		outputChannel.error(errMsg);
 		outputChannel.show();
@@ -554,7 +554,6 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 		});
 		// This has to be a floating promise, since the command won't complete until
 		// the error is dismissed.
-		// eslint-disable-next-line @typescript-eslint/no-floating-promises
 		vscode.window.showErrorMessage(messages.error.analysisFailedGenerator(errMsg));
 		outputChannel.error(errMsg)
 		outputChannel.show();

@@ -1,14 +1,14 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */ // TODO: Need to update these old tests... many of the chair assertions are not being used correctly causing eslint errors.
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
-import * as assert from 'assert';
 import {expect} from 'chai';
-import path = require('path');
+import * as path from 'path';
 import {SfCli} from '../../lib/sf-cli';
-import Sinon = require('sinon');
+import * as Sinon from 'sinon';
 import { _runAndDisplayScanner, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
 import {messages} from '../../lib/messages';
 import {SettingsManagerImpl} from '../../lib/settings';
@@ -27,12 +27,11 @@ suite('Extension Test Suite', () => {
 	const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
 
 	suite('E2E', () => {
-		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-		let context: vscode.ExtensionContext;
+		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
-			context = await ext.activate();
+			await ext.activate();
 		});
 
 		setup(function () {
@@ -313,14 +312,12 @@ suite('Extension Test Suite', () => {
 				const fakeTelemetryName = 'FakeName';
 
 				// ===== TEST =====
-				// Attempt to run the appropriate extension command, expecting an error.
-				let err: Error = null;
 				try {
 					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName
 					}, null, ['someMethod'], 'some/project/dir', stubTelemetryService);
-				} catch (e) {
-					err = e;
+				} catch (_e) {
+					// Spy will check the error
 				}
 
 				// ===== ASSERTIONS =====
@@ -352,7 +349,7 @@ suite('Extension Test Suite', () => {
 			try {
 				await verifyPluginInstallation();
 			} catch (e) {
-				err = e;
+				err = e as Error;
 			}
 
 			// ===== ASSERTIONS =====
@@ -371,7 +368,7 @@ suite('Extension Test Suite', () => {
 			try {
 				await verifyPluginInstallation();
 			} catch (e) {
-				err = e;
+				err = e as Error;
 			}
 
 			// ===== ASSERTIONS =====
@@ -380,12 +377,13 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_shouldProceedWithDfaRun()', () => {
-		let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
 
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			context = await ext.activate();
 		});
 
@@ -394,7 +392,7 @@ suite('Extension Test Suite', () => {
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 		});
 
-		test('Returns true and confirmation message not called when no existing DFA process detected', async() => {
+		test('Returns true and confirmation message not called when no existing DFA process detected', async () => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
@@ -403,10 +401,11 @@ suite('Extension Test Suite', () => {
 			Sinon.assert.callCount(infoMessageSpy, 0);
 		});
 
-		test('Confirmation message called when DFA process detected', async() => {
+		test('Confirmation message called when DFA process detected', async () => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			_shouldProceedWithDfaRun(context);
 
 			Sinon.assert.callCount(infoMessageSpy, 1);
@@ -415,35 +414,37 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_stopExistingDfaRun()', () => {
-        let ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
         suiteSetup(async function () {
             this.timeout(10000);
             // Activate the extension.
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             context = await ext.activate();
         });
 
-        teardown(async () => {
+        teardown(() => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             Sinon.restore();
         });
 
-        test('Cache cleared as part of stopping the existing DFA run', async() => {
+        test('Cache cleared as part of stopping the existing DFA run', async () => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-			_stopExistingDfaRun(context);
+			await _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
-        test('Cache stays cleared when there are no existing DFA runs', async() => {
+        test('Cache stays cleared when there are no existing DFA runs', () => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
             _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
 
 	suite('#isValidFileForAnalysis', () => {
-		test('Returns true for valid files', async() => {
+		test('Returns true for valid files', () => {
 			// ===== SETUP ===== and ===== ASSERTIONS =====
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.apex"))).to.equal(true);
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.cls"))).to.equal(true);
@@ -452,7 +453,7 @@ suite('Extension Test Suite', () => {
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.js"))).to.equal(true);
 		});
 
-		test('Returns false for invalid files', async() => {
+		test('Returns false for invalid files', () => {
 			// ===== SETUP ===== and ===== ASSERTIONS =====
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.java"))).to.equal(false);
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file"))).to.equal(false);
@@ -661,11 +662,11 @@ class StubTelemetryService implements TelemetryService {
 
 	private exceptionCalls: TelemetryExceptionData[] = [];
 
-	public sendExtensionActivationEvent(hrStart: [number, number]): void {
+	public sendExtensionActivationEvent(_hrStart: [number, number]): void {
 		// NO-OP
 	}
 
-	public sendCommandEvent(key: string, data: Properties): void {
+	public sendCommandEvent(_key: string, _data: Properties): void {
 		// NO-OP
 	}
 
@@ -687,7 +688,7 @@ class StubTelemetryService implements TelemetryService {
 }
 
 class StubDiagnosticManager implements DiagnosticManager {
-	public displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void {
+	public displayAsDiagnostics(_allTargets: string[], _convertibles: DiagnosticConvertible[]): void {
 		// NO-OP
 	}
 }
