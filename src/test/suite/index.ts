@@ -1,3 +1,4 @@
+/* eslint-disable */
 /*
  * Copyright (c) 2023, Salesforce, Inc.
  * All rights reserved.
@@ -98,7 +99,7 @@ export async function run(): Promise<void> {
 	}
 }
 
-async function captureStdout(fn) {
+async function captureStdout(fn: () => Promise<void>): Promise<string> {
 	const w = process.stdout.write;
 	let buffer = '';
 	process.stdout.write = (s) => {buffer = buffer + s; return true;}

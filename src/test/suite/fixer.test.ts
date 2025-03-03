@@ -79,7 +79,7 @@ suite('fixer.ts', () => {
 
                 suite('Line-level suppression', () => {
                     const existingFixes = new Set<number>(); 
-                    test('Appends suppression to end of commentless line', async () => {
+                    test('Appends suppression to end of commentless line', () => {
                         // Create our fake diagnostic, positioned at the line with no comment at the end.
                         const diag = new vscode.Diagnostic(
                             new vscode.Range(
@@ -103,7 +103,7 @@ suite('fixer.ts', () => {
                         expect(fix.range.start.isEqual(new vscode.Position(7, Number.MAX_SAFE_INTEGER))).to.equal(true, 'Should be at the end of the violation line');
                     });
 
-                    test('Does not add suppression if suppression for that same line already exists', async () => {
+                    test('Does not add suppression if suppression for that same line already exists', () => {
                         existingFixes.add(7);
                         // Create our fake diagnostic whose start position is the same as the existing fix already added
                         const diag = new vscode.Diagnostic(
@@ -279,21 +279,21 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
 
-                    test('Should generate the correct suppression tag for Apex language', async () => {
+                    test('Should generate the correct suppression tag for Apex language', () => {
                         const suppressionRule = 'rule1';
                         const lang = 'apex';
                         const expectedSuppressionTag = `@SuppressWarnings('${suppressionRule}')\n`;
                         expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should generate the correct suppression tag for Java language', async () => {
+                    test('Should generate the correct suppression tag for Java language', () => {
                         const suppressionRule = 'rule2';
                         const lang = 'java';
                         const expectedSuppressionTag = `@SuppressWarnings("${suppressionRule}")\n`;
                         expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should return an empty string for unsupported languages', async () => {
+                    test('Should return an empty string for unsupported languages', () => {
                         const suppressionRule = 'rule3';
                         const lang = 'python'; // Assuming python as an unsupported language
                         expect(fixGenerator.generateNewSuppressionTag(suppressionRule, lang)).to.equal('');
@@ -303,21 +303,21 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
                 
-                    test('Should generate the correct suppression tag for Apex language with single quotes', async () => {
+                    test('Should generate the correct suppression tag for Apex language with single quotes', () => {
                         const updatedRules = 'rule1';
                         const lang = 'apex';
                         const expectedSuppressionTag = `@SuppressWarnings('${updatedRules}')`;
                         expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should generate the correct suppression tag for Java language with double quotes', async () => {
+                    test('Should generate the correct suppression tag for Java language with double quotes', () => {
                         const updatedRules = 'rule2';
                         const lang = 'java';
                         const expectedSuppressionTag = `@SuppressWarnings("${updatedRules}")`;
                         expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal(expectedSuppressionTag);
                     });
                 
-                    test('Should return an empty string for unsupported languages', async () => {
+                    test('Should return an empty string for unsupported languages', () => {
                         const updatedRules = 'rule3';
                         const lang = 'python'; // Assuming python as an unsupported language
                         expect(fixGenerator.generateUpdatedSuppressionTag(updatedRules, lang)).to.equal('');
@@ -327,7 +327,7 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
                 
-                    test('Should find the correct line before class start declaration when it is not the first line', async () => {
+                    test('Should find the correct line before class start declaration when it is not the first line', () => {
                         const classStartPosition = new vscode.Position(2, 0);
                         const document = {
                             lineAt: (lineNumber: number) => {
@@ -345,7 +345,7 @@ suite('fixer.ts', () => {
                         expect(line).to.equal('This is line 1');
                     });
 
-                    test('Should return empty string when class declaration is the first line', async () => {
+                    test('Should return empty string when class declaration is the first line', () => {
                         const classStartPosition = new vscode.Position(0, 0);
                         const document = {
                             lineAt: (lineNumber: number) => {
@@ -367,35 +367,35 @@ suite('fixer.ts', () => {
                     // Instantiate our fixer
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(null, null);
                 
-                    test('Should return true if the match is within single quotes', async () => {
+                    test('Should return true if the match is within single quotes', () => {
                         const line = "This is 'a matching string'";
                         const matchIndex = 15; // Index where match occurs within the string
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(true);
                     });
                 
-                    test('Should return true if the match is within double quotes', async () => {
+                    test('Should return true if the match is within double quotes', () => {
                         const line = 'This is "a matching string"';
                         const matchIndex = 21; // Index where match occurs within the string
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(true);
                     });
                 
-                    test('Should return false if the match is not within quotes', async () => {
+                    test('Should return false if the match is not within quotes', () => {
                         const line = 'This is a line without quotes';
                         const matchIndex = 5; // Index where match occurs within the string
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(false);
                     });
                 
-                    test('Should return false if the match is at the start of a string within quotes', async () => {
+                    test('Should return false if the match is at the start of a string within quotes', () => {
                         const line = "'quotes' is at the start of a string";
                         const matchIndex = 10; // Index where match occurs within the string and it is after the quotes
                         const isWithin = fixGenerator.isWithinQuotes(line, matchIndex);
                         expect(isWithin).to.equal(false);
                     });
                 
-                    test('Should return true if the match is at the start of a string but quotes is not closed', async () => {
+                    test('Should return true if the match is at the start of a string but quotes is not closed', () => {
                         // This is an extreme case where someone opens a quote and has class defined in it
                         // and the closure of the quote is not on the same line.
                         const line = "'quotes is at the start of a string";
@@ -494,7 +494,7 @@ suite('fixer.ts', () => {
                 await vscode.window.showTextDocument(doc);
             });
     
-            test('Should generate a suppression fix if line is not processed', async () => {
+            test('Should generate a suppression fix if line is not processed', () => {
                 // Create a fake diagnostic.
                 const diag = new vscode.Diagnostic(
                     new vscode.Range(
@@ -526,7 +526,7 @@ suite('fixer.ts', () => {
                 expect(fixes[0].command.command).to.equal(Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS);
             });
     
-            test('Should not generate a suppression fix if line is already processed', async () => {
+            test('Should not generate a suppression fix if line is already processed', () => {
                 processedLines.add(7);
     
                 // Create a fake diagnostic.
@@ -568,7 +568,7 @@ suite('fixer.ts', () => {
                 await vscode.window.showTextDocument(doc);
             });
 
-            test('Should generate the correct ApexGuru suppression code action', async () => {
+            test('Should generate the correct ApexGuru suppression code action', () => {
                 // Create a fake diagnostic.
                 const diag = new vscode.Diagnostic(
                     new vscode.Range(

@@ -117,7 +117,7 @@ suite('targeting.ts', () => {
             try {
                 await getTargets([fakeFileUri]);
             } catch (e) {
-                err = e;
+                err = e as Error;
             }
             // ===== ASSERTIONS =====
             // Expect that an error was thrown.
@@ -157,7 +157,7 @@ suite('targeting.ts', () => {
             try {
                 await getTargets([]);
             } catch (e) {
-                err = e;
+                err = e as Error;
             }
 
             // ===== ASSERTIONS =====
@@ -231,7 +231,7 @@ suite('targeting.ts', () => {
                 try {
                     await getSelectedMethod();
                 } catch (e) {
-                    err = e;
+                    err = e as Error;
                 }
 
                 // ===== ASSERTIONS =====

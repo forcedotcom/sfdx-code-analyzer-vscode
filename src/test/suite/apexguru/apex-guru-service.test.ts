@@ -326,7 +326,7 @@ suite('Apex Guru Test Suite', () => {
                 await ApexGuruFunctions.pollAndGetApexGuruResponse(connectionStub as unknown as Connection, requestId, maxWaitTimeInSeconds, retryInterval);
                 throw new Error('Expected to throw an error due to timeout');
             } catch (error) {
-                expect(error.message).to.equal('Failed to get a successful response from Apex Guru after maximum retries.');
+                expect((error as Error).message).to.equal('Failed to get a successful response from Apex Guru after maximum retries.');
             }
 
             // ===== ASSERTIONS =====

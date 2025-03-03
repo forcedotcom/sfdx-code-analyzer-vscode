@@ -41,8 +41,10 @@ export class CoreExtensionService {
 			return undefined;
 		}
 
+		const pkgJson: {version: string} = coreExtension.packageJSON as {version: string};
+
 		// We know that there has to be a `version` property on the package.json object.
-		const coreExtensionVersion = (coreExtension.packageJSON.version) as string;
+		const coreExtensionVersion = pkgJson.version;
 		if (!this.isAboveMinimumRequiredVersion(MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, coreExtensionVersion)) {
 			console.log(`${CORE_EXTENSION_ID} below minimum viable version; cannot load core dependencies. Returning undefined instead.`);
 			return undefined;

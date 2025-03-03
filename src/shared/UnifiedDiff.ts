@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
+/* eslint-disable */
 /**
  * Copyright (c) 2023, salesforce.com, inc.
  * All rights reserved.
@@ -374,7 +374,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    * @returns Code actions for unified diff.
    */
   public provideCodeActions() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const actions: any[] = [];
 
     // let action;

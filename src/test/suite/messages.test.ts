@@ -28,7 +28,7 @@ suite('messages Test Suite', () => {
 
         test('isSource should return false if the source is undefined', () => {
             // ===== SETUP =====
-            const source = undefined;
+            const source: string = undefined;
 
             // ===== TEST =====
             const result = messages.diagnostics.source.isSource(source);
@@ -51,7 +51,7 @@ suite('messages Test Suite', () => {
     
         test('extractEngine should return undefined if the source is undefined', () => {
             // ===== SETUP =====
-            const source = undefined;
+            const source: string = undefined;
     
             // ===== TEST =====
             const result = messages.diagnostics.source.extractEngine(source);

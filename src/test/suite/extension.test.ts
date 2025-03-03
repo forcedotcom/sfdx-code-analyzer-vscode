@@ -39,7 +39,7 @@ suite('Extension Test Suite', () => {
 			// Verify that there are no existing diagnostics floating around.
 			const diagnosticsArrays = vscode.languages.getDiagnostics();
 			for (const [uri, diagnostics] of diagnosticsArrays) {
-				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.equal
+				expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.be.empty;
 			}
 			// Set custom settings
 			const configuration = vscode.workspace.getConfiguration();
@@ -349,7 +349,7 @@ suite('Extension Test Suite', () => {
 			try {
 				await verifyPluginInstallation();
 			} catch (e) {
-				err = e;
+				err = e as Error;
 			}
 
 			// ===== ASSERTIONS =====
@@ -368,7 +368,7 @@ suite('Extension Test Suite', () => {
 			try {
 				await verifyPluginInstallation();
 			} catch (e) {
-				err = e;
+				err = e as Error;
 			}
 
 			// ===== ASSERTIONS =====
@@ -383,6 +383,7 @@ suite('Extension Test Suite', () => {
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			context = await ext.activate();
 		});
 
@@ -404,7 +405,7 @@ suite('Extension Test Suite', () => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-			_shouldProceedWithDfaRun(context);
+			await _shouldProceedWithDfaRun(context);
 
 			Sinon.assert.callCount(infoMessageSpy, 1);
 			expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.existingDfaRunText);
@@ -418,29 +419,30 @@ suite('Extension Test Suite', () => {
         suiteSetup(async function () {
             this.timeout(10000);
             // Activate the extension.
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             context = await ext.activate();
         });
 
-        teardown(async () => {
+        teardown(() => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             Sinon.restore();
         });
 
-        test('Cache cleared as part of stopping the existing DFA run', async() => {
+        test('Cache cleared as part of stopping the existing DFA run', async () => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-			_stopExistingDfaRun(context);
+			await _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
-        test('Cache stays cleared when there are no existing DFA runs', async() => {
+        test('Cache stays cleared when there are no existing DFA runs', async () => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            _stopExistingDfaRun(context);
+            await _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
 
 	suite('#isValidFileForAnalysis', () => {
-		test('Returns true for valid files', async() => {
+		test('Returns true for valid files', () => {
 			// ===== SETUP ===== and ===== ASSERTIONS =====
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.apex"))).to.equal(true);
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.cls"))).to.equal(true);
@@ -449,7 +451,7 @@ suite('Extension Test Suite', () => {
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.js"))).to.equal(true);
 		});
 
-		test('Returns false for invalid files', async() => {
+		test('Returns false for invalid files', () => {
 			// ===== SETUP ===== and ===== ASSERTIONS =====
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file.java"))).to.equal(false);
 			expect(_isValidFileForAnalysis(vscode.Uri.file("/some/path/file"))).to.equal(false);

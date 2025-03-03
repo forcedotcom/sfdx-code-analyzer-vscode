@@ -19,6 +19,7 @@ suite('Delta Run Test Suite', () => {
       readFileSyncStub = Sinon.stub();
   
       // Load the module with the mocked fs dependency
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
       const mockedModule = proxyquire('../../../deltarun/delta-run-service', {
         fs: {
           readFileSync: readFileSyncStub
@@ -26,6 +27,7 @@ suite('Delta Run Test Suite', () => {
       });
   
       // Get the function from the module
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       getDeltaRunTarget = mockedModule.getDeltaRunTarget;
     });
   
