@@ -392,7 +392,7 @@ suite('Extension Test Suite', () => {
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 		});
 
-		test('Returns true and confirmation message not called when no existing DFA process detected', async() => {
+		test('Returns true and confirmation message not called when no existing DFA process detected', async () => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
@@ -401,11 +401,12 @@ suite('Extension Test Suite', () => {
 			Sinon.assert.callCount(infoMessageSpy, 0);
 		});
 
-		test('Confirmation message called when DFA process detected', async() => {
+		test('Confirmation message called when DFA process detected', async () => {
 			const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 			await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-			await _shouldProceedWithDfaRun(context);
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
+			_shouldProceedWithDfaRun(context);
 
 			Sinon.assert.callCount(infoMessageSpy, 1);
 			expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.existingDfaRunText);
@@ -434,9 +435,10 @@ suite('Extension Test Suite', () => {
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
-        test('Cache stays cleared when there are no existing DFA runs', async () => {
+        test('Cache stays cleared when there are no existing DFA runs', () => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            await _stopExistingDfaRun(context);
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
+            _stopExistingDfaRun(context);
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
