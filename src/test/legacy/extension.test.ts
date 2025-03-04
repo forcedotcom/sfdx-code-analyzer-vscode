@@ -237,6 +237,14 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_runAndDisplayScanner()', () => {
+		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		
+		suiteSetup(async function () {
+			this.timeout(10000);
+			// Activate the extension.
+			await ext.activate();
+		});
+
 		suite('Error handling', () => {
 			teardown(() => {
 				Sinon.restore();
