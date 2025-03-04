@@ -31,7 +31,6 @@ suite('targeting.ts', () => {
         test('Given a real file, returns that file', async () => {
             // ===== SETUP =====
             // Get a URI for one file.
-            console.log("HELLO WORLD: " + __dirname)
             const singlePath: string = path.join(codeFixturesPath, "folder-a", "MyClassA1.cls");
             const singleUri: vscode.Uri = vscode.Uri.file(singlePath);
 
