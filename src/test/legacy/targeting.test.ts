@@ -13,8 +13,8 @@ import {getSelectedMethod, getTargets} from '../../lib/targeting';
 import {ApexLsp, GenericSymbol} from '../../lib/apex-lsp';
 
 suite('targeting.ts', () => {
-    // Note: __dirname is used here because it's consistent across file systems.
-    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
+    // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
+    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
     function moveCursor(line: number, column: number): void {
         const position = new vscode.Position(line, column);
@@ -31,6 +31,7 @@ suite('targeting.ts', () => {
         test('Given a real file, returns that file', async () => {
             // ===== SETUP =====
             // Get a URI for one file.
+            console.log("HELLO WORLD: " + __dirname)
             const singlePath: string = path.join(codeFixturesPath, "folder-a", "MyClassA1.cls");
             const singleUri: vscode.Uri = vscode.Uri.file(singlePath);
 
