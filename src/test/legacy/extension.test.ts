@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unused-expressions */ // TODO: Need to update these old tests... many of the chair assertions are not being used correctly causing eslint errors.
 /*
  * Copyright (c) 2023, Salesforce, Inc.
@@ -23,8 +25,8 @@ import { DiagnosticConvertible, DiagnosticManager } from '../../lib/diagnostics'
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
-	// Note: __dirname is used here because it's consistent across file systems.
-	const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
+	// Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
+	const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
 	suite('E2E', () => {
 		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
@@ -238,7 +240,7 @@ suite('Extension Test Suite', () => {
 
 	suite('#_runAndDisplayScanner()', () => {
 		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-		
+
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.

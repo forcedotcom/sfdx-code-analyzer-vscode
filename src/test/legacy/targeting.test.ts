@@ -13,8 +13,8 @@ import {getSelectedMethod, getTargets} from '../../lib/targeting';
 import {ApexLsp, GenericSymbol} from '../../lib/apex-lsp';
 
 suite('targeting.ts', () => {
-    // Note: __dirname is used here because it's consistent across file systems.
-    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
+    // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
+    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
     function moveCursor(line: number, column: number): void {
         const position = new vscode.Position(line, column);

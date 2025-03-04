@@ -11,8 +11,8 @@ import * as Constants from '../../lib/constants';
 import {_NoOpFixGenerator, _PmdFixGenerator, _ApexGuruFixGenerator} from '../../lib/fixer';
 
 suite('fixer.ts', () => {
-    // Note: __dirname is used here because it's consistent across file systems.
-    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures', 'fixer-tests');
+    // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
+    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
 	teardown(async () => {
 		// Close any open tabs and close the active editor.
@@ -39,7 +39,7 @@ suite('fixer.ts', () => {
         suite('#generateFixes()', () => {
             suite('XML doc', () => {
                 // Get the URI for the XML doc.
-                const xmlDocUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'MyDoc1.xml'));
+                const xmlDocUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyDoc1.xml'));
 
                 // At this time, we don't support injecting suppression for XML.
                 test('No fixes are offered', async () => {
@@ -68,7 +68,7 @@ suite('fixer.ts', () => {
             });
 
             suite('Apex doc', () => {
-                const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+                const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass1.cls'));
 
                 let doc: vscode.TextDocument;
                 // Load the document and store its starting contents.
@@ -156,7 +156,7 @@ suite('fixer.ts', () => {
                 suite('Class-level suppression', () => {
                     suite('#findClassStartPosition()', () => {
                         test('Should find class start position above the diagnostic line', async () => {
-                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass1.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
@@ -180,7 +180,7 @@ suite('fixer.ts', () => {
                         });
 
                         test('Should ignore class defined in single line comment', async () => {
-                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
@@ -204,7 +204,7 @@ suite('fixer.ts', () => {
                         });
 
                         test('Should ignore class defined in a block comment comment', async () => {
-                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
@@ -228,7 +228,7 @@ suite('fixer.ts', () => {
                         });
 
                         test('Should ignore class defined as a string', async () => {
-                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
@@ -251,7 +251,7 @@ suite('fixer.ts', () => {
                             expect(position.character).to.equal(0);
                         });
                         test('Should ignore inner class', async () => {
-                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass2.cls'));
+                            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
                             const diag = new vscode.Diagnostic(
@@ -482,10 +482,10 @@ suite('fixer.ts', () => {
         });    
     });
     suite('_ApexGuruFixGenerator', () => {
-        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+        const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass1.cls'));
         suite('#generateFixes()', () => {
             const processedLines = new Set<number>();
-            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'MyClass1.cls'));
+            const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass1.cls'));
     
             let doc: vscode.TextDocument;
             // Load the document and store its starting contents.
