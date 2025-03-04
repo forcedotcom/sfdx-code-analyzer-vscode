@@ -12,6 +12,6 @@ export default defineConfig({
 	}],
 	coverage: {
 		includeAll: true,
-		reporter: ["lcov", "text-summary", "json-summary"]
+		reporter: ["text", "lcov"]
 	}
 });

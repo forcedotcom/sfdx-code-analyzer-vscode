@@ -10,7 +10,8 @@ import * as path from 'path';
 import {exists, isDir} from '../../lib/file';
 
 suite('file.ts', () => {
-    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'code-fixtures');
+    // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
+    const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
     suite('#exists()', () => {
         

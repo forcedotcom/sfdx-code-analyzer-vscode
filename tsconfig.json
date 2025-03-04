@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"skipLibCheck": true, /* needed to avoid conflict between @types/jest and @types/mocha. When we remove mocha, we should remove this line */
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
 		"target": "ES2020",
@@ -8,12 +9,7 @@
 			"ES2020"
 		],
 		"sourceMap": true,
-		"rootDir": "src",
-		"strict": false   /* enable all strict type-checking options */
-		/* Additional Checks */
-		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
-		// "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
-		// "noUnusedParameters": true,  /* Report errors on unused parameters. */
+		"rootDir": "src"
 	},
 	"include": [
 		"./src/**/*"
