@@ -6,51 +6,51 @@ import {messages} from '../messages';
 import {TelemetryService} from "../external-services/telemetry-service";
 
 export type ScannerDependencies = {
-	scannerStrategy: ScannerStrategy;
-	display: Display;
-	diagnosticManager: DiagnosticManager;
-	telemetryService: TelemetryService;
+    scannerStrategy: ScannerStrategy;
+    display: Display;
+    diagnosticManager: DiagnosticManager;
+    telemetryService: TelemetryService;
 };
 
 export class ScannerAction {
-	private readonly commandName: string;
-	private readonly scannerStrategy: ScannerStrategy;
-	private readonly display: Display;
-	private readonly diagnosticManager: DiagnosticManager;
-	private readonly telemetryService: TelemetryService;
+    private readonly commandName: string;
+    private readonly scannerStrategy: ScannerStrategy;
+    private readonly display: Display;
+    private readonly diagnosticManager: DiagnosticManager;
+    private readonly telemetryService: TelemetryService;
 
-	public constructor(commandName: string, dependencies: ScannerDependencies) {
-		this.commandName = commandName;
-		this.scannerStrategy = dependencies.scannerStrategy;
-		this.display = dependencies.display;
-		this.scannerStrategy = dependencies.scannerStrategy;
-		this.diagnosticManager = dependencies.diagnosticManager;
-		this.telemetryService = dependencies.telemetryService;
-	}
+    public constructor(commandName: string, dependencies: ScannerDependencies) {
+        this.commandName = commandName;
+        this.scannerStrategy = dependencies.scannerStrategy;
+        this.display = dependencies.display;
+        this.scannerStrategy = dependencies.scannerStrategy;
+        this.diagnosticManager = dependencies.diagnosticManager;
+        this.telemetryService = dependencies.telemetryService;
+    }
 
-	public async runScanner(workspaceTargets: string[]): Promise<void> {
-		const startTime = Date.now();
-		await this.scannerStrategy.validateEnvironment();
+    public async runScanner(workspaceTargets: string[]): Promise<void> {
+        const startTime = Date.now();
+        await this.scannerStrategy.validateEnvironment();
 
-		this.display.displayProgress(messages.scanProgressReport.identifyingTargets);
+        this.display.displayProgress(messages.scanProgressReport.identifyingTargets);
 
-		this.display.displayProgress(messages.scanProgressReport.analyzingTargets);
+        this.display.displayProgress(messages.scanProgressReport.analyzingTargets);
 
-		this.display.displayLog(messages.info.scanningWith(this.scannerStrategy.getScannerName()));
+        this.display.displayLog(messages.info.scanningWith(this.scannerStrategy.getScannerName()));
 
-		const results: DiagnosticConvertible[] = await this.scannerStrategy.scan(workspaceTargets);
+        const results: DiagnosticConvertible[] = await this.scannerStrategy.scan(workspaceTargets);
 
-		this.display.displayProgress(messages.scanProgressReport.processingResults);
+        this.display.displayProgress(messages.scanProgressReport.processingResults);
 
-		this.diagnosticManager.displayAsDiagnostics(workspaceTargets, results);
+        this.diagnosticManager.displayAsDiagnostics(workspaceTargets, results);
 
-		this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
-			commandName: this.commandName,
-			duration: (Date.now() - startTime).toString()
-		});
+        this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
+            commandName: this.commandName,
+            duration: (Date.now() - startTime).toString()
+        });
 
-		// This has to be a floating promise, because progress bars won't disappear otherwise.
-		// eslint-disable-next-line @typescript-eslint/no-floating-promises
-		this.display.displayResults(workspaceTargets, results);
-	}
+        // This has to be a floating promise, because progress bars won't disappear otherwise.
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        this.display.displayResults(workspaceTargets, results);
+    }
 }

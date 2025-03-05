@@ -21,11 +21,11 @@ suite('targeting.ts', () => {
         vscode.window.activeTextEditor.selection = new vscode.Selection(position, position);
     }
 
-	teardown(async () => {
-		// Close all open editors after each test.
-		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-		Sinon.restore();
-	});
+    teardown(async () => {
+        // Close all open editors after each test.
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+        Sinon.restore();
+    });
 
     suite('#getTargets()', () => {
         test('Given a real file, returns that file', async () => {
@@ -143,13 +143,13 @@ suite('targeting.ts', () => {
         });
 
         test('Without selection or active file, throws error', async () => {
-			// ===== SETUP =====
-			// Simulate no window being open in the editor.
-			// NOTE: We need to use a stub here instead of/in addition to directly closing
-			//       windows, because sometimes the test context can have a weird "phantom window"
-			//       even if you close anything. This seems to happen when the test instance loses
-			//       focus.
-			Sinon.stub(vscode.window, 'activeTextEditor').value(undefined);
+            // ===== SETUP =====
+            // Simulate no window being open in the editor.
+            // NOTE: We need to use a stub here instead of/in addition to directly closing
+            //       windows, because sometimes the test context can have a weird "phantom window"
+            //       even if you close anything. This seems to happen when the test instance loses
+            //       focus.
+            Sinon.stub(vscode.window, 'activeTextEditor').value(undefined);
 
             // ===== TEST =====
             // Feed an empty array into target finder, expecting an error.
@@ -168,11 +168,11 @@ suite('targeting.ts', () => {
     });
 
     suite('#getSelectedMethod()', () => {
-		const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-		const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
-		// We expect our path to be unix-ified, or else it'll parse as a glob and flunk
-		// the transaction.
-		const expectedFilePath = openFilePath.replace(/\\/g, '/');
+        const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
+        const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
+        // We expect our path to be unix-ified, or else it'll parse as a glob and flunk
+        // the transaction.
+        const expectedFilePath = openFilePath.replace(/\\/g, '/');
         suite('When Apex LSP is available...', () => {
 
             setup(async () => {

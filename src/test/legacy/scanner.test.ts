@@ -43,8 +43,8 @@ suite('ScanRunner', () => {
             // Perform the validations common to all cases.
             expect(args).to.have.length.of.at.least(10, 'Wrong number of args');
             expect(args[0]).to.equal('scanner', 'Wrong arg');
-			expect(args[1]).to.equal('run', 'Wrong arg');
-			expect(args[2]).to.equal('dfa', 'Wrong arg');
+            expect(args[1]).to.equal('run', 'Wrong arg');
+            expect(args[2]).to.equal('dfa', 'Wrong arg');
             expect(args[3]).to.equal('--projectdir', 'Wrong arg');
             expect(args[4]).to.equal(projectDir, 'Wrong arg');
             expect(args[5]).to.equal('--format', 'Wrong arg');
@@ -62,11 +62,11 @@ suite('ScanRunner', () => {
             test('Creates array-ified sfdx-scanner dfa command', () => {
                 // ===== SETUP =====
                 // Stub out all the settings methods to return null/false values.
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
-				settingsManager.setGraphEngineJvmArgs(null);
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -82,11 +82,11 @@ suite('ScanRunner', () => {
 
             test('Ignore target when it is empty', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
-				settingsManager.setGraphEngineJvmArgs(null);
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineJvmArgs(null);
                 const emptyTargets = [];
 
                 // ===== TEST =====
@@ -102,11 +102,11 @@ suite('ScanRunner', () => {
 
             test('Ignore target when it contains only null entries', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
-				settingsManager.setGraphEngineJvmArgs(null);
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineJvmArgs(null);
                 const emptyTargets = [null];
 
                 // ===== TEST =====
@@ -122,13 +122,13 @@ suite('ScanRunner', () => {
 
             test('Disable Warning Violations', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				// Stub the Disable Warning Violations method to return true.
-				settingsManager.setGraphEngineDisableWarningViolations(true);
-				// Stub out the other settings methods to return null/false values.
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
-				settingsManager.setGraphEngineJvmArgs(null);
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                // Stub the Disable Warning Violations method to return true.
+                settingsManager.setGraphEngineDisableWarningViolations(true);
+                // Stub out the other settings methods to return null/false values.
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -142,14 +142,14 @@ suite('ScanRunner', () => {
 
             test('Thread Timeout', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				// Stub out the Thread Timeout method to return some unusual number.
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                // Stub out the Thread Timeout method to return some unusual number.
                 const timeout: number = 234123;
-				settingsManager.setGraphEngineThreadTimeout(timeout);
-				// Stub out the other settings methods to return null/false values.
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
-				settingsManager.setGraphEngineJvmArgs(null);
+                settingsManager.setGraphEngineThreadTimeout(timeout);
+                // Stub out the other settings methods to return null/false values.
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -164,14 +164,14 @@ suite('ScanRunner', () => {
 
             test('Path Expansion Limit', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				// Stub out the Path Expansion Limit method to return some unusual number.
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                // Stub out the Path Expansion Limit method to return some unusual number.
                 const limit: number = 38832;
-				settingsManager.setGraphEnginePathExpansionLimit(limit);
-				// Stub out the other settings methods to return null/false values.
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEngineJvmArgs(null);
+                settingsManager.setGraphEnginePathExpansionLimit(limit);
+                // Stub out the other settings methods to return null/false values.
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEngineJvmArgs(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -186,14 +186,14 @@ suite('ScanRunner', () => {
 
             test('JVM Args', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
                 // Stub out the JVM Args method to return some non-standard value.
-				const jvmArgs = '-Xmx25g';
-				settingsManager.setGraphEngineJvmArgs(jvmArgs);
+                const jvmArgs = '-Xmx25g';
+                settingsManager.setGraphEngineJvmArgs(jvmArgs);
                 // Stub out the other settings methods to return null/false values.
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
 
                 // ===== TEST =====
                 // Call the test method helper.
@@ -208,11 +208,11 @@ suite('ScanRunner', () => {
 
             test('Enable caching and include cache path', () => {
                 // ===== SETUP =====
-				const settingsManager: StubSettingsManager = new StubSettingsManager();
-				settingsManager.setGraphEngineDisableWarningViolations(false);
-				settingsManager.setGraphEngineThreadTimeout(null);
-				settingsManager.setGraphEnginePathExpansionLimit(null);
-				settingsManager.setGraphEngineJvmArgs(null);
+                const settingsManager: StubSettingsManager = new StubSettingsManager();
+                settingsManager.setGraphEngineDisableWarningViolations(false);
+                settingsManager.setGraphEngineThreadTimeout(null);
+                settingsManager.setGraphEnginePathExpansionLimit(null);
+                settingsManager.setGraphEngineJvmArgs(null);
                 const emptyTargets = [];
 
                 // ===== TEST =====
@@ -333,14 +333,14 @@ suite('ScanRunner', () => {
 
     suite('#invokeDfaAnalyzer()', () => {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-		let context: vscode.ExtensionContext;
+        let context: vscode.ExtensionContext;
 
-		suiteSetup(async function () {
-			this.timeout(10000);
-			// Activate the extension.
-			const extData: SFCAExtensionData = await ext.activate();
-			context = extData.context;
-		});
+        suiteSetup(async function () {
+            this.timeout(10000);
+            // Activate the extension.
+            const extData: SFCAExtensionData = await ext.activate();
+            context = extData.context;
+        });
 
         test('Adds process Id to the cache', () => {
             // ===== SETUP =====
@@ -359,92 +359,92 @@ suite('ScanRunner', () => {
 });
 
 class StubSettingsManager implements SettingsManager {
-	private graphEngineDisableWarningViolations: boolean = false;
-	private graphEngineThreadTimeout: number = 900000;
-	private graphEnginePathExpansionLimit: number = null;
-	private graphEngineJvmArgs: string = null;
+    private graphEngineDisableWarningViolations: boolean = false;
+    private graphEngineThreadTimeout: number = 900000;
+    private graphEnginePathExpansionLimit: number = null;
+    private graphEngineJvmArgs: string = null;
 
-	constructor() {
-		this.resetSettings();
-	}
+    constructor() {
+        this.resetSettings();
+    }
 
-	public resetSettings(): void {
-		this.graphEngineDisableWarningViolations = false;
-		this.graphEngineThreadTimeout = 900000;
-		this.graphEnginePathExpansionLimit = null;
-		this.graphEngineJvmArgs = null;
-	}
+    public resetSettings(): void {
+        this.graphEngineDisableWarningViolations = false;
+        this.graphEngineThreadTimeout = 900000;
+        this.graphEnginePathExpansionLimit = null;
+        this.graphEngineJvmArgs = null;
+    }
 
-	getCodeAnalyzerV5Enabled(): boolean {
-		throw new Error('Method not implemented.');
-	}
+    getCodeAnalyzerV5Enabled(): boolean {
+        throw new Error('Method not implemented.');
+    }
 
-	getCodeAnalyzerTags(): string {
-		throw new Error('Method not implemented');
-	}
+    getCodeAnalyzerTags(): string {
+        throw new Error('Method not implemented');
+    }
 
-	getPmdCustomConfigFile(): string {
-		throw new Error('Method not implemented.');
-	}
+    getPmdCustomConfigFile(): string {
+        throw new Error('Method not implemented.');
+    }
 
-	setGraphEngineDisableWarningViolations(b: boolean): void {
-		this.graphEngineDisableWarningViolations = b;
-	}
+    setGraphEngineDisableWarningViolations(b: boolean): void {
+        this.graphEngineDisableWarningViolations = b;
+    }
 
-	getGraphEngineDisableWarningViolations(): boolean {
-		return this.graphEngineDisableWarningViolations;
-	}
+    getGraphEngineDisableWarningViolations(): boolean {
+        return this.graphEngineDisableWarningViolations;
+    }
 
-	setGraphEngineThreadTimeout(n: number): void {
-		this.graphEngineThreadTimeout = n;
-	}
+    setGraphEngineThreadTimeout(n: number): void {
+        this.graphEngineThreadTimeout = n;
+    }
 
-	getGraphEngineThreadTimeout(): number {
-		return this.graphEngineThreadTimeout;
-	}
+    getGraphEngineThreadTimeout(): number {
+        return this.graphEngineThreadTimeout;
+    }
 
-	setGraphEnginePathExpansionLimit(n: number): void {
-		this.graphEnginePathExpansionLimit = n;
-	}
+    setGraphEnginePathExpansionLimit(n: number): void {
+        this.graphEnginePathExpansionLimit = n;
+    }
 
-	getGraphEnginePathExpansionLimit(): number {
-		return this.graphEnginePathExpansionLimit;
-	}
+    getGraphEnginePathExpansionLimit(): number {
+        return this.graphEnginePathExpansionLimit;
+    }
 
-	setGraphEngineJvmArgs(s: string): void {
-		this.graphEngineJvmArgs = s;
-	}
+    setGraphEngineJvmArgs(s: string): void {
+        this.graphEngineJvmArgs = s;
+    }
 
-	getGraphEngineJvmArgs(): string {
-		return this.graphEngineJvmArgs;
-	}
+    getGraphEngineJvmArgs(): string {
+        return this.graphEngineJvmArgs;
+    }
 
-	getAnalyzeOnSave(): boolean {
-		throw new Error('Method not implemented.');
-	}
+    getAnalyzeOnSave(): boolean {
+        throw new Error('Method not implemented.');
+    }
 
-	getAnalyzeOnOpen(): boolean {
-		throw new Error('Method not implemented.');
-	}
+    getAnalyzeOnOpen(): boolean {
+        throw new Error('Method not implemented.');
+    }
 
-	getEnginesToRun(): string {
-		throw new Error('Method not implemented.');
-	}
+    getEnginesToRun(): string {
+        throw new Error('Method not implemented.');
+    }
 
-	getNormalizeSeverityEnabled(): boolean {
-		throw new Error('Method not implemented.');
-	}
+    getNormalizeSeverityEnabled(): boolean {
+        throw new Error('Method not implemented.');
+    }
 
-	getRulesCategory(): string {
-		throw new Error('Method not implemented.');
-	}
+    getRulesCategory(): string {
+        throw new Error('Method not implemented.');
+    }
 
-	getApexGuruEnabled(): boolean {
-		throw new Error('Method not implemented.');
-	}
+    getApexGuruEnabled(): boolean {
+        throw new Error('Method not implemented.');
+    }
 
-	getSfgePartialSfgeRunsEnabled(): boolean {
-		throw new Error('Method not implemented.');
-	}
+    getSfgePartialSfgeRunsEnabled(): boolean {
+        throw new Error('Method not implemented.');
+    }
 
 }

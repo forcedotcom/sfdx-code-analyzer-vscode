@@ -7,9 +7,9 @@
 import * as vscode from 'vscode';
 
 export interface SettingsManager {
-	getCodeAnalyzerV5Enabled(): boolean;
+    getCodeAnalyzerV5Enabled(): boolean;
 
-	getCodeAnalyzerTags(): string;
+    getCodeAnalyzerTags(): string;
 
     getPmdCustomConfigFile(): string;
 
@@ -37,13 +37,13 @@ export interface SettingsManager {
 }
 
 export class SettingsManagerImpl implements SettingsManager {
-	public getCodeAnalyzerV5Enabled(): boolean {
-		return vscode.workspace.getConfiguration('codeAnalyzer').get('enableV5');
-	}
+    public getCodeAnalyzerV5Enabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('enableV5');
+    }
 
-	public getCodeAnalyzerTags(): string {
-		return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
-	}
+    public getCodeAnalyzerTags(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
+    }
 
     public getPmdCustomConfigFile(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('customConfigFile');

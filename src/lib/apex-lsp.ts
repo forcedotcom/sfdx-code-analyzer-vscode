@@ -26,6 +26,6 @@ export class ApexLsp {
      * @returns An array of symbols if the server is available, otherwise undefined
      */
     public static async getSymbols(documentUri: vscode.Uri): Promise<GenericSymbol[]> {
-		return vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', documentUri);
+        return vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', documentUri);
     }
 }
