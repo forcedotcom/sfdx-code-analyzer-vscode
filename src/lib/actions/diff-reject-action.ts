@@ -26,7 +26,7 @@ export class DiffRejectAction {
 			await this.callback(diffHunk);
 			this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_REJECT, {
 				commandSource: this.commandName,
-				languageType: 'apex' // Apex is the only language A4D codegen supports at present.
+				languageType: 'apex' // The only rules that the CodeAnalyzer A4D integration supports are Apex-based
 			});
 		} catch (e) {
 			const errMsg = e instanceof Error ? e.message : e as string;
