@@ -1,5 +1,5 @@
-import {TelemetryService} from '../core-extension-service';
 import * as Constants from '../constants';
+import {TelemetryService} from "../external-services/telemetry-service";
 
 export type DiffCreateCallback = (code: string, file?: string) => Promise<void>;
 

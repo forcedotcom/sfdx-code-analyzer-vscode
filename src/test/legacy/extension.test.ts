@@ -11,10 +11,21 @@ import {expect} from 'chai';
 import * as path from 'path';
 import {SfCli} from '../../lib/sf-cli';
 import * as Sinon from 'sinon';
-import { _runAndDisplayScanner, _runAndDisplayDfa, _clearDiagnostics, _shouldProceedWithDfaRun, _stopExistingDfaRun, _isValidFileForAnalysis, verifyPluginInstallation, _clearDiagnosticsForSelectedFiles, _removeDiagnosticsInRange, RunInfo } from '../../extension';
+import {
+	_runAndDisplayScanner,
+	_runAndDisplayDfa,
+	_clearDiagnostics,
+	_shouldProceedWithDfaRun,
+	_stopExistingDfaRun,
+	_isValidFileForAnalysis,
+	verifyPluginInstallation,
+	_clearDiagnosticsForSelectedFiles,
+	_removeDiagnosticsInRange,
+	RunInfo,
+	SFCAExtensionData
+} from '../../extension';
 import {messages} from '../../lib/messages';
 import {SettingsManagerImpl} from '../../lib/settings';
-import {TelemetryService, Properties} from '../../lib/core-extension-service';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
 
@@ -22,6 +33,9 @@ import * as targeting from '../../lib/targeting';
 // as well as import your extension to test it
 import * as vscode from 'vscode';
 import { DiagnosticConvertible, DiagnosticManager } from '../../lib/diagnostics';
+import {Properties} from "@salesforce/vscode-service-provider";
+import {TelemetryService} from "../../lib/external-services/telemetry-service";
+import {SpyLogger} from "./test-utils";
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -29,7 +43,7 @@ suite('Extension Test Suite', () => {
 	const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
 	suite('E2E', () => {
-		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
@@ -239,7 +253,7 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_runAndDisplayScanner()', () => {
-		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 
 		suiteSetup(async function () {
 			this.timeout(10000);
@@ -266,7 +280,8 @@ suite('Extension Test Suite', () => {
 				await _runAndDisplayScanner(fakeTelemetryName, [], {
 					telemetryService: stubTelemetryService,
 					diagnosticManager: new StubDiagnosticManager(),
-					settingsManager: new SettingsManagerImpl()
+					settingsManager: new SettingsManagerImpl(),
+					logger: new SpyLogger()
 				});
 
 
@@ -300,7 +315,7 @@ suite('Extension Test Suite', () => {
 				// Attempt to run the appropriate extension command.
 				await _runAndDisplayDfa(null, {
 					commandName: fakeTelemetryName
-				}, null, ['someMethod'], 'some/project/dir', stubTelemetryService);
+				}, null, ['someMethod'], 'some/project/dir', stubTelemetryService, new SpyLogger());
 
 				// ===== ASSERTIONS =====
 				Sinon.assert.callCount(errorSpy, 1);
@@ -325,7 +340,7 @@ suite('Extension Test Suite', () => {
 				try {
 					await _runAndDisplayDfa(null, {
 						commandName: fakeTelemetryName
-					}, null, ['someMethod'], 'some/project/dir', stubTelemetryService);
+					}, null, ['someMethod'], 'some/project/dir', stubTelemetryService, new SpyLogger());
 				} catch (_e) {
 					// Spy will check the error
 				}
@@ -387,14 +402,14 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_shouldProceedWithDfaRun()', () => {
-		const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
 
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-			context = await ext.activate();
+			const extData: SFCAExtensionData = await ext.activate();
+			context = extData.context;
 		});
 
 		teardown(async () => {
@@ -424,14 +439,14 @@ suite('Extension Test Suite', () => {
 	});
 
 	suite('#_stopExistingDfaRun()', () => {
-        const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+		const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
         suiteSetup(async function () {
             this.timeout(10000);
             // Activate the extension.
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            context = await ext.activate();
+			const extData: SFCAExtensionData = await ext.activate();
+			context = extData.context;
         });
 
         teardown(() => {
@@ -441,14 +456,14 @@ suite('Extension Test Suite', () => {
 
         test('Cache cleared as part of stopping the existing DFA run', async () => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-			await _stopExistingDfaRun(context);
+			await _stopExistingDfaRun(context, new SpyLogger());
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
         test('Cache stays cleared when there are no existing DFA runs', () => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 			// eslint-disable-next-line @typescript-eslint/no-floating-promises
-            _stopExistingDfaRun(context);
+            _stopExistingDfaRun(context, new SpyLogger());
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
@@ -508,7 +523,7 @@ suite('Extension Test Suite', () => {
 			expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
 			// ===== TEST =====
-			await _clearDiagnosticsForSelectedFiles([uri], runInfo);
+			await _clearDiagnosticsForSelectedFiles([uri], runInfo, new StubTelemetryService(), new SpyLogger());
 
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
@@ -529,7 +544,7 @@ suite('Extension Test Suite', () => {
 			expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
 			// ===== TEST =====
-			await _clearDiagnosticsForSelectedFiles([uri1, uri2], runInfo);
+			await _clearDiagnosticsForSelectedFiles([uri1, uri2], runInfo, new StubTelemetryService(), new SpyLogger());
 
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
@@ -541,7 +556,7 @@ suite('Extension Test Suite', () => {
 			const uri = vscode.Uri.file('/some/path/file4.cls');
 
 			// ===== TEST =====
-			await _clearDiagnosticsForSelectedFiles([uri], runInfo);
+			await _clearDiagnosticsForSelectedFiles([uri], runInfo, new StubTelemetryService(), new SpyLogger());
 
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
@@ -559,7 +574,7 @@ suite('Extension Test Suite', () => {
 			expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
 			// ===== TEST =====
-			await _clearDiagnosticsForSelectedFiles([], runInfo);
+			await _clearDiagnosticsForSelectedFiles([], runInfo, new StubTelemetryService(), new SpyLogger());
 
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
@@ -583,7 +598,7 @@ suite('Extension Test Suite', () => {
 			expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
 			// ===== TEST =====
-			await _clearDiagnosticsForSelectedFiles([uri1], runInfo);
+			await _clearDiagnosticsForSelectedFiles([uri1], runInfo, new StubTelemetryService(), new SpyLogger());
 
 			// ===== ASSERTIONS =====
 			expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;

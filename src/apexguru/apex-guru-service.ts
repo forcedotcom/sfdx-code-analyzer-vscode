@@ -7,13 +7,15 @@
 
 import * as vscode from 'vscode';
 import * as fspromises from 'fs/promises';
-import { CoreExtensionService, Connection, TelemetryServiceImpl } from '../lib/core-extension-service';
+import {Connection, CoreExtensionService} from '../lib/core-extension-service';
 import * as Constants from '../lib/constants';
 import {messages} from '../lib/messages';
-import { DiagnosticManagerImpl, DiagnosticConvertible } from '../lib/diagnostics';
-import { RunInfo } from '../extension';
+import {DiagnosticConvertible, DiagnosticManagerImpl} from '../lib/diagnostics';
+import {RunInfo} from '../extension';
+import {TelemetryService} from "../lib/external-services/telemetry-service";
+import {Logger} from "../lib/logger";
 
-export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChannel): Promise<boolean> {
+export async function isApexGuruEnabledInOrg(logger: Logger): Promise<boolean> {
     try {
 		const connection = await CoreExtensionService.getConnection();
 		const response:ApexGuruAuthResponse = await connection.request({
@@ -26,17 +28,15 @@ export async function isApexGuruEnabledInOrg(outputChannel: vscode.LogOutputChan
 		// This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
 		// In all of these scenarios, we return false.
 		const errMsg = e instanceof Error ? e.message : e as string;
-		outputChannel.error('Apex Guru perm check failed with error:' + errMsg);
-		outputChannel.show();
+		logger.error('Apex Guru perm check failed with error:' + errMsg);
 		return false;
 	}
 }
 
-export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo) {
+export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo, telemetryService: TelemetryService, logger: Logger) {
 	const {
 		diagnosticCollection,
-		commandName,
-		outputChannel
+		commandName
 	} = runInfo;
 	const startTime = Date.now();
 	try {
@@ -45,8 +45,8 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 		}, async (progress) => {
 			progress.report(messages.apexGuru.progress);
 			const connection = await CoreExtensionService.getConnection();
-			const requestId = await initiateApexGuruRequest(selection, outputChannel, connection);
-			outputChannel.appendLine('Code Analyzer with ApexGuru request Id:' + requestId);
+			const requestId = await initiateApexGuruRequest(selection, logger, connection);
+			logger.log('Code Analyzer with ApexGuru request Id:' + requestId);
 
 			const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_MAX_TIMEOUT_SECONDS, Constants.APEX_GURU_RETRY_INTERVAL_MILLIS);
 
@@ -56,7 +56,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 			// TODO: For testability, the diagnostic manager should probably be passed in, not instantiated here.
 			new DiagnosticManagerImpl(diagnosticCollection).displayAsDiagnostics([selection.fsPath], convertibles);
 			// TODO: For testability, the telemetry service should probably be passed in, not instantiated here.
-			new TelemetryServiceImpl().sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
+			telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
 				executedCommand: commandName,
 				duration: (Date.now() - startTime).toString(),
 				violationCount: convertibles.length.toString(),
@@ -66,8 +66,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo)
 		});
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
-        outputChannel.error('Initial Code Analyzer with ApexGuru request failed.');
-        outputChannel.appendLine(errMsg);
+		logger.error('Initial Code Analyzer with ApexGuru request failed: ' + errMsg);
     }
 }
 
@@ -102,7 +101,7 @@ export async function pollAndGetApexGuruResponse(connection: Connection, request
 	throw new Error(`Failed to get a successful response from Apex Guru after maximum retries.${lastErrorMessage}`);
 }
 
-export async function initiateApexGuruRequest(selection: vscode.Uri, outputChannel: vscode.LogOutputChannel, connection: Connection): Promise<string> {
+export async function initiateApexGuruRequest(selection: vscode.Uri, logger: Logger, connection: Connection): Promise<string> {
 	const fileContent = await fileSystem.readFile(selection.fsPath);
 	const base64EncodedContent = Buffer.from(fileContent).toString('base64');
 	const response: ApexGuruInitialResponse = await connection.request({
@@ -114,12 +113,11 @@ export async function initiateApexGuruRequest(selection: vscode.Uri, outputChann
 	});
 
 	if (response.status != 'new' && response.status != 'success') {
-		outputChannel.warn('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
+		logger.warn('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
 		throw Error('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
 	}
 
-	const requestId = response.requestId;
-	return requestId;
+	return response.requestId;
 }
 
 export const fileSystem = {

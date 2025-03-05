@@ -1,6 +1,6 @@
 import { DiffHunk } from "../../shared/UnifiedDiff";
-import { TelemetryService } from "../core-extension-service";
 import * as Constants from '../constants';
+import {TelemetryService} from "../external-services/telemetry-service";
 
 export type DiffRejectCallback = (diffHunk?: DiffHunk) => Promise<void>;
 

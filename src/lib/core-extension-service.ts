@@ -5,11 +5,10 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import { Event } from 'vscode';
-import { satisfies } from 'semver';
-import { messages } from './messages';
+import {Extension} from 'vscode';
+import * as semver from 'semver';
 import { AuthFields } from '../types';
-import {SettingsManagerImpl} from '../lib/settings';
+import {SettingsManagerImpl} from './settings';
 
 import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
 /**
@@ -18,14 +17,12 @@ import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './co
  */
 export class CoreExtensionService {
 	private static initialized = false;
-	private static telemetryService: CoreTelemetryService;
 	private static workspaceContext: WorkspaceContext;
 
-	public static async loadDependencies(context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
+	public static async loadDependencies(outputChannel: vscode.LogOutputChannel): Promise<void> {
 		if (!CoreExtensionService.initialized) {
 			const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
-			await CoreExtensionService.initializeTelemetryService(coreExtensionApi?.services.TelemetryService, context, outputChannel);
 			// TODO: For testability, this should probably be passed in, instead of instantiated.
 			if (new SettingsManagerImpl().getApexGuruEnabled()) {
 				CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
@@ -35,7 +32,11 @@ export class CoreExtensionService {
 	}
 
 	private static async getCoreExtensionApiOrUndefined(): Promise<CoreExtensionApi|undefined> {
-		const coreExtension = vscode.extensions.getExtension(CORE_EXTENSION_ID);
+		// Note that when we get an extension, then it's "exports" field is the provided the return value
+		// of the extensions activate method. If the activate method hasn't been called, then this won't be filled in.
+		// Also note that the type of the return of the activate method is the templated type T of the Extension<T>.
+
+		const coreExtension: Extension<CoreExtensionApi> = vscode.extensions.getExtension(CORE_EXTENSION_ID);
 		if (!coreExtension) {
 			console.log(`${CORE_EXTENSION_ID} not found; cannot load core dependencies. Returning undefined instead.`);
 			return undefined;
@@ -45,45 +46,18 @@ export class CoreExtensionService {
 
 		// We know that there has to be a `version` property on the package.json object.
 		const coreExtensionVersion = pkgJson.version;
-		if (!this.isAboveMinimumRequiredVersion(MINIMUM_REQUIRED_VERSION_CORE_EXTENSION, coreExtensionVersion)) {
+		if (semver.lt(coreExtensionVersion, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION)) {
 			console.log(`${CORE_EXTENSION_ID} below minimum viable version; cannot load core dependencies. Returning undefined instead.`);
 			return undefined;
 		}
 
 		if (!coreExtension.isActive) {
 			console.log(`${CORE_EXTENSION_ID} present but inactive. Activating now.`);
-			await coreExtension.activate();
+			await coreExtension.activate(); // will call the extensions activate function and fill in the exports property with its return value
 		}
 
 		console.log(`${CORE_EXTENSION_ID} present and active. Returning its exported API.`);
-		return coreExtension.exports as CoreExtensionApi;
-	}
-
-	/**
-	 * Verifies that the current version of a dependency is at least as recent as the minimum required version.
-	 * @param minRequiredVersion
-	 * @param actualVersion
-	 */
-	public static isAboveMinimumRequiredVersion(minRequiredVersion: string, actualVersion: string): boolean {
-		return satisfies(actualVersion, ">=" + minRequiredVersion);
-	}
-
-	/**
-	 * Initializes a {@link CoreTelemetryService} instance of the provided class, or uses null if none was provided.
-	 * @param telemetryService
-	 * @param context
-	 */
-	private static async initializeTelemetryService(telemetryService: CoreTelemetryService | undefined, context: vscode.ExtensionContext, outputChannel: vscode.LogOutputChannel): Promise<void> {
-		const { name } = context.extension.packageJSON as { name: string };
-
-		if (!telemetryService) {
-			outputChannel.append(`Telemetry service not present in core dependency API. Using null instead.`);
-			outputChannel.show();
-			CoreExtensionService.telemetryService = null;
-		} else {
-			CoreExtensionService.telemetryService = telemetryService.getInstance(name);
-			await CoreExtensionService.telemetryService.initializeService(context);
-		}
+		return coreExtension.exports;
 	}
 
 	private static initializeWorkspaceContext(workspaceContext: WorkspaceContext | undefined, outputChannel: vscode.LogOutputChannel) {
@@ -92,17 +66,6 @@ export class CoreExtensionService {
 			outputChannel.show();
 		}
 		CoreExtensionService.workspaceContext = workspaceContext.getInstance(false);
-	}
-
-	/**
-	 *
-	 * @returns The {@link TelemetryService} object exported by the Core Extension if available, else null.
-	 */
-	public static _getTelemetryService(): CoreTelemetryService|null {
-		if (CoreExtensionService.initialized) {
-			return CoreExtensionService.telemetryService;
-		}
-		throw new Error(messages.error.coreExtensionServiceUninitialized);
 	}
 
 	static async getWorkspaceOrgId(): Promise<string | undefined> {
@@ -119,84 +82,33 @@ export class CoreExtensionService {
 	}
 }
 
-export interface TelemetryService {
-	sendExtensionActivationEvent(hrStart: [number, number]): void;
-	sendCommandEvent(key: string, data: Properties): void;
-	sendException(name: string, message: string, data?: Record<string, string>): void;
-	dispose(): void;
-}
-
-export class TelemetryServiceImpl implements TelemetryService {
-
-	public sendExtensionActivationEvent(hrStart: [number, number]): void {
-		CoreExtensionService._getTelemetryService()?.sendExtensionActivationEvent(hrStart);
-	}
-
-	public sendCommandEvent(key: string, data: Properties): void {
-		CoreExtensionService._getTelemetryService()?.sendCommandEvent(key, undefined, data);
-	}
-
-	public sendException(name: string, message: string, data?: Record<string, string>): void {
-		const fullMessage = data ? message + JSON.stringify(data) : message;
-		CoreExtensionService._getTelemetryService()?.sendException(name, fullMessage);
-	}
-
-	public dispose(): void {
-		CoreExtensionService._getTelemetryService()?.dispose();
-	}
-}
-
-
-interface Measurements {
-	[key: string]: number;
-}
-
-export interface Properties {
-	[key: string]: string;
-}
-
-/**
- * This interface is a subset of the TelemetryService interface from the salesforcedx-utils-vscode package.
- */
-interface CoreTelemetryService {
-	extensionName: string;
-	isTelemetryEnabled(): boolean;
-	getInstance(extensionName: string): CoreTelemetryService;
-	initializeService(extensionContext: vscode.ExtensionContext): Promise<void>;
-	sendExtensionActivationEvent(hrstart: [number, number]): void;
-	sendExtensionDeactivationEvent(): void;
-	sendCommandEvent(
-		commandName?: string,
-		hrstart?: [number, number],
-		properties?: Properties,
-		measurements?: Measurements
-	): void;
-	sendException(name: string, message: string): void;
-	dispose(): void;
-}
-
+// See https://github.com/forcedotcom/salesforcedx-vscode/blob/develop/packages/salesforcedx-vscode-core/src/index.ts#L479
 interface CoreExtensionApi {
 	services: {
-		TelemetryService: CoreTelemetryService;
 		WorkspaceContext: WorkspaceContext;
 	}
 }
 
+
+
+
+// TODO: Move all this Workspace Context stuff over into the external-services-provider so that we can instead pass in
+// the connection into the apex-guru-service code using dependency injection instead of all the global stuff.
+
+
+// See https://github.com/forcedotcom/salesforcedx-vscode/blob/develop/packages/salesforcedx-vscode-core/src/context/workspaceContext.ts
 interface WorkspaceContext {
-	readonly onOrgChange: Event<{
-	username?: string;
-	alias?: string;
-	}>;
+	// Note that the salesforce.salesforcedx-vscode-core extension's active method doesn't actually return an instance
+	// of this service, but instead returns the class. We must use the getInstance static method to create the instance.
 	getInstance(forceNew: boolean): WorkspaceContext;
+
+	// We need the connection, but no other instance methods currently
 	getConnection(): Promise<Connection>;
-	username(): string | undefined;
-	alias(): string | undefined;
 }
 
+// See https://github.com/forcedotcom/sfdx-core/blob/main/src/org/connection.ts#L69
 export interface Connection {
-	instanceUrl: string;
 	getApiVersion(): string;
-	getUsername(): string | undefined;
 	getAuthInfoFields(): AuthFields;
 	request<T>(options: { method: string; url: string; body: string; headers?: Record<string, string> }): Promise<T>;
 }

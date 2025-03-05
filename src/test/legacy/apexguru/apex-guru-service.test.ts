@@ -16,10 +16,9 @@ import { Connection } from '../../../lib/core-extension-service';
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from 'vscode';
+import {SpyLogger} from "../test-utils";
 
 suite('Apex Guru Test Suite', () => {
-    const outputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
-
 	  suite('#_isApexGuruEnabledInOrg', () => {
         let getConnectionStub: Sinon.SinonStub;
 		    let requestStub: Sinon.SinonStub;
@@ -40,7 +39,7 @@ suite('Apex Guru Test Suite', () => {
             });
 
             // ===== TEST =====
-            const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
+            const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(new SpyLogger());
 
             // ===== ASSERTIONS =====
             expect(result).to.equal(true);
@@ -60,7 +59,7 @@ suite('Apex Guru Test Suite', () => {
             });
 
             // ===== TEST =====
-            const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
+            const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(new SpyLogger());
 
             // ===== ASSERTIONS =====
             expect(result).to.equal(false);
@@ -80,7 +79,7 @@ suite('Apex Guru Test Suite', () => {
             });
 
             // ===== TEST =====
-            const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(outputChannel);
+            const result = await ApexGuruFunctions.isApexGuruEnabledInOrg(new SpyLogger());
 
             // ===== ASSERTIONS =====
             expect(result).to.equal(false);
@@ -118,7 +117,7 @@ suite('Apex Guru Test Suite', () => {
             const connection = await CoreExtensionService.getConnection();
 
             // ===== TEST =====
-            const result = await ApexGuruFunctions.initiateApexGuruRequest(vscode.Uri.file('dummyPath'), outputChannel, connection);
+            const result = await ApexGuruFunctions.initiateApexGuruRequest(vscode.Uri.file('dummyPath'), new SpyLogger(), connection);
 
             // ===== ASSERTIONS =====
             expect(result).to.equal('12345');
@@ -138,16 +137,14 @@ suite('Apex Guru Test Suite', () => {
                 request: requestStub.resolves({ status: 'failed' })
             });
             readFileStub.resolves('console.log("Hello World");');
-            const outputChannelSpy = Sinon.spy(outputChannel, 'warn');
             const connection = await CoreExtensionService.getConnection();
-
+			const spyLogger: SpyLogger = new SpyLogger();
             // ===== TEST =====
             try {
-              await ApexGuruFunctions.initiateApexGuruRequest(vscode.Uri.file('dummyPath'), outputChannel, connection);
+              	await ApexGuruFunctions.initiateApexGuruRequest(vscode.Uri.file('dummyPath'), spyLogger, connection);
             } catch (_e) {
-              // ===== ASSERTIONS =====
-              Sinon.assert.calledOnce(outputChannelSpy);
-              Sinon.assert.calledWith(outputChannelSpy, Sinon.match.string);
+              	// ===== ASSERTIONS =====
+				expect(spyLogger.warnCallHistory.length).to.be.greaterThan(0);
             }
         });
     });
@@ -262,9 +259,7 @@ suite('Apex Guru Test Suite', () => {
 
         setup(() => {
             connectionStub = {
-                instanceUrl: '',
                 getApiVersion: Sinon.stub(),
-                getUsername: Sinon.stub(),
                 getAuthInfoFields: Sinon.stub(),
                 request: Sinon.stub()
             } as Sinon.SinonStubbedInstance<Connection>;

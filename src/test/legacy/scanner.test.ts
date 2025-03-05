@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import * as Constants from '../../lib/constants';
 
 import {ExecutionResult} from '../../types';
+import {SFCAExtensionData} from "../../extension";
 
 suite('ScanRunner', () => {
 
@@ -34,7 +35,7 @@ suite('ScanRunner', () => {
 
             // ===== TEST =====
             // Use the scan runner on our target list to create and return our arg array.
-            
+
             /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             const args: string[] = (scanner as any).createDfaArgArray(targets, projectDir);
 
@@ -331,14 +332,14 @@ suite('ScanRunner', () => {
     });
 
     suite('#invokeDfaAnalyzer()', () => {
-        const ext = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
 		let context: vscode.ExtensionContext;
 
 		suiteSetup(async function () {
 			this.timeout(10000);
 			// Activate the extension.
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-			context = await ext.activate();
+			const extData: SFCAExtensionData = await ext.activate();
+			context = extData.context;
 		});
 
         test('Adds process Id to the cache', () => {

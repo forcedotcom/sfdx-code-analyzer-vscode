@@ -1,9 +1,9 @@
 import {ScannerStrategy} from '../scanner-strategies/scanner-strategy';
 import {Display} from '../display';
 import * as Constants from '../constants';
-import {TelemetryService} from '../core-extension-service';
 import {DiagnosticManager, DiagnosticConvertible} from '../diagnostics';
 import {messages} from '../messages';
+import {TelemetryService} from "../external-services/telemetry-service";
 
 export type ScannerDependencies = {
 	scannerStrategy: ScannerStrategy;
