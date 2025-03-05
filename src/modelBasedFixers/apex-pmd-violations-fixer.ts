@@ -83,7 +83,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
 
                 const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1, document);
                 // Update the command arguments with the resolved code snippet
-                codeAction.command.arguments = [updatedFileContent, document.uri, Constants.A4D_PREFIX];
+                codeAction.command.arguments = [Constants.A4D_PREFIX, updatedFileContent, document.uri];
 
                 return codeAction;
             } catch (error) {
