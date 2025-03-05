@@ -25,8 +25,7 @@ export class DiffAcceptAction {
 		try {
 			const lines: number = await this.callback(diffHunk);
 			this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_ACCEPT, {
-				commandName: this.commandName,
-				commandSource: Constants.A4D_COMMAND_SOURCE,
+				commandSource: this.commandName,
 				completionNumLines: lines.toString(),
 				languageType: 'apex' // Apex is the only language A4D codegen supports at present.
 			});
