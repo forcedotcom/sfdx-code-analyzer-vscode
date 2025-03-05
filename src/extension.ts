@@ -14,6 +14,9 @@ import {SfCli} from './lib/sf-cli';
 
 import {Displayable, ProgressNotification, UxDisplay} from './lib/display';
 import {DiagnosticManager, DiagnosticConvertible, DiagnosticManagerImpl} from './lib/diagnostics';
+import {DiffCreateAction} from './lib/actions/diff-create-action';
+import { DiffAcceptAction } from './lib/actions/diff-accept-action';
+import { DiffRejectAction } from './lib/actions/diff-reject-action';
 import {ScannerAction} from './lib/actions/scanner-action';
 import { CliScannerV4Strategy } from './lib/scanner-strategies/v4-scanner';
 import { CliScannerV5Strategy } from './lib/scanner-strategies/v5-scanner';
@@ -225,21 +228,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 	context.subscriptions.push(documentSaveListener);
 
 	telemetryService.sendExtensionActivationEvent(extensionHrStart);
-	setupUnifiedDiff(context, diagnosticManager);
+	setupUnifiedDiff(context, diagnosticManager, telemetryService);
 	outputChannel.appendLine(`Extension sfdx-code-analyzer-vscode activated.`);
 	return Promise.resolve(context);
 }
 
 
-function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: DiagnosticManager) {
+function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService) {
 	context.subscriptions.push(
 			vscode.commands.registerCommand(Constants.UNIFIED_DIFF, async (code: string, file?: string) => {
+				await (new DiffCreateAction(Constants.UNIFIED_DIFF, {
+					callback: (code: string, file?: string) => VSCodeUnifiedDiff.singleton.unifiedDiff(code, file),
+					telemetryService
+				})).run(code, file);
 				await VSCodeUnifiedDiff.singleton.unifiedDiff(code, file);
 			})
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk) => {
-				await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(hunk);
+				await (new DiffAcceptAction(CODEGENIE_UNIFIED_DIFF_ACCEPT, {
+					callback: async (diffHunk: DiffHunk) => {
+						await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(diffHunk);
+						return diffHunk.lines.length;
+					},
+					telemetryService
+				})).run(hunk);
 				// For accept & accept all, it is tricky to track the diagnostics and the changed lines as multiple fixes are requested.
 				// Hence, we save the file and rerun the scan instead.
 				await vscode.window.activeTextEditor.document.save();
@@ -252,12 +265,18 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
-				await VSCodeUnifiedDiff.singleton.unifiedDiffReject(hunk);
+				await (new DiffRejectAction(CODEGENIE_UNIFIED_DIFF_REJECT, {
+					callback: (diffHunk: DiffHunk) => VSCodeUnifiedDiff.singleton.unifiedDiffReject(diffHunk),
+					telemetryService
+				})).run(hunk);
 			})
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
-				await VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll();
+				await (new DiffAcceptAction(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, {
+					callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll(),
+					telemetryService
+				})).run();
 				await vscode.window.activeTextEditor.document.save();
 				return _runAndDisplayScanner(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName], {
 					telemetryService,
@@ -268,7 +287,10 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
-				await VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll();
+				await (new DiffRejectAction(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, {
+					callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll(),
+					telemetryService
+				})).run();
 			})
 	);
 	VSCodeUnifiedDiff.singleton.activate(context);
@@ -498,7 +520,6 @@ export async function _runAndDisplayScanner(commandName: string, targets: string
 		});
 	} catch (e) {
 		const errMsg = e instanceof Error ? e.message : e as string;
-		console.log(errMsg);
 		telemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS, errMsg, {
 			executedCommand: commandName,
 			duration: (Date.now() - startTime).toString()
@@ -547,7 +568,6 @@ export async function _runAndDisplayDfa(context:vscode.ExtensionContext ,runInfo
 		})
 	} catch (e) {
 		const errMsg = e instanceof Error ? e.message : e as string;
-		console.log(errMsg);
 		telemetryService.sendException(Constants.TELEM_FAILED_DFA_ANALYSIS, errMsg, {
 			executedCommand: commandName,
 			duration: (Date.now() - startTime).toString()
@@ -600,7 +620,6 @@ export async function _clearDiagnosticsForSelectedFiles(selections: vscode.Uri[]
 		});
 	} catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
-        console.log(errMsg);
         telemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS, errMsg, {
             executedCommand: commandName,
             duration: (Date.now() - startTime).toString()
