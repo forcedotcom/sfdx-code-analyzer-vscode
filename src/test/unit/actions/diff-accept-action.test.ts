@@ -32,10 +32,10 @@ describe('DiffAcceptAction', () => {
 			expect(stubTelemetryService.getSentExceptions()).toHaveLength(0);
 			expect(stubTelemetryService.getSentCommandEvents()).toHaveLength(1);
 			expect(stubTelemetryService.getSentCommandEvents()[0].key).toEqual(Constants.TELEM_DIFF_ACCEPT);
-			expect(stubTelemetryService.getSentCommandEvents()[0].data!.commandName).toEqual('fakeName');
-			expect(stubTelemetryService.getSentCommandEvents()[0].data!.commandSource).toEqual(Constants.A4D_COMMAND_SOURCE);
-			expect(stubTelemetryService.getSentCommandEvents()[0].data!.completionNumLines).toEqual('5');
-			expect(stubTelemetryService.getSentCommandEvents()[0].data!.languageType).toEqual('apex');
+			expect(stubTelemetryService.getSentCommandEvents()[0].data.commandName).toEqual('fakeName');
+			expect(stubTelemetryService.getSentCommandEvents()[0].data.commandSource).toEqual(Constants.A4D_COMMAND_SOURCE);
+			expect(stubTelemetryService.getSentCommandEvents()[0].data.completionNumLines).toEqual('5');
+			expect(stubTelemetryService.getSentCommandEvents()[0].data.languageType).toEqual('apex');
 		});
 	});
 });

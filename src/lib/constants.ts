@@ -32,8 +32,8 @@ export const TELEM_DIFF_SUGGESTION = 'sfdx__eGPT_suggest';
 export const TELEM_DIFF_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
 export const TELEM_DIFF_ACCEPT = 'sfdx__eGPT_accept';
 export const TELEM_DIFF_ACCEPT_FAILED = 'sfdx__eGPT_accept_failure';
-export const TELEM_DIFF_REJECT = 'sfdx__eGPT_reject';
-export const TELEM_DIFF_REJECT_FAILED = 'sfdx__eGPT_reject_failure';
+export const TELEM_DIFF_REJECT = 'sfdx__eGPT_clear';
+export const TELEM_DIFF_REJECT_FAILED = 'sfdx__eGPT_clear_failure';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
