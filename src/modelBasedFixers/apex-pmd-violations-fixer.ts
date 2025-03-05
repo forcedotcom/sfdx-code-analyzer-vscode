@@ -83,12 +83,12 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
 
                 const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1, document);
                 // Update the command arguments with the resolved code snippet
-                codeAction.command.arguments = [updatedFileContent, document.uri];
+                codeAction.command.arguments = [Constants.A4D_PREFIX, updatedFileContent, document.uri];
 
                 return codeAction;
             } catch (error) {
                 const errorMessage = '***Failed to resolve code action:***'
-                const detailedMessage = error instanceof Error 
+                const detailedMessage = error instanceof Error
                 ? error.message
                 : String(error);
                 console.error(errorMessage, error);
@@ -198,17 +198,17 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         if (!document) {
             return replaceCode;
         }
-    
+
         // Get the indentation of the first line in the range
         const startLine = range && range.start.line > 0 ? range.start.line - 1 : 0;
         const baseIndentation = this.getLineIndentation(document, startLine);
-        
+
         // Split the replacement code into lines
         const lines = replaceCode.split(/\r?\n/);
-        
+
         // First, normalize the code by removing all existing indentation
         const normalizedLines = lines.map(line => line.trimStart());
-        
+
         let indentLevel = 0;
         let braceLevel = 0;
         let parenLevel = 0;
@@ -250,10 +250,10 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
 
             return indentation + line;
         });
-        
+
         return formattedLines.join(document.eol === vscode.EndOfLine.CRLF ? '\r\n' : '\n');
     }
-    
+
     // Helper to get the indentation of a specific line
     private getLineIndentation(document: vscode.TextDocument, lineNumber: number): string {
         const lineText = document.lineAt(lineNumber).text;
@@ -267,7 +267,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         // This is a known issue and we will fix this as we learn more about how the model sends the responses for other fixes.
         const updatedDiagnostics = currentDiagnostics.filter(
             diagnostic => (
-                !Constants.A4D_FIX_AVAILABLE_RULES.includes(this.extractDiagnosticCode(diagnostic)) || 
+                !Constants.A4D_FIX_AVAILABLE_RULES.includes(this.extractDiagnosticCode(diagnostic)) ||
                 (diagnostic.range.end.line < range.start.line || diagnostic.range.start.line > range.end.line )
             )
         );

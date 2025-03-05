@@ -461,14 +461,16 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
   /**
    * Accept all changes in the unified diff.
    */
-  public async unifiedDiffAcceptAll() {
+  public async unifiedDiffAcceptAll(): Promise<number> {
     const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
+    if (!editor) return 0;
     const diff = this.unifiedDiffs.get(editor.document.uri.toString());
-    if (!diff) return;
+    if (!diff) return 0;
+	const diffLines: number = diff.getHunks().reduce((prev, curr) => prev + curr.lines.length, 0);
     diff.setSourceCode(diff.getTargetCode());
     await this.renderUnifiedDiff(editor.document);
     this.checkRedundantUnifiedDiff(editor.document);
+	return diffLines;
   }
 
   /**
