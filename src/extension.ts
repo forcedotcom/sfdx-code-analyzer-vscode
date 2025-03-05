@@ -236,8 +236,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<vscode
 
 function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService) {
 	context.subscriptions.push(
-			vscode.commands.registerCommand(Constants.UNIFIED_DIFF, async (code: string, file?: string) => {
-				await (new DiffCreateAction(Constants.UNIFIED_DIFF, {
+			vscode.commands.registerCommand(Constants.UNIFIED_DIFF, async (source: string, code: string, file?: string) => {
+				await (new DiffCreateAction(`${source}.${Constants.UNIFIED_DIFF}`, {
 					callback: (code: string, file?: string) => VSCodeUnifiedDiff.singleton.unifiedDiff(code, file),
 					telemetryService
 				})).run(code, file);
@@ -246,7 +246,9 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk) => {
-				await (new DiffAcceptAction(CODEGENIE_UNIFIED_DIFF_ACCEPT, {
+				// TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+				//       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+				await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT}`, {
 					callback: async (diffHunk: DiffHunk) => {
 						await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(diffHunk);
 						return diffHunk.lines.length;
@@ -265,7 +267,9 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
-				await (new DiffRejectAction(CODEGENIE_UNIFIED_DIFF_REJECT, {
+				// TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+				//       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+				await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT}`, {
 					callback: (diffHunk: DiffHunk) => VSCodeUnifiedDiff.singleton.unifiedDiffReject(diffHunk),
 					telemetryService
 				})).run(hunk);
@@ -273,7 +277,9 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
-				await (new DiffAcceptAction(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, {
+				// TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+				//       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+				await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL}`, {
 					callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll(),
 					telemetryService
 				})).run();
@@ -287,7 +293,9 @@ function setupUnifiedDiff(context: vscode.ExtensionContext, diagnosticManager: D
 	);
 	context.subscriptions.push(
 			vscode.commands.registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
-				await (new DiffRejectAction(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, {
+				// TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+				//       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+				await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT_ALL}`, {
 					callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll(),
 					telemetryService
 				})).run();
