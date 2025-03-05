@@ -14,10 +14,10 @@ suite('fixer.ts', () => {
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
-	teardown(async () => {
-		// Close any open tabs and close the active editor.
-		await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-	});
+    teardown(async () => {
+        // Close any open tabs and close the active editor.
+        await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    });
 
     suite('_NoOpFixGenerator', () => {
         const existingFixes = new Set<number>(); 
@@ -45,7 +45,7 @@ suite('fixer.ts', () => {
                 test('No fixes are offered', async () => {
                     // Open the document.
                     const doc = await vscode.workspace.openTextDocument(xmlDocUri);
-					await vscode.window.showTextDocument(doc);
+                    await vscode.window.showTextDocument(doc);
                     // Create a fake diagnostic.
                     const diag = new vscode.Diagnostic(
                         new vscode.Range(
@@ -74,7 +74,7 @@ suite('fixer.ts', () => {
                 // Load the document and store its starting contents.
                 setup(async () => {
                     doc = await vscode.workspace.openTextDocument(fileUri);
-					await vscode.window.showTextDocument(doc);
+                    await vscode.window.showTextDocument(doc);
                 });
 
                 suite('Line-level suppression', () => {

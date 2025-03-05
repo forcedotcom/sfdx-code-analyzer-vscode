@@ -15,73 +15,73 @@ suite('diagnostics.ts', () => {
         const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
         
         const pathToFirstFile: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
-		const firstFileConvertibles: DiagnosticConvertible[] = [{
-			rule: 'fakeRule1',
-			engine: 'pmd',
-			message: 'fakeMessage',
-			severity: 1,
-			locations: [{
-				file: pathToFirstFile,
-				startLine: 12,
-				startColumn: 2
-			}],
-			primaryLocationIndex: 0,
-			resources: []
-		}]
+        const firstFileConvertibles: DiagnosticConvertible[] = [{
+            rule: 'fakeRule1',
+            engine: 'pmd',
+            message: 'fakeMessage',
+            severity: 1,
+            locations: [{
+                file: pathToFirstFile,
+                startLine: 12,
+                startColumn: 2
+            }],
+            primaryLocationIndex: 0,
+            resources: []
+        }]
         const firstFileApexSharingViolationsConvertibles: DiagnosticConvertible[] = [{
-			rule: 'ApexSharingViolations',
-			engine: 'pmd',
-			message: 'fakeMessage',
-			severity: 1,
-			locations: [{
-				file: pathToFirstFile,
-				startLine: 12,
-				startColumn: 2,
+            rule: 'ApexSharingViolations',
+            engine: 'pmd',
+            message: 'fakeMessage',
+            severity: 1,
+            locations: [{
+                file: pathToFirstFile,
+                startLine: 12,
+                startColumn: 2,
                 endLine: 13,
                 endColumn: 3
-			}],
-			primaryLocationIndex: 0,
-			resources: []
-		}]
+            }],
+            primaryLocationIndex: 0,
+            resources: []
+        }]
         const pathToSecondFile: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA2.cls');
-		const secondFileConvertibles: DiagnosticConvertible[] = [{
-			rule: 'fakeRule1',
-			engine: 'pmd',
-			message: 'fakeMessage',
-			severity: 1,
-			locations: [{
-				file: pathToSecondFile,
-				startLine: 19,
-				startColumn: 2
-			}],
-			primaryLocationIndex: 0,
-			resources: []
-		}, {
-			rule: 'fakeRule2',
-			engine: 'pmd',
-			message: 'fakeMessage',
-			severity: 1,
-			locations: [{
-				file: pathToSecondFile,
-				startLine: 3,
-				startColumn: 15
-			}],
-			primaryLocationIndex: 0,
-			resources: []
-		}];
+        const secondFileConvertibles: DiagnosticConvertible[] = [{
+            rule: 'fakeRule1',
+            engine: 'pmd',
+            message: 'fakeMessage',
+            severity: 1,
+            locations: [{
+                file: pathToSecondFile,
+                startLine: 19,
+                startColumn: 2
+            }],
+            primaryLocationIndex: 0,
+            resources: []
+        }, {
+            rule: 'fakeRule2',
+            engine: 'pmd',
+            message: 'fakeMessage',
+            severity: 1,
+            locations: [{
+                file: pathToSecondFile,
+                startLine: 3,
+                startColumn: 15
+            }],
+            primaryLocationIndex: 0,
+            resources: []
+        }];
 
-		// Note: We want to share the same diagnostic collection across tests.
-		let diagnosticCollection: vscode.DiagnosticCollection = null;
+        // Note: We want to share the same diagnostic collection across tests.
+        let diagnosticCollection: vscode.DiagnosticCollection = null;
 
-		setup(() => {
-			// Re-initialize the collection before each test.
-			diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca.diagnosticTest');
-		});
+        setup(() => {
+            // Re-initialize the collection before each test.
+            diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca.diagnosticTest');
+        });
 
-		teardown(() => {
-			// Clear the collection after each test.
-			diagnosticCollection.clear();
-		});
+        teardown(() => {
+            // Clear the collection after each test.
+            diagnosticCollection.clear();
+        });
 
         test('Adds violations to first-time target', () => {
             // ===== SETUP =====

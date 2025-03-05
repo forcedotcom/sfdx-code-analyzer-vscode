@@ -27,12 +27,12 @@ export async function getTargets(selections: vscode.Uri[]): Promise<string[]> {
                 // This should never happen, but we should handle it gracefully regardless.
                 throw new Error(messages.targeting.error.nonexistentSelectedFileGenerator(selection.fsPath));
             } else if (await isDir(selection.fsPath)) {
-				// Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
-				// latter into the former.
-				const globbablePath = selection.fsPath.replace(/\\/g, '/');
+                // Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
+                // latter into the former.
+                const globbablePath = selection.fsPath.replace(/\\/g, '/');
                 const globOut: string[] = await glob(`${globbablePath}/**/*`, {nodir: true});
-				// Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
-				// to its expected form.
+                // Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
+                // to its expected form.
 
                 globOut.forEach(o => targets.add(vscode.Uri.file(o).fsPath));
             } else {
@@ -73,9 +73,9 @@ export async function getSelectedMethod(): Promise<string> {
     const textDocument: vscode.TextDocument = activeEditor.document;
     const cursorPosition: vscode.Position = activeEditor.selection.active;
 
-	// The filename-portion of the target string needs to be Unix-formatted,
-	// otherwise it will parse as a glob and kill the process.
-	const fileName: string = textDocument.fileName.replace(/\\/g, '/');
+    // The filename-portion of the target string needs to be Unix-formatted,
+    // otherwise it will parse as a glob and kill the process.
+    const fileName: string = textDocument.fileName.replace(/\\/g, '/');
 
     // If the Apex Language Server is available, we can use it to derive much more robust
     // targeting information than we can independently.

@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import * as Constants from '../lib/constants';
 import * as PromptConstants from './prompt-constants';
-import { ServiceProvider, ServiceType } from '@salesforce/vscode-service-provider';
+import {LLMServiceInterface, ServiceProvider, ServiceType} from '@salesforce/vscode-service-provider';
 import { PromptBuilder } from './prompt-formatter';
 import { messages } from '../lib/messages';
 import { randomUUID } from 'crypto';
@@ -75,7 +75,7 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 const prompt = this.generatePrompt(document, diagnostic);
 
                 // Get the LLM service instance
-                const llmService = await ServiceProvider.getService(ServiceType.LLMService, Constants.EXTENSION_ID);
+                const llmService: LLMServiceInterface = await ServiceProvider.getService(ServiceType.LLMService, Constants.EXTENSION_ID);
 
                 // Call the LLM service with the generated prompt
                 const llmResponse = await llmService.callLLM(prompt, getUniqueId());

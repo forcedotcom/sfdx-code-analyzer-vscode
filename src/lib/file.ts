@@ -36,16 +36,16 @@ export async function isDir(fileName: string): Promise<boolean> {
 }
 
 export async function tmpFileWithCleanup(ext?: string): Promise<string> {
-	return new Promise<string>((res, rej) => {
-		// Make `tmp` clean up the file after the process exits.
-		tmp.setGracefulCleanup();
-		const options: tmp.FileOptions = ext ? {postfix: ext}: {};
-		return tmp.file(options, (err, name) => {
-			if (!err) {
-				res(name);
-			} else {
-				rej(err);
-			}
-		});
-	});
+    return new Promise<string>((res, rej) => {
+        // Make `tmp` clean up the file after the process exits.
+        tmp.setGracefulCleanup();
+        const options: tmp.FileOptions = ext ? {postfix: ext}: {};
+        return tmp.file(options, (err, name) => {
+            if (!err) {
+                res(name);
+            } else {
+                rej(err);
+            }
+        });
+    });
 }
