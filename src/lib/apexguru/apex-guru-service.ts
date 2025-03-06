@@ -7,13 +7,12 @@
 
 import * as vscode from 'vscode';
 import * as fspromises from 'fs/promises';
-import {Connection, CoreExtensionService} from '../lib/core-extension-service';
-import * as Constants from '../lib/constants';
-import {messages} from '../lib/messages';
-import {DiagnosticConvertible, DiagnosticManagerImpl} from '../lib/diagnostics';
-import {RunInfo} from '../extension';
-import {TelemetryService} from "../lib/external-services/telemetry-service";
-import {Logger} from "../lib/logger";
+import {Connection, CoreExtensionService} from '../core-extension-service';
+import * as Constants from '../constants';
+import {messages} from '../messages';
+import {DiagnosticConvertible, DiagnosticManager} from '../diagnostics';
+import {TelemetryService} from "../external-services/telemetry-service";
+import {Logger} from "../logger";
 
 export async function isApexGuruEnabledInOrg(logger: Logger): Promise<boolean> {
     try {
@@ -33,11 +32,7 @@ export async function isApexGuruEnabledInOrg(logger: Logger): Promise<boolean> {
     }
 }
 
-export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo, telemetryService: TelemetryService, logger: Logger) {
-    const {
-        diagnosticCollection,
-        commandName
-    } = runInfo;
+export async function runApexGuruOnFile(selection: vscode.Uri, commandName: string, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger) {
     const startTime = Date.now();
     try {
         await vscode.window.withProgress({
@@ -54,7 +49,7 @@ export async function runApexGuruOnFile(selection: vscode.Uri, runInfo: RunInfo,
 
             const convertibles: DiagnosticConvertible[] = transformStringToDiagnosticConvertibles(selection.fsPath, decodedReport);
             // TODO: For testability, the diagnostic manager should probably be passed in, not instantiated here.
-            new DiagnosticManagerImpl(diagnosticCollection).displayAsDiagnostics([selection.fsPath], convertibles);
+            diagnosticManager.displayAsDiagnostics([selection.fsPath], convertibles);
             telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
                 executedCommand: commandName,
                 duration: (Date.now() - startTime).toString(),

@@ -7,8 +7,9 @@
 
 import * as vscode from 'vscode';
 import { expect } from 'chai';
-import { ApexPmdViolationsFixer } from '../../../modelBasedFixers/apex-pmd-violations-fixer';
+import { AgentforceViolationsFixer } from '../../../lib/agentforce/agentforce-violations-fixer';
 import Sinon from 'sinon';
+import {SpyLLMService} from "../test-utils";
 
 suite('apex-pmd-violations-fixer.ts', () => {
 
@@ -18,26 +19,26 @@ suite('apex-pmd-violations-fixer.ts', () => {
     });
 
     suite('resolveCodeAction', () => {
-        let fixer: ApexPmdViolationsFixer;
+        let fixer: AgentforceViolationsFixer;
 
         setup(() => {
-            fixer = new ApexPmdViolationsFixer();
+            fixer = new AgentforceViolationsFixer(new SpyLLMService());
         });
 
         test('should return null if cancellation is requested', async () => {
             const token = { isCancellationRequested: true } as vscode.CancellationToken;
             const codeAction = new vscode.CodeAction('Test Action', vscode.CodeActionKind.QuickFix);
-            
+
             const result = await fixer.resolveCodeAction(codeAction, token);
             expect(result).to.equal(null);
         });
     });
 
     suite('extractCodeFromResponse', () => {
-        let fixer: ApexPmdViolationsFixer;
+        let fixer: AgentforceViolationsFixer;
 
         setup(() => {
-            fixer = new ApexPmdViolationsFixer();
+            fixer = new AgentforceViolationsFixer(new SpyLLMService());
         });
 
         test('should extract code ending with triple ticks', () => {
@@ -82,10 +83,10 @@ suite('apex-pmd-violations-fixer.ts', () => {
     });
 
     suite('extractCodeFromFile', () => {
-        let fixer: ApexPmdViolationsFixer;
+        let fixer: AgentforceViolationsFixer;
 
         setup(() => {
-            fixer = new ApexPmdViolationsFixer();
+            fixer = new AgentforceViolationsFixer(new SpyLLMService());
         });
 
         test('should extract code from given line range with OSX linebreaks', () => {
@@ -114,11 +115,11 @@ suite('apex-pmd-violations-fixer.ts', () => {
     });
 
     suite('replaceCodeInFile', () => {
-        let fixer: ApexPmdViolationsFixer;
+        let fixer: AgentforceViolationsFixer;
         let fakeDocument: vscode.TextDocument;
 
         setup(() => {
-            fixer = new ApexPmdViolationsFixer();
+            fixer = new AgentforceViolationsFixer(new SpyLLMService());
             fakeDocument = {
                 lineAt: Sinon.stub()
             } as unknown as vscode.TextDocument;
@@ -187,54 +188,54 @@ suite('apex-pmd-violations-fixer.ts', () => {
     });
 
     suite('isSupportedViolationForCodeFix', () => {
-        let fixer: ApexPmdViolationsFixer;
-    
+        let fixer: AgentforceViolationsFixer;
+
         setup(() => {
-            fixer = new ApexPmdViolationsFixer();
+            fixer = new AgentforceViolationsFixer(new SpyLLMService());
         });
-    
+
         test('returns true for supported rule as object', () => {
             const diagnostic: vscode.Diagnostic = {
                 code: { value: 'ApexCRUDViolation' }
             } as vscode.Diagnostic;
-    
+
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
             expect(result).to.equal(true);
         });
-    
+
         test('returns true for supported rule as string', () => {
             const diagnostic: vscode.Diagnostic = {
                 code: 'ApexCRUDViolation'
             } as vscode.Diagnostic;
-    
+
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
             expect(result).to.equal(false);
         });
-    
+
         test('returns false for unsupported rule', () => {
             const diagnostic: vscode.Diagnostic = {
                 code: { value: 'unsupportedRule' }
             } as vscode.Diagnostic;
-    
+
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
             expect(result).to.equal(false);
         });
-    
+
         test('returns false for diagnostic without code', () => {
             const diagnostic: vscode.Diagnostic = {} as vscode.Diagnostic;
-    
+
             const result = fixer.isSupportedViolationForCodeFix(diagnostic);
             expect(result).to.equal(false);
         });
     });
 
     suite('removeDiagnosticsWithInRange', () => {
-        let fixer: ApexPmdViolationsFixer;
+        let fixer: AgentforceViolationsFixer;
         let diagnosticCollection: vscode.DiagnosticCollection;
         let uri: vscode.Uri;
 
         setup(() => {
-            fixer = new ApexPmdViolationsFixer();
+            fixer = new AgentforceViolationsFixer(new SpyLLMService());
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
             uri = vscode.Uri.file('test.apex');
         });

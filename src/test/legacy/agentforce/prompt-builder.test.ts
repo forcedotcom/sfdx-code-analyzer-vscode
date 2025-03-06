@@ -7,7 +7,7 @@
 
 
 import { expect } from 'chai';
-import { PromptBuilder } from '../../../modelBasedFixers/prompt-formatter';
+import { PromptBuilder } from '../../../lib/agentforce/prompt-builder';
 
 suite('PromptFormatter', () => {
   const baseTemplate = `
@@ -24,7 +24,7 @@ Additional Notes: {{###ADDITIONAL_PROMPT###}}
       const result = formatter
           .withViolationCode('class Test {}')
           .build();
-      
+
       expect(result).to.include('class Test {}');
       expect(result).to.not.include('{{###VIOLATION_CODE###}}');
   });
@@ -34,7 +34,7 @@ Additional Notes: {{###ADDITIONAL_PROMPT###}}
       const result = formatter
           .withViolationMessage('Code style violation')
           .build();
-      
+
       expect(result).to.include('Code style violation');
       expect(result).to.not.include('{{###VIOLATION_MESSAGE###}}');
   });
@@ -44,7 +44,7 @@ Additional Notes: {{###ADDITIONAL_PROMPT###}}
       const result = formatter
           .withAdditionalPrompt('Improve readability')
           .build();
-      
+
       expect(result).to.include('Improve readability');
       expect(result).to.not.include('{{###ADDITIONAL_PROMPT###}}');
   });
@@ -56,7 +56,7 @@ Additional Notes: {{###ADDITIONAL_PROMPT###}}
           .withViolationMessage('Code style violation')
           .withAdditionalPrompt('Improve readability')
           .build();
-      
+
       expect(result).to.include('class Test {}');
       expect(result).to.include('Code style violation');
       expect(result).to.include('Improve readability');
@@ -70,7 +70,7 @@ Additional Notes: {{###ADDITIONAL_PROMPT###}}
       const result = formatter
           .withViolationCode('class Test {}')
           .build();
-      
+
       expect(result).to.include('class Test {}');
       expect(result).to.include('{{###VIOLATION_MESSAGE###}}');
       expect(result).to.include('{{###ADDITIONAL_PROMPT###}}');
