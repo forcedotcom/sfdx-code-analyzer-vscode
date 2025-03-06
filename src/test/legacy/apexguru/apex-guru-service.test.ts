@@ -10,7 +10,7 @@ import * as Sinon from 'sinon';
 import {DiagnosticConvertible} from '../../../lib/diagnostics';
 import {CoreExtensionService} from '../../../lib/core-extension-service';
 import * as Constants from '../../../lib/constants';
-import * as ApexGuruFunctions from '../../../apexguru/apex-guru-service'
+import * as ApexGuruFunctions from '../../../lib/apexguru/apex-guru-service'
 import { Connection } from '../../../lib/core-extension-service';
 
 // You can import and use all API from the 'vscode' module

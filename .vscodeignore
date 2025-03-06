@@ -20,3 +20,4 @@ templates/**
 **/.vscode-test.*
 **/eslint.config.mjs
 **/tsconfig.json
+**/jest.config.mjs

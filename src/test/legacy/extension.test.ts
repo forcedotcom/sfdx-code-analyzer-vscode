@@ -12,16 +12,7 @@ import * as path from 'path';
 import {SfCli} from '../../lib/sf-cli';
 import * as Sinon from 'sinon';
 import {
-    _runAndDisplayScanner,
-    _runAndDisplayDfa,
-    _clearDiagnostics,
-    _shouldProceedWithDfaRun,
-    _stopExistingDfaRun,
     _isValidFileForAnalysis,
-    verifyPluginInstallation,
-    _clearDiagnosticsForSelectedFiles,
-    _removeDiagnosticsInRange,
-    RunInfo,
     SFCAExtensionData
 } from '../../extension';
 import {messages} from '../../lib/messages';
@@ -32,10 +23,10 @@ import * as targeting from '../../lib/targeting';
 // You can import and use all API from the 'vscode' module
 // as well as import your extension to test it
 import * as vscode from 'vscode';
-import { DiagnosticConvertible, DiagnosticManager } from '../../lib/diagnostics';
-import {Properties} from "@salesforce/vscode-service-provider";
-import {TelemetryService} from "../../lib/external-services/telemetry-service";
-import {SpyLogger} from "./test-utils";
+import {DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
+import {SpyLogger, StubDiagnosticManager, StubTelemetryService} from "./test-utils";
+import {DfaRunner, verifyPluginInstallation} from "../../lib/dfa-runner";
+import {CodeAnalyzerRunner} from "../../lib/code-analyzer-runner";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -65,8 +56,10 @@ suite('Extension Test Suite', () => {
         teardown(async () => {
             // Close any open tabs and close the active editor.
             await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+
+            const extData: SFCAExtensionData = ext.exports;
             // Also, clear any diagnostics we added.
-            _clearDiagnostics();
+            extData.diagnosticManager.clearDiagnostics()
         });
 
         suite('sfca.runOnActiveFile', () => {
@@ -252,13 +245,19 @@ suite('Extension Test Suite', () => {
         });
     });
 
-    suite('#_runAndDisplayScanner()', () => {
+    suite('#_runAndDisplay()', () => {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        let stubTelemetryService: StubTelemetryService;
+        let codeAnalyzerRunner: CodeAnalyzerRunner;
 
         suiteSetup(async function () {
             this.timeout(10000);
             // Activate the extension.
             await ext.activate();
+
+            stubTelemetryService = new StubTelemetryService();
+            codeAnalyzerRunner = new CodeAnalyzerRunner(new StubDiagnosticManager(), new SettingsManagerImpl(),
+                stubTelemetryService, new SpyLogger());
         });
 
         suite('Error handling', () => {
@@ -268,7 +267,6 @@ suite('Extension Test Suite', () => {
 
             test('Throws error if `sf`/`sfdx` is missing', async () => {
                 // ===== SETUP =====
-                const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SFDX being unavailable.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
                 Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
@@ -277,12 +275,7 @@ suite('Extension Test Suite', () => {
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
                 // The arguments do not matter.
-                await _runAndDisplayScanner(fakeTelemetryName, [], {
-                    telemetryService: stubTelemetryService,
-                    diagnosticManager: new StubDiagnosticManager(),
-                    settingsManager: new SettingsManagerImpl(),
-                    logger: new SpyLogger()
-                });
+                await codeAnalyzerRunner.runAndDisplay(fakeTelemetryName, []);
 
 
                 // ===== ASSERTIONS =====
@@ -311,11 +304,12 @@ suite('Extension Test Suite', () => {
                 Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
                 const fakeTelemetryName = 'FakeName';
 
+                const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
+                const dfaRunner: DfaRunner = new DfaRunner(context, stubTelemetryService, new SpyLogger())
+
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
-                await _runAndDisplayDfa(null, {
-                    commandName: fakeTelemetryName
-                }, null, ['someMethod'], 'some/project/dir', stubTelemetryService, new SpyLogger());
+                await dfaRunner._runAndDisplayDfa(fakeTelemetryName, null, ['someMethod'], 'some/project/dir');
 
                 // ===== ASSERTIONS =====
                 Sinon.assert.callCount(errorSpy, 1);
@@ -336,11 +330,12 @@ suite('Extension Test Suite', () => {
                 Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
                 const fakeTelemetryName = 'FakeName';
 
+                const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
+                const dfaRunner: DfaRunner = new DfaRunner(context, stubTelemetryService, new SpyLogger())
+
                 // ===== TEST =====
                 try {
-                    await _runAndDisplayDfa(null, {
-                        commandName: fakeTelemetryName
-                    }, null, ['someMethod'], 'some/project/dir', stubTelemetryService, new SpyLogger());
+                    await dfaRunner._runAndDisplayDfa(fakeTelemetryName, null, ['someMethod'], 'some/project/dir');
                 } catch (_e) {
                     // Spy will check the error
                 }
@@ -422,7 +417,9 @@ suite('Extension Test Suite', () => {
 
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
-            expect(await _shouldProceedWithDfaRun(context)).to.equal(true);
+            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+
+            expect(await dfaRunner.shouldProceedWithDfaRun()).to.equal(true);
             Sinon.assert.callCount(infoMessageSpy, 0);
         });
 
@@ -430,8 +427,10 @@ suite('Extension Test Suite', () => {
             const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
+            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            _shouldProceedWithDfaRun(context);
+            dfaRunner.shouldProceedWithDfaRun();
 
             Sinon.assert.callCount(infoMessageSpy, 1);
             expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.existingDfaRunText);
@@ -456,14 +455,19 @@ suite('Extension Test Suite', () => {
 
         test('Cache cleared as part of stopping the existing DFA run', async () => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-            await _stopExistingDfaRun(context, new SpyLogger());
+
+            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+
+            await dfaRunner.stopExistingDfaRun();
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
         test('Cache stays cleared when there are no existing DFA runs', () => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            _stopExistingDfaRun(context, new SpyLogger());
+            dfaRunner.stopExistingDfaRun();
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
@@ -487,22 +491,20 @@ suite('Extension Test Suite', () => {
 
     suite('_clearDiagnosticsForSelectedFiles Test Suite', () => {
         let diagnosticCollection: vscode.DiagnosticCollection;
-        let runInfo: RunInfo;
         let getTargetsStub: Sinon.SinonStub;
+        let diagnosticManager: DiagnosticManager;
 
         suiteSetup(() => {
             // Create a diagnostic collection before the test suite starts.
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
-            runInfo = {
-                commandName: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE,
-                diagnosticCollection
-            };
             getTargetsStub = Sinon.stub(targeting, 'getTargets');
         });
 
         setup(() => {
             // Ensure the diagnostic collection is clear before each test.
             diagnosticCollection.clear();
+
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
         });
 
         teardown(() => {
@@ -517,16 +519,16 @@ suite('Extension Test Suite', () => {
             const diagnostics = [
                 new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic', vscode.DiagnosticSeverity.Warning)
             ];
-            runInfo.diagnosticCollection.set(uri, diagnostics);
+            diagnosticCollection.set(uri, diagnostics);
             getTargetsStub.returns(['/some/path/file1.cls']);
 
-            expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
+            expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await _clearDiagnosticsForSelectedFiles([uri], runInfo, new StubTelemetryService(), new SpyLogger());
+            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE);
 
             // ===== ASSERTIONS =====
-            expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
+            expect(diagnosticCollection.get(uri)).to.be.empty;
         });
 
         test('Should clear diagnostics for multiple files', async () => {
@@ -544,11 +546,11 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await _clearDiagnosticsForSelectedFiles([uri1, uri2], runInfo, new StubTelemetryService(), new SpyLogger());
+            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri1, uri2], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
 
             // ===== ASSERTIONS =====
-            expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
-            expect(runInfo.diagnosticCollection.get(uri2)).to.be.empty;
+            expect(diagnosticCollection.get(uri1)).to.be.empty;
+            expect(diagnosticCollection.get(uri2)).to.be.empty;
         });
 
         test('Should handle case with no diagnostics to clear', async () => {
@@ -556,10 +558,10 @@ suite('Extension Test Suite', () => {
             const uri = vscode.Uri.file('/some/path/file4.cls');
 
             // ===== TEST =====
-            await _clearDiagnosticsForSelectedFiles([uri], runInfo, new StubTelemetryService(), new SpyLogger());
+            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
 
             // ===== ASSERTIONS =====
-            expect(runInfo.diagnosticCollection.get(uri)).to.be.empty;
+            expect(diagnosticCollection.get(uri)).to.be.empty;
         });
 
         test('Should handle case with an empty URI array', async () => {
@@ -574,10 +576,10 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await _clearDiagnosticsForSelectedFiles([], runInfo, new StubTelemetryService(), new SpyLogger());
+            await diagnosticManager.clearDiagnosticsForSelectedFiles([], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
 
             // ===== ASSERTIONS =====
-            expect(runInfo.diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
+            expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
         });
 
         test('Should not affect other diagnostics not in the selected list', async () => {
@@ -598,20 +600,22 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await _clearDiagnosticsForSelectedFiles([uri1], runInfo, new StubTelemetryService(), new SpyLogger());
+            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri1], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
 
             // ===== ASSERTIONS =====
-            expect(runInfo.diagnosticCollection.get(uri1)).to.be.empty;
-            expect(runInfo.diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
+            expect(diagnosticCollection.get(uri1)).to.be.empty;
+            expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
         });
     });
 
     suite('_removeSingleDiagnostic Test Suite', () => {
         let diagnosticCollection: vscode.DiagnosticCollection;
+        let diagnosticManager: DiagnosticManager;
 
         setup(() => {
             // Create a new diagnostic collection for each test
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
         });
 
         teardown(() => {
@@ -631,7 +635,7 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(2, 'Expected two diagnostics to be present before removal');
 
             // ===== TEST =====
-            _removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
+            diagnosticManager.clearDiagnosticsInRange(uri, diagnosticToRemove.range);
 
             // ===== ASSERTIONS =====
             const remainingDiagnostics = diagnosticCollection.get(uri);
@@ -647,7 +651,7 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.be.empty;
 
             // ===== TEST =====
-            _removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
+            diagnosticManager.clearDiagnosticsInRange(uri, diagnosticToRemove.range);
 
             // ===== ASSERTIONS =====
             const remainingDiagnostics = diagnosticCollection.get(uri);
@@ -666,7 +670,7 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected one diagnostic to be present before attempting removal');
 
             // ===== TEST =====
-            _removeDiagnosticsInRange(uri, diagnosticToRemove.range, diagnosticCollection);
+            diagnosticManager.clearDiagnosticsInRange(uri, diagnosticToRemove.range);
 
             // ===== ASSERTIONS =====
             const remainingDiagnostics = diagnosticCollection.get(uri);
@@ -676,44 +680,3 @@ suite('Extension Test Suite', () => {
     });
 
 });
-
-type TelemetryExceptionData = {
-    name: string;
-    message: string;
-    data?: Record<string, string>;
-};
-
-class StubTelemetryService implements TelemetryService {
-
-    private exceptionCalls: TelemetryExceptionData[] = [];
-
-    public sendExtensionActivationEvent(_hrStart: [number, number]): void {
-        // NO-OP
-    }
-
-    public sendCommandEvent(_key: string, _data: Properties): void {
-        // NO-OP
-    }
-
-    public sendException(name: string, message: string, data?: Record<string, string>): void {
-        this.exceptionCalls.push({
-            name,
-            message,
-            data
-        });
-    }
-
-    public getSentExceptions(): TelemetryExceptionData[] {
-        return this.exceptionCalls;
-    }
-
-    public dispose(): void {
-        // NO-OP
-    }
-}
-
-class StubDiagnosticManager implements DiagnosticManager {
-    public displayAsDiagnostics(_allTargets: string[], _convertibles: DiagnosticConvertible[]): void {
-        // NO-OP
-    }
-}

@@ -6,21 +6,24 @@
  */
 
 import * as vscode from 'vscode';
-import * as Constants from '../lib/constants';
+import * as Constants from '../constants';
 import * as PromptConstants from './prompt-constants';
-import {LLMServiceInterface, ServiceProvider, ServiceType} from '@salesforce/vscode-service-provider';
-import { PromptBuilder } from './prompt-formatter';
-import { messages } from '../lib/messages';
-import { randomUUID } from 'crypto';
+import { PromptBuilder } from './prompt-builder';
+import { messages } from '../messages';
+import {CodeActionKind} from "vscode";
+import {LLMService} from "../external-services/llm-service";
 
-export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
-    static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
-    provideCodeActions(
-        document: vscode.TextDocument,
-        range: vscode.Range,
-        context: vscode.CodeActionContext,
-        _token: vscode.CancellationToken
-    ): vscode.CodeAction[] {
+export class AgentforceViolationsFixer implements vscode.CodeActionProvider {
+    static readonly providedCodeActionKinds: CodeActionKind[] = [vscode.CodeActionKind.QuickFix];
+
+    private readonly llmService: LLMService;
+
+    constructor(llmService: LLMService) {
+        this.llmService = llmService;
+    }
+
+    provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext,
+                       _token: vscode.CancellationToken): vscode.CodeAction[] {
         const codeActions: vscode.CodeAction[] = [];
 
         // Throw out diagnostics that aren't ours, or are for the wrong line.
@@ -74,11 +77,8 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
                 const [document, diagnostic] = codeAction.command.arguments as [vscode.TextDocument, vscode.Diagnostic];
                 const prompt = this.generatePrompt(document, diagnostic);
 
-                // Get the LLM service instance
-                const llmService: LLMServiceInterface = await ServiceProvider.getService(ServiceType.LLMService, Constants.EXTENSION_ID);
-
                 // Call the LLM service with the generated prompt
-                const llmResponse = await llmService.callLLM(prompt, getUniqueId());
+                const llmResponse = await this.llmService.callLLM(prompt);
                 const codeSnippet = this.extractCodeFromResponse(llmResponse);
 
                 const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1, document);
@@ -274,8 +274,3 @@ export class ApexPmdViolationsFixer implements vscode.CodeActionProvider {
         diagnosticCollection.set(uri, updatedDiagnostics);
     }
 }
-
-export function getUniqueId(): string {
-    return randomUUID();
-}
-

@@ -7,13 +7,14 @@
 import * as vscode from 'vscode';
 import {expect} from 'chai';
 import * as path from 'path';
-import {DiagnosticConvertible, DiagnosticManagerImpl} from '../../lib/diagnostics';
+import {DiagnosticConvertible, DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
+import {SpyLogger, StubTelemetryService} from "./test-utils";
 
 suite('diagnostics.ts', () => {
     suite('#displayAsDiagnostics()', () => {
         // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
         const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
-        
+
         const pathToFirstFile: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
         const firstFileConvertibles: DiagnosticConvertible[] = [{
             rule: 'fakeRule1',
@@ -72,10 +73,12 @@ suite('diagnostics.ts', () => {
 
         // Note: We want to share the same diagnostic collection across tests.
         let diagnosticCollection: vscode.DiagnosticCollection = null;
+        let diagnosticManager: DiagnosticManager;
 
         setup(() => {
             // Re-initialize the collection before each test.
             diagnosticCollection = vscode.languages.createDiagnosticCollection('sfca.diagnosticTest');
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
         });
 
         teardown(() => {
@@ -86,7 +89,6 @@ suite('diagnostics.ts', () => {
         test('Adds violations to first-time target', () => {
             // ===== SETUP =====
             // Create a diagnostic manager.
-            const diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
 
             // ===== TEST =====
             // Simulate a run against target 1 that returned some results.
@@ -98,10 +100,6 @@ suite('diagnostics.ts', () => {
         });
 
         test('Changes ApexSharingViolations end lines to be start lines', () => {
-            // ===== SETUP =====
-            // Create a diagnostic manager.
-            const diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
-
             // ===== TEST =====
             // Simulate a run against target 1 that returned some results.
             diagnosticManager.displayAsDiagnostics([pathToFirstFile], firstFileApexSharingViolationsConvertibles);
@@ -124,9 +122,6 @@ suite('diagnostics.ts', () => {
                 )
             ]);
 
-            // Create a manager.
-            const diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
-
             // ===== TEST =====
             // Simulate a run against file 2 that returned different results than were already present.
             diagnosticManager.displayAsDiagnostics([pathToSecondFile], secondFileConvertibles);
@@ -147,9 +142,6 @@ suite('diagnostics.ts', () => {
                 )
             ]);
 
-            // Create a manager.
-            const diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
-
             // ===== TEST =====
             // Simulate a run against file 2 that returned no results.
             diagnosticManager.displayAsDiagnostics([pathToSecondFile], []);
@@ -169,8 +161,6 @@ suite('diagnostics.ts', () => {
                     "this message matters not"
                 )
             ]);
-            // Create a manager.
-            const diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
 
             // ===== TEST =====
             // Simulate a run against file 1 that returned results.

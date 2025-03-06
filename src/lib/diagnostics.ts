@@ -6,6 +6,10 @@
  */
 import {messages} from './messages';
 import * as vscode from 'vscode';
+import {Logger} from "./logger";
+import {TelemetryService} from "./external-services/telemetry-service";
+import * as targeting from './targeting';
+import * as Constants from './constants'
 
 type DiagnosticConvertibleLocation = {
     file: string;
@@ -28,15 +32,57 @@ export type DiagnosticConvertible = {
     suggestedCode?: string;
 }
 
-export interface DiagnosticManager {
-    displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void;
+export interface DiagnosticManager extends vscode.Disposable {
+    clearDiagnostics(): void
+    clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void
+    clearDiagnosticsForSelectedFiles(selections: vscode.Uri[], commandName: string): Promise<void>
+    displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void
 }
 
 export class DiagnosticManagerImpl implements DiagnosticManager {
-    private diagnosticCollection: vscode.DiagnosticCollection;
+    private readonly diagnosticCollection: vscode.DiagnosticCollection;
+    private readonly telemetryService: TelemetryService;
+    private readonly logger: Logger;
 
-    public constructor(diagnosticCollection: vscode.DiagnosticCollection) {
+    public constructor(diagnosticCollection: vscode.DiagnosticCollection, telemetryService: TelemetryService, logger: Logger) {
         this.diagnosticCollection = diagnosticCollection;
+        this.telemetryService = telemetryService;
+        this.logger = logger;
+    }
+
+    public clearDiagnostics(): void {
+        this.diagnosticCollection.clear();
+    }
+
+    public dispose(): void {
+        this.clearDiagnostics();
+    }
+
+    /**
+     * Clear diagnostics for a specific files
+     */
+    async clearDiagnosticsForSelectedFiles(selections: vscode.Uri[], commandName: string): Promise<void> {
+        const startTime = Date.now();
+
+        try {
+            const targets: string[] = await targeting.getTargets(selections);
+
+            for (const target of targets) {
+                this.diagnosticCollection.delete(vscode.Uri.file(target));
+            }
+
+            this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
+                executedCommand: commandName,
+                duration: (Date.now() - startTime).toString()
+            });
+        } catch (e) {
+            const errMsg = e instanceof Error ? e.message : e as string;
+            this.telemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS, errMsg, {
+                executedCommand: commandName,
+                duration: (Date.now() - startTime).toString()
+            });
+            this.logger.error(errMsg);
+        }
     }
 
     /**
@@ -52,6 +98,12 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
             const convertiblesForTarget: DiagnosticConvertible[] = convertiblesByTarget.get(target) || [];
             this.diagnosticCollection.set(targetUri, convertiblesForTarget.map((c) => this.convertToDiagnostic(c)));
         }
+    }
+
+    public clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void {
+        const currentDiagnostics: readonly vscode.Diagnostic[] = this.diagnosticCollection.get(uri) || [];
+        const updatedDiagnostics: vscode.Diagnostic[] = currentDiagnostics.filter(diagnostic => (diagnostic.range.start.line != range.start.line && diagnostic.range.end.line != range.end.line));
+        this.diagnosticCollection.set(uri, updatedDiagnostics);
     }
 
     private mapConvertiblesByTarget(convertibles: DiagnosticConvertible[]): Map<string, DiagnosticConvertible[]> {
@@ -137,9 +189,9 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
     // As discussed above, this is an interim solution and this method will be removed once
     // PMD fixes the bug: https://github.com/pmd/pmd/issues/5511
     private convertToRangeForApexSharingViolations({ startLine, startColumn }: DiagnosticConvertibleLocation): vscode.Range {
-    const start = new vscode.Position(Math.max(startLine - 1, 0), Math.max(startColumn - 1, 0));
-    const end = new vscode.Position(start.line, Number.MAX_SAFE_INTEGER);
+        const start = new vscode.Position(Math.max(startLine - 1, 0), Math.max(startColumn - 1, 0));
+        const end = new vscode.Position(start.line, Number.MAX_SAFE_INTEGER);
 
-    return new vscode.Range(start, end);
+        return new vscode.Range(start, end);
     }
 }
