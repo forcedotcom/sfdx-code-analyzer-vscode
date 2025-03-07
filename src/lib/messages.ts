@@ -50,7 +50,7 @@ export const messages = {
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
-            suffix: ' via Code Analyzer',
+            suffix: 'via Code Analyzer',
             generator: (engine: string) => `${engine} ${messages.diagnostics.source.suffix}`
         }
     },
