@@ -9,47 +9,61 @@ import * as vscode from 'vscode';
 import * as Constants from '../constants';
 import * as PromptConstants from './prompt-constants';
 import { PromptBuilder } from './prompt-builder';
-import { messages } from '../messages';
 import {CodeActionKind} from "vscode";
-import {LLMService} from "../external-services/llm-service";
+import {LLMService, LLMServiceProvider} from "../external-services/llm-service";
+import {messages} from "../messages";
+import {Logger} from "../logger";
 
 export class AgentforceViolationsFixer implements vscode.CodeActionProvider {
     static readonly providedCodeActionKinds: CodeActionKind[] = [vscode.CodeActionKind.QuickFix];
 
-    private readonly llmService: LLMService;
+    private readonly llmServiceProvider: LLMServiceProvider;
+    private readonly logger: Logger;
 
-    constructor(llmService: LLMService) {
-        this.llmService = llmService;
+    private hasWarnedAboutUnavailableLLMService: boolean = false;
+
+    constructor(llmServiceProvider: LLMServiceProvider, logger: Logger) {
+        this.llmServiceProvider = llmServiceProvider;
+        this.logger = logger;
     }
 
-    provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext,
-                       _token: vscode.CancellationToken): vscode.CodeAction[] {
+    async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext,
+                       _token: vscode.CancellationToken): Promise<vscode.CodeAction[]> {
         const codeActions: vscode.CodeAction[] = [];
 
         // Throw out diagnostics that aren't ours, or are for the wrong line.
-        const filteredDiagnostics = context.diagnostics.filter(
-            diagnostic => messages.diagnostics.source
-              && messages.diagnostics.source.isSource(diagnostic.source)
-              && range.contains(diagnostic.range)
-              && this.isSupportedViolationForCodeFix(diagnostic));
+        const filteredDiagnostics: vscode.Diagnostic[] = context.diagnostics.filter((diagnostic: vscode.Diagnostic) =>
+            diagnostic.source
+            && diagnostic.source.endsWith(messages.diagnostics.source.suffix)
+            && range.contains(diagnostic.range)
+            && this.isSupportedViolationForCodeFix(diagnostic));
 
-        // Loop through diagnostics in the context
-        filteredDiagnostics.forEach((diagnostic) => {
-            // Create a code action for each diagnostic
+        if (filteredDiagnostics.length == 0) {
+            return codeActions;
+        }
+
+        // Do not provide quick fix code actions if LLM service is not available. We warn once to let user know.
+        if (!(await this.llmServiceProvider.isLLMServiceAvailable())) {
+            if (!this.hasWarnedAboutUnavailableLLMService) {
+                this.logger.warn(messages.agentforce.a4dQuickFixUnavailable);
+                this.hasWarnedAboutUnavailableLLMService = true;
+            }
+            return codeActions;
+        }
+
+        for (const diagnostic of filteredDiagnostics) {
             const fixAction = new vscode.CodeAction(
                 `Fix ${this.extractDiagnosticCode(diagnostic)} using Agentforce.`,
                 vscode.CodeActionKind.QuickFix
             );
-
-            // Pass the diagnostic as an argument to the command
+            fixAction.diagnostics = [diagnostic] // Important (that we used to miss before): we should tie the code fix to the specific diagnostic.
             fixAction.command = {
                 title: 'Fix Diagnostic Issue',
-                command: Constants.UNIFIED_DIFF,
-                arguments: [document, diagnostic] // Pass the diagnostic here
+                command: Constants.UNIFIED_DIFF, // TODO: This really should be called something like QF_COMMAND_A4D_FIX... but it isn't because we are using the resolveCodeAction to do the A4D stuff instead before sending to unifieid diff.
+                arguments: [document, diagnostic] // Pass the document and diagnostic here.
             };
-
             codeActions.push(fixAction);
-        });
+        }
 
         return codeActions;
     }
@@ -62,6 +76,8 @@ export class AgentforceViolationsFixer implements vscode.CodeActionProvider {
         return Constants.A4D_FIX_AVAILABLE_RULES.includes(this.extractDiagnosticCode(diagnostic));
     }
 
+    // TODO: Evaluate if this even should be used. It clearly does more than its responsibility of just resolving the code action... it performs work by invoking the callLLM stuff and updates the existing UNIFIED_DIFF command's arguments before actually executing the unified diff.
+    //       I think we will probably benefit from removing this and instead just have the code action trigger a QF_COMMAND_A4D_FIX which can optionally then trigger a COMMAND_UNIFIED_DIFF or something.
     public resolveCodeAction(
         codeAction: vscode.CodeAction,
         token: vscode.CancellationToken
@@ -78,7 +94,8 @@ export class AgentforceViolationsFixer implements vscode.CodeActionProvider {
                 const prompt = this.generatePrompt(document, diagnostic);
 
                 // Call the LLM service with the generated prompt
-                const llmResponse = await this.llmService.callLLM(prompt);
+                const llmService: LLMService = await this.llmServiceProvider.getLLMService();
+                const llmResponse = await llmService.callLLM(prompt);
                 const codeSnippet = this.extractCodeFromResponse(llmResponse);
 
                 const updatedFileContent = this.replaceCodeInFile(document.getText(), codeSnippet.trim(), diagnostic.range.start.line + 1, diagnostic.range.end.line + 1, document);

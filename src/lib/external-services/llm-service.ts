@@ -10,9 +10,16 @@ export interface LLMService {
     callLLM(prompt: string, guidedJsonSchema?: string): Promise<string>
 }
 
+export interface LLMServiceProvider {
+    isLLMServiceAvailable(): Promise<boolean>
+    getLLMService(): Promise<LLMService>
+}
+
+
 export class LiveLLMService implements LLMService {
     // Delegates to the "Agentforce for Developers" LLM service
-    // See https://github.com/forcedotcom/salesforcedx-vscode-einstein-gpt/blob/beb0a7cb1b1c9d3f62cf538b93204d50263f20d8/src/services/LLMService.ts#L36
+    // See https://github.com/forcedotcom/salesforcedx-vscode-einstein-gpt/blob/main/src/services/LLMService.ts#L36
+    // and https://github.com/forcedotcom/salesforcedx-vscode-einstein-gpt/blob/main/src/commands/getLLMServiceInstance.ts#L13
     private readonly coreLLMService: LLMServiceInterface;
     private readonly logger: Logger;
     private uuidGenerator: UUIDGenerator = new RandomUUIDGenerator();

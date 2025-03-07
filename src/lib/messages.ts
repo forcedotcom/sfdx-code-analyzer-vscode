@@ -19,6 +19,9 @@ export const messages = {
             increment: 60
         }
     },
+    agentforce: {
+        a4dQuickFixUnavailable: "The ability to fix violations with Agentforce is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code."
+    },
     apexGuru: {
         progress: {
             message: "Code Analyzer is running ApexGuru analysis."
@@ -40,21 +43,15 @@ export const messages = {
         existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
-        supressOnLine: "Suppress violations on this line.",
-        supressOnClass: "Suppress violations on this class.",
+        suppressOnLine: "Suppress violations on this line.",
+        suppressOnClass: "Suppress violations on this class.",
         fixWithApexGuruSuggestions: "Insert ApexGuru suggestions."
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
-            generator: (engine: string) => `${engine} via Code Analyzer`,
-            isSource: (source: string) => {
-                if (!source) {
-                    return false;
-                }
-                return source && source.endsWith(' via Code Analyzer');
-            },
-            extractEngine: (source: string) => source?.split(' ')[0]
+            suffix: ' via Code Analyzer',
+            generator: (engine: string) => `${engine} ${messages.diagnostics.source.suffix}`
         }
     },
     targeting: {

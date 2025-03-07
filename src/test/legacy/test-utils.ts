@@ -3,7 +3,7 @@ import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Properties} from "@salesforce/vscode-service-provider";
 import {DiagnosticConvertible, DiagnosticManager} from "../../lib/diagnostics";
 import vscode from "vscode";
-import {LLMService} from "../../lib/external-services/llm-service";
+import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
 
 export class SpyLogger implements Logger {
     logCallHistory: {msg: string}[] = [];
@@ -89,6 +89,21 @@ export class StubDiagnosticManager implements DiagnosticManager {
     }
 }
 
+
+export class StubLLMServiceProvider implements LLMServiceProvider {
+    private readonly llmService?: LLMService;
+
+    constructor(llmService?: LLMService) {
+        this.llmService = llmService;
+    }
+
+    isLLMServiceAvailable(): Promise<boolean> {
+        return Promise.resolve(!!this.llmService);
+    }
+    getLLMService(): Promise<LLMService> {
+        return Promise.resolve(this.llmService);
+    }
+}
 
 export class SpyLLMService implements LLMService {
     callLLMResponse: string = 'DummyResponse'
