@@ -18,8 +18,6 @@ export interface LLMServiceProvider {
 
 export class LiveLLMService implements LLMService {
     // Delegates to the "Agentforce for Developers" LLM service
-    // See https://github.com/forcedotcom/salesforcedx-vscode-einstein-gpt/blob/main/src/services/LLMService.ts#L36
-    // and https://github.com/forcedotcom/salesforcedx-vscode-einstein-gpt/blob/main/src/commands/getLLMServiceInstance.ts#L13
     private readonly coreLLMService: LLMServiceInterface;
     private readonly logger: Logger;
     private uuidGenerator: UUIDGenerator = new RandomUUIDGenerator();
