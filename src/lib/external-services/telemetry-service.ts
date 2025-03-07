@@ -11,9 +11,16 @@ export interface TelemetryService {
     sendException(name: string, errorMessage: string, properties?: Record<string, string>): void;
 }
 
+export interface TelemetryServiceProvider {
+    isTelemetryServiceAvailable(): Promise<boolean>
+    getTelemetryService(): Promise<TelemetryService>
+}
+
+
 export class LiveTelemetryService implements TelemetryService {
     // Delegates to the core telemetry service
     // See https://github.com/forcedotcom/salesforcedx-vscode/blob/develop/packages/salesforcedx-utils-vscode/src/services/telemetry.ts#L78
+    // and https://github.com/forcedotcom/salesforcedx-vscode/blob/develop/packages/salesforcedx-vscode-core/src/services/telemetry/telemetryServiceProvider.ts#L19
     private readonly coreTelemetryService: TelemetryServiceInterface;
     private readonly logger: Logger;
 

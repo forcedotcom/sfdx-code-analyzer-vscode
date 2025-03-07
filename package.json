@@ -249,14 +249,16 @@
             ],
             "editor/context": [
                 {
-                    "command": "sfca.runOnActiveFile"
+                    "command": "sfca.runOnActiveFile",
+                    "when": "true"
                 },
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
                     "when": "sfca.codeAnalyzerV4Enabled"
                 },
                 {
-                    "command": "sfca.removeDiagnosticsOnActiveFile"
+                    "command": "sfca.removeDiagnosticsOnActiveFile",
+                    "when": "true"
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnCurrentFile",
@@ -265,7 +267,8 @@
             ],
             "explorer/context": [
                 {
-                    "command": "sfca.runOnSelected"
+                    "command": "sfca.runOnSelected",
+                    "when": "true"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnSelectedFile",

@@ -17,10 +17,12 @@ export const COMMAND_RUN_DFA_ON_SELECTED_METHOD = 'sfca.runDfaOnSelectedMethod';
 export const COMMAND_RUN_DFA = 'sfca.runDfa';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE = 'sfca.removeDiagnosticsOnActiveFile';
 export const COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE = 'sfca.removeDiagnosticsOnSelectedFile';
-export const COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
 export const COMMAND_RUN_APEX_GURU_ON_FILE = 'sfca.runApexGuruAnalysisOnSelectedFile';
 export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnCurrentFile';
-export const COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
+
+// commands that are only invoked by quick fixes (which do not need to be declared in package.json since they can be registered dynamically)
+export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
+export const QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
 
 // telemetry event keys
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
@@ -49,7 +51,6 @@ export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
 
 // A4D Integration
-export const ENABLE_A4D_INTEGRATION = false;
 export const A4D_FIX_AVAILABLE_RULES = ['ApexCRUDViolation', 'ApexSharingViolations', 'EmptyCatchBlock', 'EmptyTryOrFinallyBlock', 'EmptyWhileStmt', 'EmptyIfStmt'];
 export const UNIFIED_DIFF = 'unifiedDiff';
 export const A4D_PREFIX = 'SFCA_A4D_FIX';

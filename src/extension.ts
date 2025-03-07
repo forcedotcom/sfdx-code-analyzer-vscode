@@ -93,13 +93,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // ==  Code Analyzer Run Functionality
     // =================================================================================================================
     await establishVariableInContext('sfca.codeAnalyzerV4Enabled', () => Promise.resolve(!settingsManager.getCodeAnalyzerV5Enabled()));
+
+    // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
     registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
         if (!vscode.window.activeTextEditor) {
             throw new Error(messages.targeting.error.noFileSelected);
         }
         return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
     });
+    // ... also invoked by opening a file if the user has set things to do so.
+    onDidOpenTextDocument(async (textDocument: vscode.TextDocument) => {
+        if (settingsManager.getAnalyzeOnOpen() && _isValidFileForAnalysis(textDocument.uri)) {
+            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [textDocument.fileName]);
+        }
+    });
+    // ... also invoked by saving a file if the user has set things to do so.
+    onDidSaveTextDocument(async (textDocument: vscode.TextDocument) => {
+        if (settingsManager.getAnalyzeOnSave() && _isValidFileForAnalysis(textDocument.uri)) {
+            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [textDocument.fileName]);
+        }
+    });
 
+    // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
     registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
         const targetUris: vscode.Uri[] = multiSelect && multiSelect.length > 0
             ? multiSelect
@@ -111,40 +126,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_SELECTED, targetStrings);
     });
 
-    onDidSaveTextDocument(async (textDocument: vscode.TextDocument) => {
-        if (settingsManager.getAnalyzeOnSave()) {
-            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [textDocument.fileName]);
-        }
-    });
-
-    onDidOpenTextDocument(async (textDocument: vscode.TextDocument) => {
-        if (settingsManager.getAnalyzeOnOpen()) {
-            if (_isValidFileForAnalysis(textDocument.uri)) {
-                await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [textDocument.fileName]);
-            }
-        }
-    });
-
 
     // =================================================================================================================
     // ==  Diagnostic Management Functionality
     // =================================================================================================================
+
+    // TODO: We should look to see if we can make these commands appear conditionally upon whether we have diagnostics
+    //       present instead of always showing them. Maybe there is a way to watch the diagnostics changing.
+
+    // COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' always
     registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE, async () =>
             diagnosticManager.clearDiagnosticsForSelectedFiles([], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE));
 
+    // COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE: Invokable by 'explorer/context' always
+    // ... and also invoked by a Quick Fix button that appears on diagnostics. TODO: This should change because we should only be suppressing diagnostics of a specific type - not all of them.
     registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
             diagnosticManager.clearDiagnosticsForSelectedFiles(multiSelect && multiSelect.length > 0 ? multiSelect : [selection],
             Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE));
-
-    registerCommand(Constants.COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
-            diagnosticManager.clearDiagnosticsInRange(uri, range));
 
 
     // =================================================================================================================
     // ==  Code Analyzer Basic Quick-Fix Functionality
     // =================================================================================================================
-    registerCodeActionsProvider({pattern: '**/**'}, new Fixer(),
+    registerCodeActionsProvider({pattern: '**/**'}, new Fixer(), // TODO: We should separate the apex guru quick fix from this Fixer class into its own
         {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+
+    // QF_COMMAND_DIAGNOSTICS_IN_RANGE: Invoked by a Quick Fix button that appears on diagnostics
+    registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
+        diagnosticManager.clearDiagnosticsInRange(uri, range));
 
 
     // =================================================================================================================
@@ -155,6 +164,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
     await establishVariableInContext('sfca.partialRunsEnabled', () => Promise.resolve(settingsManager.getSfgePartialSfgeRunsEnabled()));
 
+    // COMMAND_RUN_DFA_ON_SELECTED_METHOD: Invokable by 'editor/context' only when "sfca.codeAnalyzerV4Enabled"
     registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
         if (await dfaRunner.shouldProceedWithDfaRun()) {
             const methodLevelTarget: string[] = [await targeting.getSelectedMethod()];
@@ -162,6 +172,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
     });
 
+    // COMMAND_RUN_DFA: Invokable by 'commandPalette' only when "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
     registerCommand(Constants.COMMAND_RUN_DFA, async () => {
         await dfaRunner.runDfa();
         dfaRunner.clearSavedFilesCache();
@@ -174,98 +185,100 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // ==  Apex Guru Integration Functionality
     // =================================================================================================================
     const isApexGuruEnabled: () => Promise<boolean> =
-        async () => settingsManager.getApexGuruEnabled() && await ApexGuruFunctions.isApexGuruEnabledInOrg(logger);
+        async () => settingsManager.getApexGuruEnabled() &&
+            // Currently we don't watch for changes here when a user has apex guru enabled already. That is,
+            // if the user logs into an org post activation of this extension, it won't show the command until they
+            // refresh or toggle the "ApexGuru enabled" setting off and back on. At some point we might want to see
+            // if it is possible to monitor changes to the users org so we can re-trigger this check.
+            await ApexGuruFunctions.isApexGuruEnabledInOrg(logger);
+
     await establishVariableInContext('sfca.apexGuruEnabled', isApexGuruEnabled);
 
-    // TODO: When someone enables apex guru then they need to restart VS Code... we should register these commands and
-    //       make them appear conditioned based on the 'sfca.apexGuruEnabled' context instead of registering these
-    //       commands in a conditional inside of the activate function.
-    if (await isApexGuruEnabled()) {
-        registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
-            await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection,
-                Constants.COMMAND_RUN_APEX_GURU_ON_FILE, diagnosticManager, telemetryService, logger));
+    // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
+        await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection,
+            Constants.COMMAND_RUN_APEX_GURU_ON_FILE, diagnosticManager, telemetryService, logger));
 
-        registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
-            const targets: string[] = await targeting.getTargets([]);
-            return await ApexGuruFunctions.runApexGuruOnFile(vscode.Uri.file(targets[0]),
-                Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
-        });
+    // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
+        const targets: string[] = await targeting.getTargets([]);
+        return await ApexGuruFunctions.runApexGuruOnFile(vscode.Uri.file(targets[0]),
+            Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
+    });
 
-        registerCommand(Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS, async (document: vscode.TextDocument, position: vscode.Position, suggestedCode: string) => {
-            const edit = new vscode.WorkspaceEdit();
-            edit.insert(document.uri, position, suggestedCode);
-            await vscode.workspace.applyEdit(edit);
-            telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
-                executedCommand: Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
-                lines: suggestedCode.split('\n').length.toString()
-            });
+    // QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS: Invoked by a Quick Fix button that appears on diagnostics that have an "apexguru" engine name.
+    registerCommand(Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS, async (document: vscode.TextDocument, position: vscode.Position, suggestedCode: string) => {
+        const edit = new vscode.WorkspaceEdit();
+        edit.insert(document.uri, position, suggestedCode);
+        await vscode.workspace.applyEdit(edit);
+        telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
+            executedCommand: Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
+            lines: suggestedCode.split('\n').length.toString()
         });
-    }
+    });
 
 
     // =================================================================================================================
     // ==  Agentforce for Developers Integration and Unified Diff Functionality
     // =================================================================================================================
-    if (Constants.ENABLE_A4D_INTEGRATION && await externalServiceProvider.isLLMServiceAvailable()) {
-        const agentforceViolationsFixer = new AgentforceViolationsFixer(await externalServiceProvider.getLLMService());
-        registerCodeActionsProvider({pattern: '**/*.cls'}, agentforceViolationsFixer,
-                {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+    const agentforceViolationsFixer = new AgentforceViolationsFixer(externalServiceProvider, logger);
+    registerCodeActionsProvider({pattern: '**/*.cls'}, agentforceViolationsFixer,
+            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
-        registerCommand(Constants.UNIFIED_DIFF, async (source: string, code: string, file?: string) => {
-            await (new DiffCreateAction(`${source}.${Constants.UNIFIED_DIFF}`, {
-                callback: (code: string, file?: string) => VSCodeUnifiedDiff.singleton.unifiedDiff(code, file),
-                telemetryService
-            })).run(code, file);
-            await VSCodeUnifiedDiff.singleton.unifiedDiff(code, file);
-        });
+    registerCommand(Constants.UNIFIED_DIFF, async (source: string, code: string, file?: string) => {
+        await (new DiffCreateAction(`${source}.${Constants.UNIFIED_DIFF}`, {
+            callback: (code: string, file?: string) => VSCodeUnifiedDiff.singleton.unifiedDiff(code, file),
+            telemetryService
+        })).run(code, file);
+        await VSCodeUnifiedDiff.singleton.unifiedDiff(code, file);
+    });
 
-        registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk) => {
-            // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-            //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-            await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT}`, {
-                callback: async (diffHunk: DiffHunk) => {
-                    await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(diffHunk);
-                    return diffHunk.lines.length;
-                },
-                telemetryService
-            })).run(hunk);
-            // For accept & accept all, it is tricky to track the diagnostics and the changed lines as multiple fixes are requested.
-            // Hence, we save the file and rerun the scan instead.
-            await vscode.window.activeTextEditor.document.save();
-            return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
-        });
+    registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk) => {
+        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+        await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT}`, {
+            callback: async (diffHunk: DiffHunk) => {
+                await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(diffHunk);
+                return diffHunk.lines.length;
+            },
+            telemetryService
+        })).run(hunk);
+        // For accept & accept all, it is tricky to track the diagnostics and the changed lines as multiple fixes are requested.
+        // Hence, we save the file and rerun the scan instead.
+        await vscode.window.activeTextEditor.document.save();
+        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
+    });
 
-        registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
-            // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-            //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-            await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT}`, {
-                callback: (diffHunk: DiffHunk) => VSCodeUnifiedDiff.singleton.unifiedDiffReject(diffHunk),
-                telemetryService
-            })).run(hunk);
-        });
+    registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
+        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+        await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT}`, {
+            callback: (diffHunk: DiffHunk) => VSCodeUnifiedDiff.singleton.unifiedDiffReject(diffHunk),
+            telemetryService
+        })).run(hunk);
+    });
 
-        registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
-            // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-            //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-            await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL}`, {
-                callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll(),
-                telemetryService
-            })).run();
-            await vscode.window.activeTextEditor.document.save();
-            return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
-        });
+    registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
+        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+        await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL}`, {
+            callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll(),
+            telemetryService
+        })).run();
+        await vscode.window.activeTextEditor.document.save();
+        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
+    });
 
-        registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
-            // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-            //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-            await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT_ALL}`, {
-                callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll(),
-                telemetryService
-            })).run();
-        });
+    registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
+        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
+        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
+        await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT_ALL}`, {
+            callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll(),
+            telemetryService
+        })).run();
+    });
 
-        VSCodeUnifiedDiff.singleton.activate(context);
-    }
+    VSCodeUnifiedDiff.singleton.activate(context);
 
 
     // =================================================================================================================
@@ -285,6 +298,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 export function deactivate(): void {
 }
 
+// TODO: We either need to give the user control over which files the auto-scan on open/save feature works for...
+//       ... or we need to somehow determine dynamically if the file is relevant for scanning using the
+//       ... --workspace option on Code Analyzer v5 or something. I think that regex has situations that work on all
+//       ....files. So We might not be able to get this perfect. Need to discuss this soon.
 export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
     const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts'];
     return allowedFileTypes.includes(path.extname(documentUri.path));
