@@ -7,8 +7,13 @@ const config = {
     collectCoverageFrom: [
       'src/**/*.ts',
     ],
+    coveragePathIgnorePatterns: [
+        '/src/test/',
+    ],
     coverageReporters: ['text', 'lcov'],
-    coverageDirectory: '<rootDir>/coverage/unit'
+    coverageDirectory: '<rootDir>/coverage/unit',
+    setupFilesAfterEnv: ['./scripts/setup-jest.ts'],
+    resetMocks: true
 };
 
 export default config;

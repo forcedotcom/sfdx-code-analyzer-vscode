@@ -2,7 +2,7 @@ import {Logger} from "../../lib/logger";
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Properties} from "@salesforce/vscode-service-provider";
 import {DiagnosticConvertible, DiagnosticManager} from "../../lib/diagnostics";
-import vscode from "vscode";
+import * as vscode from "vscode";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
 
 export class SpyLogger implements Logger {
@@ -69,7 +69,11 @@ export class StubTelemetryService implements TelemetryService {
 }
 
 export class StubDiagnosticManager implements DiagnosticManager {
-    clearDiagnostics(): void {
+    clearAllDiagnostics(): void {
+        // NO-OP
+    }
+
+    clearDiagnostic(_uri: vscode.Uri, _diag: vscode.Diagnostic): void {
         // NO-OP
     }
 

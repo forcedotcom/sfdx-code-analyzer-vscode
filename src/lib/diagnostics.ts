@@ -33,7 +33,8 @@ export type DiagnosticConvertible = {
 }
 
 export interface DiagnosticManager extends vscode.Disposable {
-    clearDiagnostics(): void
+    clearAllDiagnostics(): void
+    clearDiagnostic(uri: vscode.Uri, diag: vscode.Diagnostic);
     clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void
     clearDiagnosticsForSelectedFiles(selections: vscode.Uri[], commandName: string): Promise<void>
     displayAsDiagnostics(allTargets: string[], convertibles: DiagnosticConvertible[]): void
@@ -50,12 +51,18 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
         this.logger = logger;
     }
 
-    public clearDiagnostics(): void {
+    public clearAllDiagnostics(): void {
         this.diagnosticCollection.clear();
     }
 
+    public clearDiagnostic(uri: vscode.Uri, diagnostic: vscode.Diagnostic): void {
+        const currentDiagnostics: readonly vscode.Diagnostic[] = this.diagnosticCollection.get(uri) || [];
+        const updatedDiagnostics: vscode.Diagnostic[] = currentDiagnostics.filter(diag => diag !== diagnostic);
+        this.diagnosticCollection.set(uri, updatedDiagnostics);
+    }
+
     public dispose(): void {
-        this.clearDiagnostics();
+        this.clearAllDiagnostics();
     }
 
     /**
@@ -71,6 +78,8 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
                 this.diagnosticCollection.delete(vscode.Uri.file(target));
             }
 
+            // TODO: It doesn't make sense that we are performing telemetry here in my opinion. This should be
+            //        moved to an associated action.
             this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
                 executedCommand: commandName,
                 duration: (Date.now() - startTime).toString()
@@ -102,7 +111,8 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
 
     public clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void {
         const currentDiagnostics: readonly vscode.Diagnostic[] = this.diagnosticCollection.get(uri) || [];
-        const updatedDiagnostics: vscode.Diagnostic[] = currentDiagnostics.filter(diagnostic => (diagnostic.range.start.line != range.start.line && diagnostic.range.end.line != range.end.line));
+        // Only keep the diagnostics that aren't within the specified range
+        const updatedDiagnostics: vscode.Diagnostic[] = currentDiagnostics.filter(diagnostic => !range.contains(diagnostic.range));
         this.diagnosticCollection.set(uri, updatedDiagnostics);
     }
 
@@ -194,4 +204,9 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
 
         return new vscode.Range(start, end);
     }
+}
+
+export function extractRuleName(diagnostic: vscode.Diagnostic): string {
+    return typeof diagnostic.code === 'object' && 'value' in diagnostic.code ? diagnostic.code.value.toString() :
+        typeof diagnostic.code === 'string' ? diagnostic.code : '';
 }

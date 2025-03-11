@@ -2,7 +2,7 @@
 import {Displayable, ProgressNotification, UxDisplay} from "./display";
 import {Logger} from "./logger";
 import {DiagnosticConvertible, DiagnosticManager} from "./diagnostics";
-import vscode from "vscode";
+import * as vscode from "vscode";
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
 import {SettingsManager} from "./settings";
