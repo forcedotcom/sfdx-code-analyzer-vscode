@@ -13,7 +13,7 @@ import {
 import {Logger} from "../logger";
 import {LiveLLMService, LLMService, LLMServiceProvider} from "./llm-service";
 import {Extension} from "vscode";
-import vscode from "vscode";
+import * as vscode from "vscode";
 import * as Constants from "../constants";
 
 const EXTENSION_THAT_SUPPLIES_LLM_SERVICE = 'salesforce.salesforcedx-einstein-gpt';

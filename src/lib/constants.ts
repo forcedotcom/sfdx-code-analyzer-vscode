@@ -23,6 +23,7 @@ export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnC
 // commands that are only invoked by quick fixes (which do not need to be declared in package.json since they can be registered dynamically)
 export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
 export const QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
+export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
 
 // telemetry event keys
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
@@ -49,8 +50,3 @@ export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
 export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
-
-// A4D Integration
-export const A4D_FIX_AVAILABLE_RULES = ['ApexCRUDViolation', 'ApexSharingViolations', 'EmptyCatchBlock', 'EmptyTryOrFinallyBlock', 'EmptyWhileStmt', 'EmptyIfStmt'];
-export const UNIFIED_DIFF = 'unifiedDiff';
-export const A4D_PREFIX = 'SFCA_A4D_FIX';

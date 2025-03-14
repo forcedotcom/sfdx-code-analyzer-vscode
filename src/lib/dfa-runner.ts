@@ -1,4 +1,4 @@
-import vscode from "vscode";
+import * as vscode from "vscode";
 import {TelemetryService} from "./external-services/telemetry-service";
 import {Logger} from "./logger";
 import * as Constants from "./constants";

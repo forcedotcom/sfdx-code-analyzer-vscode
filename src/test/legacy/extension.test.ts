@@ -59,7 +59,7 @@ suite('Extension Test Suite', () => {
 
             const extData: SFCAExtensionData = ext.exports;
             // Also, clear any diagnostics we added.
-            extData.diagnosticManager.clearDiagnostics()
+            extData.diagnosticManager.clearAllDiagnostics()
         });
 
         suite('sfca.runOnActiveFile', () => {

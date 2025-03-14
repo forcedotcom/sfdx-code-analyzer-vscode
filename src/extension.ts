@@ -10,16 +10,13 @@ import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './lib/settings';
 import * as targeting from './lib/targeting'
 import {DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
-import {DiffCreateAction} from './lib/actions/diff-create-action';
-import {DiffAcceptAction} from './lib/actions/diff-accept-action';
-import {DiffRejectAction} from './lib/actions/diff-reject-action';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import {CoreExtensionService} from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 import * as path from 'path';
 import * as ApexGuruFunctions from './lib/apexguru/apex-guru-service';
-import {AgentforceViolationsFixer} from './lib/agentforce/agentforce-violations-fixer'
+import {AgentforceViolationFixer} from './lib/agentforce/agentforce-violation-fixer'
 import {
     CODEGENIE_UNIFIED_DIFF_ACCEPT,
     CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL,
@@ -34,6 +31,10 @@ import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {DfaRunner} from "./lib/dfa-runner";
 import {CodeAnalyzerRunner} from "./lib/code-analyzer-runner";
 import {CodeActionProvider, CodeActionProviderMetadata, DocumentSelector} from "vscode";
+import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-action-provider";
+import {UnifiedDiffActions} from "./lib/unified-diff/unified-diff-actions";
+import {CodeGenieUnifiedDiffTool, UnifiedDiffTool} from "./lib/unified-diff/unified-diff-tool";
+import {FixSuggestion} from "./lib/fix-suggestion";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -99,7 +100,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (!vscode.window.activeTextEditor) {
             throw new Error(messages.targeting.error.noFileSelected);
         }
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
+
+        // Note that the active editor window could be the output window instead of the actual file editor, so we
+        // force focus it first to ensure we are getting the correct editor
+        await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+
+        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
     });
     // ... also invoked by opening a file if the user has set things to do so.
     onDidOpenTextDocument(async (textDocument: vscode.TextDocument) => {
@@ -178,7 +185,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         dfaRunner.clearSavedFilesCache();
     });
 
-    onDidSaveTextDocument((document: vscode.TextDocument) => dfaRunner.addSavedFileToCache(document.uri.fsPath));
+    onDidSaveTextDocument((document: vscode.TextDocument) => dfaRunner.addSavedFileToCache(document.fileName));
 
 
     // =================================================================================================================
@@ -219,66 +226,103 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
 
     // =================================================================================================================
-    // ==  Agentforce for Developers Integration and Unified Diff Functionality
+    // ==  Agentforce for Developers Integration
     // =================================================================================================================
-    const agentforceViolationsFixer = new AgentforceViolationsFixer(externalServiceProvider, logger);
-    registerCodeActionsProvider({pattern: '**/*.cls'}, agentforceViolationsFixer,
+    const agentforceCodeActionProvider: AgentforceCodeActionProvider = new AgentforceCodeActionProvider(externalServiceProvider, logger);
+    const agentforceViolationFixer: AgentforceViolationFixer = new AgentforceViolationFixer(externalServiceProvider, logger);
+    const unifiedDiffTool: UnifiedDiffTool<DiffHunk> = new CodeGenieUnifiedDiffTool();
+    const unifiedDiffActions: UnifiedDiffActions<DiffHunk> = new UnifiedDiffActions<DiffHunk>(unifiedDiffTool, telemetryService, logger);
+
+    registerCodeActionsProvider({language: 'apex'}, agentforceCodeActionProvider,
             {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
-    registerCommand(Constants.UNIFIED_DIFF, async (source: string, code: string, file?: string) => {
-        await (new DiffCreateAction(`${source}.${Constants.UNIFIED_DIFF}`, {
-            callback: (code: string, file?: string) => VSCodeUnifiedDiff.singleton.unifiedDiff(code, file),
-            telemetryService
-        })).run(code, file);
-        await VSCodeUnifiedDiff.singleton.unifiedDiff(code, file);
+    // Invoked by the "quick fix" buttons on A4D enabled diagnostics
+    registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: vscode.Diagnostic) => {
+        const fixSuggestion: FixSuggestion = await agentforceViolationFixer.suggestFix(document, diagnostic);
+        if (!fixSuggestion) {
+            return;
+        }
+
+        diagnosticManager.clearDiagnostic(document.uri, diagnostic);
+
+        // TODO: We really need to either improve or replace the CodeGenie unified diff tool. Ideally, we would be
+        //  passing the fixSuggestion to some sort of callback that when the diff is rejected, restore the diagnostic
+        //  that we just removed that is associated with the fix but the CodeGenie diff tool doesn't allow us to do that.
+
+        // Display the diff with buttons that call through to the commands:
+        //    CODEGENIE_UNIFIED_DIFF_ACCEPT, CODEGENIE_UNIFIED_DIFF_REJECT, CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, CODEGENIE_UNIFIED_DIFF_REJECT_ALL
+        const commandSource: string = Constants.QF_COMMAND_A4D_FIX;
+        await unifiedDiffActions.createDiff(commandSource, document, fixSuggestion.getFixedDocumentCode());
+
+        // We should consider a better way to display the explanation associated with the fix.
+        if (fixSuggestion.hasExplanation()) {
+            logger.log(messages.agentforce.explanationOfFix(indent(fixSuggestion.getExplanation())));
+        }
+
+        logger.trace(`=== ORIGINAL CODE ===:\n${fixSuggestion.getOriginalCodeToBeFixed()}\n\n` +
+            `=== FIXED CODE ===:\n${fixSuggestion.getFixedCode()}`);
     });
 
-    registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (hunk: DiffHunk) => {
-        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-        await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT}`, {
-            callback: async (diffHunk: DiffHunk) => {
-                await VSCodeUnifiedDiff.singleton.unifiedDiffAccept(diffHunk);
-                return diffHunk.lines.length;
-            },
-            telemetryService
-        })).run(hunk);
-        // For accept & accept all, it is tricky to track the diagnostics and the changed lines as multiple fixes are requested.
-        // Hence, we save the file and rerun the scan instead.
-        await vscode.window.activeTextEditor.document.save();
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
-    });
 
-    registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (hunk: DiffHunk) => {
-        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-        await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT}`, {
-            callback: (diffHunk: DiffHunk) => VSCodeUnifiedDiff.singleton.unifiedDiffReject(diffHunk),
-            telemetryService
-        })).run(hunk);
-    });
-
-    registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
-        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-        await (new DiffAcceptAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL}`, {
-            callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffAcceptAll(),
-            telemetryService
-        })).run();
-        await vscode.window.activeTextEditor.document.save();
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [vscode.window.activeTextEditor.document.fileName]);
-    });
-
-    registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
-        // TODO: The use of the prefix shouldn't be hardcoded. Ideally, it should be passed in as an argument to the command.
-        //       But that would require us to make changes to the underlying UnifiedDiff code that we're not currently in a position to make.
-        await (new DiffRejectAction(`${Constants.A4D_PREFIX}.${CODEGENIE_UNIFIED_DIFF_REJECT_ALL}`, {
-            callback: () => VSCodeUnifiedDiff.singleton.unifiedDiffRejectAll(),
-            telemetryService
-        })).run();
-    });
+    // =================================================================================================================
+    // ==  CodeGenie Unified Diff Integration
+    // =================================================================================================================
 
     VSCodeUnifiedDiff.singleton.activate(context);
+
+    // Invoked by the "Accept" button on the CodeGenie Unified Diff tool
+    registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, async (diffHunk: DiffHunk) => {
+        // Unfortunately the CodeGenie diff tool doesn't pass in the original source of the diff, so we hardcode
+        // this for now since A4D is the only source for the unified diff so far.
+        const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_ACCEPT}`;
+        // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
+        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+
+        await unifiedDiffActions.acceptDiffHunk(commandSource, document, diffHunk);
+    });
+
+    // Invoked by the "Reject" button on the CodeGenie Unified Diff tool
+    registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT, async (diffHunk: DiffHunk) => {
+        // Unfortunately the CodeGenie diff tool doesn't pass in the original source of the diff, so we hardcode
+        // this for now since A4D is the only source for the unified diff so far.
+        const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_REJECT}`;
+        // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
+        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+        await unifiedDiffActions.rejectDiffHunk(commandSource, document, diffHunk);
+
+        // Work Around: For reject & reject all, we really should be restoring the diagnostic that we removed
+        // but CodeGenie doesn't let us keep the diagnostic information around at this point. So instead we must
+        // rerun the scan instead to get the diagnostic restored.
+        await document.save(); // TODO: saving the document should be built in to the runAndDisplay command in my opinion
+        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+    });
+
+    // Invoked by the "Accept All" button on the CodeGenie Unified Diff tool
+    registerCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL, async () => {
+        // Unfortunately the CodeGenie diff tool doesn't pass in the original source of the diff, so we hardcode
+        // this for now since A4D is the only source for the unified diff so far.
+        const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL}`;
+        // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
+        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+
+        await unifiedDiffActions.acceptAll(commandSource, document);
+    });
+
+    // Invoked by the "Reject All" button on the CodeGenie Unified Diff tool
+    registerCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL, async () => {
+        // Unfortunately the CodeGenie diff tool doesn't pass in the original source of the diff, so we hardcode
+        // this for now since A4D is the only source for the unified diff so far.
+        const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_REJECT_ALL}`;
+        // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
+        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+        await unifiedDiffActions.rejectAll(commandSource, document);
+
+        // Work Around: For reject & reject all, we really should be restoring the diagnostic that we removed
+        // but CodeGenie doesn't let us keep the diagnostic information around at this point. So instead we must
+        // rerun the scan instead to get the diagnostic restored.
+        await document.save(); // TODO: saving the document should be built in to the runAndDisplay command in my opinion
+        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+    });
 
 
     // =================================================================================================================
@@ -317,3 +361,8 @@ async function establishVariableInContext(varUsedInPackageJson: string, getValue
         await vscode.commands.executeCommand('setContext', varUsedInPackageJson, await getValueFcn());
     });
 }
+
+export function indent(value: string, indentation = '    '): string {
+    return indentation + value.replace(/\n/g, `\n${indentation}`);
+}
+
