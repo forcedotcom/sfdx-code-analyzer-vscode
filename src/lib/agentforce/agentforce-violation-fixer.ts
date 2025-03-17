@@ -10,7 +10,7 @@ import {makePrompt, GUIDED_JSON_SCHEMA, LLMResponse, PromptInputs} from './llm-p
 import {LLMService, LLMServiceProvider} from "../external-services/llm-service";
 import {Logger} from "../logger";
 import {extractRuleName} from "../diagnostics";
-import {A4D_SUPPORTED_RULES} from "./supported-rules";
+import {A4D_SUPPORTED_RULES, RuleInfo, ViolationContextScope} from "./supported-rules";
 import {RangeExpander} from "../range-expander";
 import {FixSuggestion} from "../fix-suggestion";
 import {messages} from "../messages";
@@ -34,23 +34,28 @@ export class AgentforceViolationFixer {
         try {
             const llmService: LLMService = await this.llmServiceProvider.getLLMService();
 
-            const rangeExpander: RangeExpander = new RangeExpander();
-
-            const violationLinesRange: vscode.Range = rangeExpander.expandToCompleteLines(document, diagnostic.range);
-
-            // NOTE: We currently assume that the range of the context of the code to replace is equal to the range of
-            //       the violating lines. This won't work for the rules that need additional context, so we have a
-            //       TODO to update the context with W-17617362.
-            const contextRange: vscode.Range = violationLinesRange;
-
-            // Generate the prompt
             const ruleName: string = extractRuleName(diagnostic);
+            const ruleInfo: RuleInfo = A4D_SUPPORTED_RULES.get(ruleName);
+            if (!ruleInfo) {
+                // Should never get called since suggestFix should only be called on supported rules
+                throw new Error(`Unsupported rule: ${ruleName}`);
+            }
+
+            const rangeExpander: RangeExpander = new RangeExpander(document);
+            const violationLinesRange: vscode.Range = rangeExpander.expandToCompleteLines(diagnostic.range);
+            let contextRange: vscode.Range = violationLinesRange; // This is the default: ViolationContextScope.ViolationScope
+            if (ruleInfo.violationContextScope === ViolationContextScope.ClassScope) {
+                contextRange = rangeExpander.expandToClass(diagnostic.range);
+            } else if (ruleInfo.violationContextScope === ViolationContextScope.MethodScope) {
+                contextRange = rangeExpander.expandToMethod(diagnostic.range);
+            }
+
             const promptInputs: PromptInputs = {
                 codeContext: document.getText(contextRange),
                 violatingLines: document.getText(violationLinesRange),
                 violationMessage: diagnostic.message,
                 ruleName: ruleName,
-                ruleDescription: A4D_SUPPORTED_RULES.get(ruleName)
+                ruleDescription: ruleInfo.description
             };
             const prompt: string = makePrompt(promptInputs);
 
