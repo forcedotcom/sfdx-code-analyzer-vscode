@@ -31,26 +31,49 @@ describe('AgentforceViolationFixer Tests', () => {
             '  with spaces and such\n' +
             '  within the content.';
         const sampleDocument: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), sampleContent, 'apex');
-        const sampleRange: vscode.Range = new vscode.Range(0, 8, 1, 7);
-        const sampleDiagnostic: vscode.Diagnostic = new vscode.Diagnostic(sampleRange, 'dummy message');
+        const sampleDiagnostic: vscode.Diagnostic = new vscode.Diagnostic(new vscode.Range(0, 8, 1, 7), 'dummy message');
+        sampleDiagnostic.code = 'ApexCRUDViolation';
 
         it('When response is valid JSON with fixedCode and an explanation, then return the fix suggestion correctly', async () => {
             spyLLMService.callLLMReturnValue = '{"fixedCode": "some code fix", "explanation": "some explanation"}';
             const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
-            expect(fixSuggestion).toBeDefined();
+            expect(fixSuggestion).not.toBeNull();
             expect(fixSuggestion.codeFixData.document).toEqual(sampleDocument);
             expect(fixSuggestion.codeFixData.diagnostic).toEqual(sampleDiagnostic);
-            // Important, we expand the range by default to include the full lines of the violation:
-            expect(fixSuggestion.codeFixData.rangeToBeFixed).toEqual(new vscode.Range(0, 0, 1, 18));
+            expect(fixSuggestion.codeFixData.rangeToBeFixed).toEqual(new vscode.Range(0, 0, 1, 18)); // Should be the full violation context
             expect(fixSuggestion.codeFixData.fixedCode).toEqual('some code fix');
             expect(fixSuggestion.hasExplanation()).toEqual(true);
             expect(fixSuggestion.getExplanation()).toEqual('some explanation');
         });
 
+        it('When a rule should be sending in additional context, confirm the range gets adjusted appropriately', async () => {
+            const fileContent: string =
+                'public class SomeClass {\n' +
+                '    public void someMethod() {\n' +
+                '        Blob hardCodedIV = Blob.valueOf(\'Hardcoded IV 123\');\n' +
+                '        Blob hardCodedKey = Blob.valueOf(\'0000000000000000\');\n' +
+                '        Blob data = Blob.valueOf(\'Data to be encrypted\');\n' +
+                '        Blob encrypted = Crypto.encrypt(\'AES128\', hardCodedKey, hardCodedIV, data);\n' +
+                '    }\n' +
+                '}';
+            const document: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), fileContent, 'apex');
+            const diagnostic: vscode.Diagnostic = new vscode.Diagnostic(new vscode.Range(5, 50, 5, 62), 'dummy message');
+            diagnostic.code = 'ApexBadCrypto';
+
+            spyLLMService.callLLMReturnValue = '{"fixedCode": "some fixed code"}';
+
+            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(document, diagnostic);
+            expect(fixSuggestion).not.toBeNull();
+            expect(fixSuggestion.codeFixData.document).toEqual(document);
+            expect(fixSuggestion.codeFixData.diagnostic).toEqual(diagnostic);
+            expect(fixSuggestion.codeFixData.rangeToBeFixed).toEqual(new vscode.Range(1, 0, 6, 5)); // Should be the full method context
+            expect(fixSuggestion.codeFixData.fixedCode).toEqual('some fixed code');
+        });
+
         it('When response is valid JSON with fixedCode but without an explanation, then return the fix suggestion correctly', async () => {
             spyLLMService.callLLMReturnValue = '{"fixedCode": "some code fix"}';
             const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
-            expect(fixSuggestion).toBeDefined();
+            expect(fixSuggestion).not.toBeNull();
             expect(fixSuggestion.hasExplanation()).toEqual(false);
             expect(fixSuggestion.getExplanation()).toEqual('');
             expect(fixSuggestion.codeFixData.fixedCode).toEqual('some code fix');
@@ -83,6 +106,13 @@ describe('AgentforceViolationFixer Tests', () => {
             const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
             expect(fixSuggestion).toBeNull();
             expectErrorGettingShownCorrectly('Error from callLLM');
+        });
+
+        it('When diagnostic is associated with an unsupported rule, then show error message and log error', async () => {
+            sampleDiagnostic.code = 'SomeRandomRule';
+            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
+            expect(fixSuggestion).toBeNull();
+            expectErrorGettingShownCorrectly('Unsupported rule: SomeRandomRule');
         });
 
         function expectErrorGettingShownCorrectly(expectErrorSubMessage: string): void {
