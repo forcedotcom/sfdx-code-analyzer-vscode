@@ -54,8 +54,8 @@ export class UnifiedDiff {
    * @param targetCode Target code to compare.
    */
   constructor(sourceCode: string, targetCode: string) {
-    this.sourceCode = sourceCode.trim();
-    this.targetCode = targetCode.trim();
+    this.sourceCode = sourceCode;
+    this.targetCode = targetCode;
   }
 
   /**
@@ -71,7 +71,7 @@ export class UnifiedDiff {
    * @param code Source code to set.
    */
   public setSourceCode(code: string) {
-    this.sourceCode = code.trim();
+    this.sourceCode = code;
     this.calcDiffs();
     this.calcUnifiedCode();
   }
@@ -89,7 +89,7 @@ export class UnifiedDiff {
    * @param code Target code to set.
    */
   public setTargetCode(code: string) {
-    this.targetCode = code.trim();
+    this.targetCode = code;
     this.calcDiffs();
     this.calcUnifiedCode();
   }
@@ -318,7 +318,7 @@ export class UnifiedDiff {
       updated = lines.join('\n');
       delta = -hunk.lines.length;
     }
-    this.sourceCode = updated.trim();
+    this.sourceCode = updated;
     for (let i = this.hunks.indexOf(hunk) + 1; i < this.hunks.length; i++) {
       this.hunks[i].sourceLine += delta;
     }
@@ -341,7 +341,7 @@ export class UnifiedDiff {
       updated = lines.join('\n');
       delta = hunk.lines.length;
     }
-    this.targetCode = updated.trim();
+    this.targetCode = updated;
     for (let i = this.hunks.indexOf(hunk) + 1; i < this.hunks.length; i++) {
       this.hunks[i].targetLine += delta;
     }
