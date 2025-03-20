@@ -15,6 +15,9 @@ export type CodeFixData = {
     fixedCode: string
 }
 
+
+// IMPORTANT: Currently the CodeFixData contains the document and not a copy of the original document code, so the methods in this class
+// assume that you have not modified the document. Otherwise, the rangeToBeFixed will be associated with the newly modified document.
 export class FixSuggestion {
     readonly codeFixData: CodeFixData;
     private readonly explanation?: string;

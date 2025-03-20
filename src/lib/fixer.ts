@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import {messages} from './messages';
 import * as Constants from './constants';
+import { extractRuleName } from './diagnostics';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -176,7 +177,7 @@ export class _PmdFixGenerator extends FixGenerator {
         // Create a position indicating the very end of the violation's start line.
         const endOfLine: vscode.Position = new vscode.Position(this.diagnostic.range.start.line, Number.MAX_SAFE_INTEGER);
 
-        const action = new vscode.CodeAction(messages.fixer.suppressOnLine, vscode.CodeActionKind.QuickFix);
+        const action = new vscode.CodeAction(messages.fixer.suppressPMDViolationsOnLine, vscode.CodeActionKind.QuickFix);
         action.edit = new vscode.WorkspaceEdit();
         action.edit.insert(this.document.uri, endOfLine, " // NOPMD");
         action.diagnostics = [this.diagnostic];
@@ -193,16 +194,13 @@ export class _PmdFixGenerator extends FixGenerator {
         // Find the end-of-line position of the class declaration where the diagnostic is found.
         const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
 
-        const action = new vscode.CodeAction(messages.fixer.suppressOnClass, vscode.CodeActionKind.QuickFix);
-        action.edit = new vscode.WorkspaceEdit();
+        const ruleName: string = extractRuleName(this.diagnostic);
+        const suppressionTag: string = ruleName ? `PMD.${ruleName}` :
+            `PMD`; // TODO: Figure out when this would ever be the case?? I don't think we should blindly suppress everything
+        const suppressMsg: string = messages.fixer.suppressPmdViolationsOnClass(ruleName);
 
-        // Determine the appropriate suppression rule based on the type of diagnostic.code
-        let suppressionRule: string;
-        if (typeof this.diagnostic.code == 'object' && 'value' in this.diagnostic.code) {
-            suppressionRule = `PMD.${this.diagnostic.code.value}`;
-        } else {
-            suppressionRule = `PMD`;
-        }
+        const action = new vscode.CodeAction(suppressMsg, vscode.CodeActionKind.QuickFix);
+        action.edit = new vscode.WorkspaceEdit();
 
         // Extract text from the start to end of the class declaration to search for existing suppressions
         const classText = this.findLineBeforeClassStartDeclaration(classStartPosition, this.document);
@@ -211,9 +209,9 @@ export class _PmdFixGenerator extends FixGenerator {
         if (suppressionMatch) {
             // If @SuppressWarnings exists, check if the rule is already present
             const existingRules = suppressionMatch[1].split(',').map(rule => rule.trim());
-            if (!existingRules.includes(suppressionRule)) {
+            if (!existingRules.includes(suppressionTag)) {
                 // If the rule is not present, add it to the existing @SuppressWarnings
-                const updatedRules = [...existingRules, suppressionRule].join(', ');
+                const updatedRules = [...existingRules, suppressionTag].join(', ');
                 const updatedSuppression = this.generateUpdatedSuppressionTag(updatedRules, this.document.languageId);
                 const suppressionStartPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]));
                 const suppressionEndPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
@@ -222,7 +220,7 @@ export class _PmdFixGenerator extends FixGenerator {
             }
         } else {
             // If @SuppressWarnings does not exist, insert a new one
-            const newSuppression = this.generateNewSuppressionTag(suppressionRule, this.document.languageId);
+            const newSuppression = this.generateNewSuppressionTag(suppressionTag, this.document.languageId);
             action.edit.insert(this.document.uri, classStartPosition, newSuppression);
         }
 

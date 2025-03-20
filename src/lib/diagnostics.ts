@@ -133,6 +133,11 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
         // This is an interim fix to handle ApexSharingViolations and can be removed once PMD fixes PMD fixes the bug: https://github.com/pmd/pmd/issues/5511
         if (convertible.rule === 'ApexSharingViolations' && primaryLocation.endLine && primaryLocation.endLine !== primaryLocation.startLine) {
             primaryLocationRange = this.convertToRangeForApexSharingViolations(primaryLocation);
+        } else if (convertible.rule === 'ApexDoc' || convertible.rule === 'ExcessiveParameterList') {
+             // See https://github.com/pmd/pmd/issues/5614 and https://github.com/pmd/pmd/issues/5616
+            primaryLocationRange = this.convertToRange(primaryLocation);
+            primaryLocationRange = new vscode.Range(primaryLocationRange.start.line, primaryLocationRange.start.character, 
+                primaryLocationRange.start.line, Number.MAX_SAFE_INTEGER);
         } else {
             primaryLocationRange = this.convertToRange(primaryLocation);
         }
@@ -201,7 +206,6 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
     private convertToRangeForApexSharingViolations({ startLine, startColumn }: DiagnosticConvertibleLocation): vscode.Range {
         const start = new vscode.Position(Math.max(startLine - 1, 0), Math.max(startColumn - 1, 0));
         const end = new vscode.Position(start.line, Number.MAX_SAFE_INTEGER);
-
         return new vscode.Range(start, end);
     }
 }

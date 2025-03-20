@@ -513,7 +513,7 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
       diff.getHunks().length === 0 ||
       (diff.getHunks().length === 1 && diff.getHunks()[0].type === DiffType.Unmodified)
     ) {
-      vscode.window.showInformationMessage('Ask CodeGenie: No changes to diff.');
+      vscode.window.showInformationMessage('Agentforce Fix: No changes to diff.');
       return;
     }
 
