@@ -243,6 +243,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             return;
         }
 
+        logger.debug(`Agentforce Fix Diff:\n` + 
+            `=== ORIGINAL CODE ===:\n${fixSuggestion.getOriginalCodeToBeFixed()}\n\n` +
+            `=== FIXED CODE ===:\n${fixSuggestion.getFixedCode()}`);
+
         diagnosticManager.clearDiagnostic(document.uri, diagnostic);
 
         // TODO: We really need to either improve or replace the CodeGenie unified diff tool. Ideally, we would be
@@ -254,13 +258,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         const commandSource: string = Constants.QF_COMMAND_A4D_FIX;
         await unifiedDiffActions.createDiff(commandSource, document, fixSuggestion.getFixedDocumentCode());
 
-        // We should consider a better way to display the explanation associated with the fix.
         if (fixSuggestion.hasExplanation()) {
-            logger.log(messages.agentforce.explanationOfFix(indent(fixSuggestion.getExplanation())));
+            vscode.window.showInformationMessage(messages.agentforce.explanationOfFix(fixSuggestion.getExplanation()));
         }
-
-        logger.trace(`=== ORIGINAL CODE ===:\n${fixSuggestion.getOriginalCodeToBeFixed()}\n\n` +
-            `=== FIXED CODE ===:\n${fixSuggestion.getFixedCode()}`);
     });
 
 
@@ -361,8 +361,3 @@ async function establishVariableInContext(varUsedInPackageJson: string, getValue
         await vscode.commands.executeCommand('setContext', varUsedInPackageJson, await getValueFcn());
     });
 }
-
-export function indent(value: string, indentation = '    '): string {
-    return indentation + value.replace(/\n/g, `\n${indentation}`);
-}
-

@@ -68,7 +68,7 @@ export const A4D_SUPPORTED_RULES: Map<string, RuleInfo> = new Map([
     }],
     ['MethodWithSameNameAsEnclosingClass', {
         description: 'Non-constructor methods should not have the same name as the enclosing class.',
-        violationContextScope: ViolationContextScope.ViolationScope
+        violationContextScope: ViolationContextScope.ClassScope
     }],
     ['OverrideBothEqualsAndHashcode', {
         description: 'Override both `public Boolean equals(Object obj)`, and `public Integer hashCode()`, or override neither. Even if you are inheriting a hashCode() from a parent class, consider implementing hashCode and explicitly delegating to your superclass. This is especially important when Using Custom Types in Map Keys and Sets.',
@@ -76,7 +76,7 @@ export const A4D_SUPPORTED_RULES: Map<string, RuleInfo> = new Map([
     }],
     ['TestMethodsMustBeInTestClasses', {
         description: 'Test methods marked as a testMethod or annotated with @IsTest, but not residing in a test class should be moved to a proper class or have the @IsTest annotation added to the class. Support for tests inside functional classes was removed in Spring-13 (API Version 27.0), making classes that violate this rule fail compile-time. This rule is mostly usable when dealing with legacy code.',
-        violationContextScope: ViolationContextScope.ViolationScope
+        violationContextScope: ViolationContextScope.ClassScope
     }],
 
 

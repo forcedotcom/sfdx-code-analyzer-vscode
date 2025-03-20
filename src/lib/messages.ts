@@ -21,9 +21,9 @@ export const messages = {
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with Agentforce is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
-        fixViolationWithA4D: (ruleName: string) => `Fix ${ruleName} using Agentforce. (Beta)`,
+        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce. (Beta)`,
         failedA4DResponse: "Unable to receive code fix suggestion from Agentforce.",
-        explanationOfFix: (explanation: string) => `Explanation of the fix supplied by Agentforce:\n${explanation}`
+        explanationOfFix: (explanation: string) => `Agentforce Fix Explanation: ${explanation}`
     },
     apexGuru: {
         progress: {
@@ -46,8 +46,8 @@ export const messages = {
         existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
-        suppressOnLine: "Suppress violations on this line.",
-        suppressOnClass: "Suppress violations on this class.",
+        suppressPMDViolationsOnLine: "Suppress all PMD violations on this line.",
+        suppressPmdViolationsOnClass: (ruleName?: string) => ruleName ? `Suppress '${ruleName}' on this class.` : `Suppress all PMD violations on this class.`,
         fixWithApexGuruSuggestions: "Insert ApexGuru suggestions."
     },
     diagnostics: {
