@@ -5,6 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 export const messages = {
+    stoppingV4SupportSoon: "We plan to stop supporting v4.x of Code Analyzer in the coming months. We highly recommend that you start using v5.x, which is currently in Beta, by setting 'Code Analyzer: Enable V5' to true. For information on v5.x, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
     scanProgressReport: {
         identifyingTargets: {
             message: "Code Analyzer is identifying targets.",

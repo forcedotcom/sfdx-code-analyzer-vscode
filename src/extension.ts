@@ -328,6 +328,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Finalize activation
     // =================================================================================================================
+
+    if(!settingsManager.getCodeAnalyzerV5Enabled()) {
+        const button1Text: string = "Enable V5";
+        const button2Text: string = "Show 'EnableV5' in Settings";
+        vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, button1Text, button2Text).then(selection => {
+            if (selection === button1Text) {
+                settingsManager.setCodeAnalyzerV5Enabled(true);
+            } else if (selection === button2Text) {
+                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.enableV5');
+                vscode.commands.executeCommand('vscode.open', settingUri);
+            }
+        });
+    }
+
     telemetryService.sendExtensionActivationEvent(extensionHrStart);
     logger.log('Extension sfdx-code-analyzer-vscode activated.');
     return {
