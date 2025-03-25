@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import {messages} from './messages';
 import * as Constants from './constants';
+import { extractRuleName } from './diagnostics';
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -20,11 +21,14 @@ export class Fixer implements vscode.CodeActionProvider {
      * @returns All actions corresponding to diagnostics in the specified range of the target document.
      */
     public provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
-        const processedLines = new Set<number>(); 
+        const processedLines = new Set<number>();
         // Iterate over all diagnostics.
         return context.diagnostics
             // Throw out diagnostics that aren't ours, or are for the wrong line.
-            .filter(diagnostic => messages.diagnostics.source && messages.diagnostics.source.isSource(diagnostic.source) && diagnostic.range.isEqual(range))
+            .filter(diagnostic =>
+                diagnostic.source &&
+                diagnostic.source.endsWith(messages.diagnostics.source.suffix)
+                && range.contains(diagnostic.range))
             // Get and use the appropriate fix generator.
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.
@@ -39,9 +43,8 @@ export class Fixer implements vscode.CodeActionProvider {
      * @returns
      */
     private getFixGenerator(document: vscode.TextDocument, diagnostic: vscode.Diagnostic): FixGenerator {
-        const engine: string = messages.diagnostics.source.extractEngine(diagnostic.source);
-
-        switch (engine) {
+        const engineName: string = diagnostic.source?.split(' ')[0];
+        switch (engineName) {
             case 'pmd':
             case 'pmd-custom':
                 return new _PmdFixGenerator(document, diagnostic);
@@ -94,7 +97,6 @@ export class _ApexGuruFixGenerator extends FixGenerator {
      * Generate an array of fixes, if possible.
      * @returns
      */
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     public generateFixes(processedLines: Set<number>, document: vscode.TextDocument, diagnostic: vscode.Diagnostic): vscode.CodeAction[] {
         console.log(diagnostic);
         const fixes: vscode.CodeAction[] = [];
@@ -108,7 +110,7 @@ export class _ApexGuruFixGenerator extends FixGenerator {
 
     public generateApexGuruSuppresssion(document: vscode.TextDocument): vscode.CodeAction {
         const suggestedCode = this.diagnostic.relatedInformation[1].message;
-    
+
         const action = new vscode.CodeAction(messages.fixer.fixWithApexGuruSuggestions, vscode.CodeActionKind.QuickFix);
         action.diagnostics = [this.diagnostic];
         const range = this.diagnostic.range;  // Assuming the range is the location of the existing code in the document
@@ -116,13 +118,13 @@ export class _ApexGuruFixGenerator extends FixGenerator {
 
         action.command = {
             title: 'Apply ApexGuru Fix',
-            command: Constants.COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
-            arguments: [document, diagnosticStartLine, suggestedCode + '\n'] 
+            command: Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
+            arguments: [document, diagnosticStartLine, suggestedCode + '\n']
         }
-        
+
         return action;
     }
-    
+
 }
 
 /**
@@ -175,12 +177,12 @@ export class _PmdFixGenerator extends FixGenerator {
         // Create a position indicating the very end of the violation's start line.
         const endOfLine: vscode.Position = new vscode.Position(this.diagnostic.range.start.line, Number.MAX_SAFE_INTEGER);
 
-        const action = new vscode.CodeAction(messages.fixer.supressOnLine, vscode.CodeActionKind.QuickFix);
+        const action = new vscode.CodeAction(messages.fixer.suppressPMDViolationsOnLine, vscode.CodeActionKind.QuickFix);
         action.edit = new vscode.WorkspaceEdit();
         action.edit.insert(this.document.uri, endOfLine, " // NOPMD");
         action.diagnostics = [this.diagnostic];
         action.command = {
-            command: Constants.COMMAND_DIAGNOSTICS_IN_RANGE,
+            command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE,
             title: 'Clear Single Diagnostic',
             arguments: [this.document.uri, this.diagnostic.range]
         };
@@ -192,27 +194,24 @@ export class _PmdFixGenerator extends FixGenerator {
         // Find the end-of-line position of the class declaration where the diagnostic is found.
         const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
 
-        const action = new vscode.CodeAction(messages.fixer.supressOnClass, vscode.CodeActionKind.QuickFix);
+        const ruleName: string = extractRuleName(this.diagnostic);
+        const suppressionTag: string = ruleName ? `PMD.${ruleName}` :
+            `PMD`; // TODO: Figure out when this would ever be the case?? I don't think we should blindly suppress everything
+        const suppressMsg: string = messages.fixer.suppressPmdViolationsOnClass(ruleName);
+
+        const action = new vscode.CodeAction(suppressMsg, vscode.CodeActionKind.QuickFix);
         action.edit = new vscode.WorkspaceEdit();
-    
-        // Determine the appropriate suppression rule based on the type of diagnostic.code
-        let suppressionRule: string;
-        if (typeof this.diagnostic.code == 'object' && 'value' in this.diagnostic.code) {
-            suppressionRule = `PMD.${this.diagnostic.code.value}`;
-        } else {
-            suppressionRule = `PMD`;
-        }
-    
+
         // Extract text from the start to end of the class declaration to search for existing suppressions
         const classText = this.findLineBeforeClassStartDeclaration(classStartPosition, this.document);
         const suppressionMatch = classText.match(this.suppressionRegex);
-    
+
         if (suppressionMatch) {
             // If @SuppressWarnings exists, check if the rule is already present
             const existingRules = suppressionMatch[1].split(',').map(rule => rule.trim());
-            if (!existingRules.includes(suppressionRule)) {
+            if (!existingRules.includes(suppressionTag)) {
                 // If the rule is not present, add it to the existing @SuppressWarnings
-                const updatedRules = [...existingRules, suppressionRule].join(', ');
+                const updatedRules = [...existingRules, suppressionTag].join(', ');
                 const updatedSuppression = this.generateUpdatedSuppressionTag(updatedRules, this.document.languageId);
                 const suppressionStartPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]));
                 const suppressionEndPosition = this.document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
@@ -221,10 +220,10 @@ export class _PmdFixGenerator extends FixGenerator {
             }
         } else {
             // If @SuppressWarnings does not exist, insert a new one
-            const newSuppression = this.generateNewSuppressionTag(suppressionRule, this.document.languageId);
+            const newSuppression = this.generateNewSuppressionTag(suppressionTag, this.document.languageId);
             action.edit.insert(this.document.uri, classStartPosition, newSuppression);
         }
-    
+
         action.diagnostics = [this.diagnostic];
         action.command = {
             command: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE,
@@ -234,7 +233,7 @@ export class _PmdFixGenerator extends FixGenerator {
 
         return action;
     }
-    
+
     public generateUpdatedSuppressionTag(updatedRules: string, lang: string) {
         if (lang === 'apex') {
             return `@SuppressWarnings('${updatedRules}')`;
@@ -261,13 +260,13 @@ export class _PmdFixGenerator extends FixGenerator {
     public findClassStartPosition(diagnostic: vscode.Diagnostic, document: vscode.TextDocument): vscode.Position {
         const text = document.getText();
         const diagnosticLine = diagnostic.range.start.line;
-    
+
         // Split the text into lines for easier processing
         const lines = text.split('\n');
         let classStartLine: number | undefined;
 
         let inBlockComment = false;
-    
+
         // Iterate from the diagnostic line upwards to find the class declaration
         for (let lineNumber = 0; lineNumber <= diagnosticLine; lineNumber++) {
             const line = lines[lineNumber];
@@ -293,18 +292,18 @@ export class _PmdFixGenerator extends FixGenerator {
             if (line.match(this.blockCommentEndPattern) && line.match(this.blockCommentStartPattern)) {
                 continue;
             }
-            
+
             const match = line.match(this.classDeclarationPattern);
             if (!inBlockComment && match && !this.isWithinQuotes(line, match.index)) {
                 classStartLine = lineNumber;
                 break;
             }
         }
-    
+
         if (classStartLine !== undefined) {
             return new vscode.Position(classStartLine, 0);
         }
-        
+
         // Default to the start of the document if class is not found
         return new vscode.Position(0, 0);
     }
@@ -327,9 +326,9 @@ export class _PmdFixGenerator extends FixGenerator {
 
     /**
      * Helper function to check if match is within quotes
-     * @param line 
-     * @param matchIndex 
-     * @returns 
+     * @param line
+     * @param matchIndex
+     * @returns
      */
     public isWithinQuotes(line: string, matchIndex: number): boolean {
         const beforeMatch = line.slice(0, matchIndex);

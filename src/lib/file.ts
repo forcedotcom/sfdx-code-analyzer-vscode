@@ -16,7 +16,7 @@ export async function exists(fileName: string): Promise<boolean> {
     try {
         await fs.access(fileName, fsConstants.F_OK);
         return true;
-    } catch (e) {
+    } catch (_e) {
         return false;
     }
 }
@@ -30,22 +30,22 @@ export async function isDir(fileName: string): Promise<boolean> {
     try {
         await fs.access(fileName, fsConstants.F_OK);
         return (await fs.stat(fileName)).isDirectory();
-    } catch (e) {
+    } catch (_e) {
         return false;
     }
 }
 
 export async function tmpFileWithCleanup(ext?: string): Promise<string> {
-	return new Promise<string>((res, rej) => {
-		// Make `tmp` clean up the file after the process exits.
-		tmp.setGracefulCleanup();
-		const options: tmp.FileOptions = ext ? {postfix: ext}: {};
-		return tmp.file(options, (err, name) => {
-			if (!err) {
-				res(name);
-			} else {
-				rej(err);
-			}
-		});
-	});
+    return new Promise<string>((res, rej) => {
+        // Make `tmp` clean up the file after the process exits.
+        tmp.setGracefulCleanup();
+        const options: tmp.FileOptions = ext ? {postfix: ext}: {};
+        return tmp.file(options, (err, name) => {
+            if (!err) {
+                res(name);
+            } else {
+                rej(err);
+            }
+        });
+    });
 }

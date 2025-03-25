@@ -8,17 +8,17 @@ import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './settings';
 import {ExecutionResult} from '../types';
 import * as Constants from './constants';
-import cspawn = require('cross-spawn');
+import * as cspawn from 'cross-spawn';
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
  */
 export class ScanRunner {
-	private readonly settingsManager: SettingsManager;
+    private readonly settingsManager: SettingsManager;
 
-	public constructor(settingsManager?: SettingsManager) {
-		this.settingsManager = settingsManager ?? new SettingsManagerImpl();
-	}
+    public constructor(settingsManager?: SettingsManager) {
+        this.settingsManager = settingsManager ?? new SettingsManagerImpl();
+    }
 
     /**
      * Run the DFA rules against the specified targets

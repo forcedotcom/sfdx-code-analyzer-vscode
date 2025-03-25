@@ -4,21 +4,21 @@ import {messages} from '../messages';
 
 
 export abstract class ScannerStrategy {
-	public abstract validateEnvironment(): Promise<void>;
+    public abstract validateEnvironment(): Promise<void>;
 
-	public abstract scan(targets: string[]): Promise<DiagnosticConvertible[]>;
+    public abstract scan(targets: string[]): Promise<DiagnosticConvertible[]>;
 
-	public abstract getScannerName(): string;
+    public abstract getScannerName(): string;
 }
 
 
 export abstract class CliScannerStrategy extends ScannerStrategy {
-	public override async validateEnvironment(): Promise<void> {
-		if (!await SfCli.isSfCliInstalled()) {
-			throw new Error(messages.error.sfMissing);
-		}
-		await this.validatePlugin();
-	}
+    public override async validateEnvironment(): Promise<void> {
+        if (!await SfCli.isSfCliInstalled()) {
+            throw new Error(messages.error.sfMissing);
+        }
+        await this.validatePlugin();
+    }
 
-	protected abstract validatePlugin(): Promise<void>;
+    protected abstract validatePlugin(): Promise<void>;
 }

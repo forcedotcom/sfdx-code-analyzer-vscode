@@ -5,7 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import globby = require('globby');
+import {glob} from 'glob';
 import {exists, isDir} from './file';
 import {ApexLsp, GenericSymbol} from './apex-lsp';
 import {messages} from './messages';
@@ -27,12 +27,13 @@ export async function getTargets(selections: vscode.Uri[]): Promise<string[]> {
                 // This should never happen, but we should handle it gracefully regardless.
                 throw new Error(messages.targeting.error.nonexistentSelectedFileGenerator(selection.fsPath));
             } else if (await isDir(selection.fsPath)) {
-				// Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
-				// latter into the former.
-				const globbablePath = selection.fsPath.replace(/\\/g, '/');
-                const globOut: string[] = await globby(`${globbablePath}/**/*`);
-				// Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
-				// to its expected form.
+                // Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
+                // latter into the former.
+                const globbablePath = selection.fsPath.replace(/\\/g, '/');
+                const globOut: string[] = await glob(`${globbablePath}/**/*`, {nodir: true});
+                // Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
+                // to its expected form.
+
                 globOut.forEach(o => targets.add(vscode.Uri.file(o).fsPath));
             } else {
                 targets.add(selection.fsPath);
@@ -72,9 +73,9 @@ export async function getSelectedMethod(): Promise<string> {
     const textDocument: vscode.TextDocument = activeEditor.document;
     const cursorPosition: vscode.Position = activeEditor.selection.active;
 
-	// The filename-portion of the target string needs to be Unix-formatted,
-	// otherwise it will parse as a glob and kill the process.
-	const fileName: string = textDocument.fileName.replace(/\\/g, '/');
+    // The filename-portion of the target string needs to be Unix-formatted,
+    // otherwise it will parse as a glob and kill the process.
+    const fileName: string = textDocument.fileName.replace(/\\/g, '/');
 
     // If the Apex Language Server is available, we can use it to derive much more robust
     // targeting information than we can independently.
@@ -92,7 +93,6 @@ export async function getSelectedMethod(): Promise<string> {
     } else {
         // Without the Apex Language Server, we'll take the quick-and-dirty route
         // of just identifying the exact word the user selected, and assuming that's the name of a method.
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         vscode.window.showWarningMessage(messages.targeting.warnings.apexLspUnavailable);
         const wordRange: vscode.Range = textDocument.getWordRangeAtPosition(cursorPosition);
         return `${fileName}#${textDocument.getText(wordRange)}`;

@@ -5,6 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 export const messages = {
+    stoppingV4SupportSoon: "We plan to stop supporting v4.x of Code Analyzer in the coming months. We highly recommend that you start using v5.x, which is currently in Beta, by setting 'Code Analyzer: Enable V5' to true. For information on v5.x, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
     scanProgressReport: {
         identifyingTargets: {
             message: "Code Analyzer is identifying targets.",
@@ -19,6 +20,12 @@ export const messages = {
             increment: 60
         }
     },
+    agentforce: {
+        a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
+        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce for Developers. (Beta)`,
+        failedA4DResponse: "Unable to receive code fix suggestion from Agentforce for Developers.",
+        explanationOfFix: (explanation: string) => `Fix Explanation: ${explanation}`
+    },
     apexGuru: {
         progress: {
             message: "Code Analyzer is running ApexGuru analysis."
@@ -26,7 +33,7 @@ export const messages = {
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
     },
     info: {
-		scanningWith: (scannerName: string) => `Scanning with ${scannerName}`,
+        scanningWith: (scannerName: string) => `Scanning with ${scannerName}`,
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
     },
     graphEngine: {
@@ -40,21 +47,15 @@ export const messages = {
         existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
-        supressOnLine: "Suppress violations on this line.",
-        supressOnClass: "Suppress violations on this class.",
+        suppressPMDViolationsOnLine: "Suppress all PMD violations on this line.",
+        suppressPmdViolationsOnClass: (ruleName?: string) => ruleName ? `Suppress '${ruleName}' on this class.` : `Suppress all PMD violations on this class.`,
         fixWithApexGuruSuggestions: "Insert ApexGuru suggestions."
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
-            generator: (engine: string) => `${engine} via Code Analyzer`,
-            isSource: (source: string) => {
-                if (!source) {
-                    return false;
-                }
-                return source && source.endsWith(' via Code Analyzer');
-            },
-            extractEngine: (source: string) => source?.split(' ')[0]
+            suffix: 'via Code Analyzer',
+            generator: (engine: string) => `${engine} ${messages.diagnostics.source.suffix}`
         }
     },
     targeting: {
@@ -72,7 +73,7 @@ export const messages = {
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use this extension, first install Salesforce CLI `sf` or `sfdx` commands.",
         sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`.",
-		codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
-		coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
+        codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
+        coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     }
 };

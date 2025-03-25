@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: 3.12
       - name: 'Install node module dependencies'
-        run: yarn install --frozen-lockfile
+        run: npm ci
       # We'll need to install the CLI tool, since some of the tests
       # are integration tests.
       - name: Install SF CLI
@@ -115,14 +115,14 @@ jobs:
         run: sf plugins install code-analyzer
       # Run the tests. (Linux and non-Linux need slightly different commands.)
       - name: 'Run Tests (Linux)'
-        run: xvfb-run -a yarn test
+        run: xvfb-run -a npm run test
         if: runner.os == 'Linux'
       - name: 'Run Tests (non-Linux)'
-        run: yarn test
+        run: npm run test
         if: runner.os != 'Linux'
       # Lint, to make sure we're following best practices.
       - name: 'Lint'
-        run: yarn lint
+        run: npm run lint
       # Upload the code coverage from the test as an artifact with
       # the name 'code-coverage-[whatever the OS is]'.
       - name: Upload coverage artifact

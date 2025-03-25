@@ -1,10 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-floating-promises */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable */
 /**
  * Copyright (c) 2023, salesforce.com, inc.
  * All rights reserved.
@@ -60,8 +54,8 @@ export class UnifiedDiff {
    * @param targetCode Target code to compare.
    */
   constructor(sourceCode: string, targetCode: string) {
-    this.sourceCode = sourceCode.trim();
-    this.targetCode = targetCode.trim();
+    this.sourceCode = sourceCode;
+    this.targetCode = targetCode;
   }
 
   /**
@@ -77,7 +71,7 @@ export class UnifiedDiff {
    * @param code Source code to set.
    */
   public setSourceCode(code: string) {
-    this.sourceCode = code.trim();
+    this.sourceCode = code;
     this.calcDiffs();
     this.calcUnifiedCode();
   }
@@ -95,7 +89,7 @@ export class UnifiedDiff {
    * @param code Target code to set.
    */
   public setTargetCode(code: string) {
-    this.targetCode = code.trim();
+    this.targetCode = code;
     this.calcDiffs();
     this.calcUnifiedCode();
   }
@@ -324,7 +318,7 @@ export class UnifiedDiff {
       updated = lines.join('\n');
       delta = -hunk.lines.length;
     }
-    this.sourceCode = updated.trim();
+    this.sourceCode = updated;
     for (let i = this.hunks.indexOf(hunk) + 1; i < this.hunks.length; i++) {
       this.hunks[i].sourceLine += delta;
     }
@@ -347,7 +341,7 @@ export class UnifiedDiff {
       updated = lines.join('\n');
       delta = hunk.lines.length;
     }
-    this.targetCode = updated.trim();
+    this.targetCode = updated;
     for (let i = this.hunks.indexOf(hunk) + 1; i < this.hunks.length; i++) {
       this.hunks[i].targetLine += delta;
     }
@@ -380,7 +374,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    * @returns Code actions for unified diff.
    */
   public provideCodeActions() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const actions: any[] = [];
 
     // let action;
@@ -415,7 +408,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    */
   public provideCodeLenses(
     document: vscode.TextDocument,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken
   ): vscode.CodeLens[] {
     const diff = this.unifiedDiffs.get(document.uri.toString());
@@ -431,7 +423,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    */
   public resolveCodeLens(
     codeLens: vscode.CodeLens,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _token: vscode.CancellationToken
   ) {
     return codeLens;
@@ -470,14 +461,16 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
   /**
    * Accept all changes in the unified diff.
    */
-  public async unifiedDiffAcceptAll() {
+  public async unifiedDiffAcceptAll(): Promise<number> {
     const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
+    if (!editor) return 0;
     const diff = this.unifiedDiffs.get(editor.document.uri.toString());
-    if (!diff) return;
+    if (!diff) return 0;
+    const diffLines: number = diff.getHunks().reduce((prev, curr) => prev + curr.lines.length, 0);
     diff.setSourceCode(diff.getTargetCode());
     await this.renderUnifiedDiff(editor.document);
     this.checkRedundantUnifiedDiff(editor.document);
+    return diffLines;
   }
 
   /**
@@ -520,7 +513,7 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
       diff.getHunks().length === 0 ||
       (diff.getHunks().length === 1 && diff.getHunks()[0].type === DiffType.Unmodified)
     ) {
-      vscode.window.showInformationMessage('Ask CodeGenie: No changes to diff.');
+      vscode.window.showInformationMessage('Agentforce Fix: No changes to diff.');
       return;
     }
 
@@ -542,7 +535,6 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider, vscode.CodeAc
    * Document opened.
    * @param _document Document that was opened.
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected onDocumentOpened(_document: vscode.TextDocument) {
     // noop
   }
