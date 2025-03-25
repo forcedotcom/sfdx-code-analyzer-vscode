@@ -9,7 +9,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as Sinon from 'sinon';
 import {expect} from 'chai';
-import {getSelectedMethod, getTargets} from '../../lib/targeting';
+import {getSelectedMethod, getFilesFromSelection} from '../../lib/targeting';
 import {ApexLsp, GenericSymbol} from '../../lib/apex-lsp';
 
 suite('targeting.ts', () => {
@@ -36,7 +36,7 @@ suite('targeting.ts', () => {
 
             // ===== TEST =====
             // Feed that URI into the target finder.
-            const targets: string[] = await getTargets([singleUri]);
+            const targets: string[] = await getFilesFromSelection([singleUri]);
 
             // ===== ASSERTIONS =====
             // Verify we got the right output.
@@ -57,7 +57,7 @@ suite('targeting.ts', () => {
 
             // ===== TEST =====
             // Feed those URIs into the target finder.
-            const targets: string[] = await getTargets(multipleUris);
+            const targets: string[] = await getFilesFromSelection(multipleUris);
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
@@ -76,7 +76,7 @@ suite('targeting.ts', () => {
 
             // ===== TEST =====
             // Feed the URI into the target finder.
-            const targets: string[] = await getTargets([folderUri]);
+            const targets: string[] = await getFilesFromSelection([folderUri]);
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
@@ -93,7 +93,7 @@ suite('targeting.ts', () => {
 
             // ===== TEST =====
             // Feed the URI into the target finder.
-            const targets: string[] = await getTargets([folderUri]);
+            const targets: string[] = await getFilesFromSelection([folderUri]);
 
             // ===== ASSERTIONS =====
             // Verify we got the right outputs.
@@ -115,7 +115,7 @@ suite('targeting.ts', () => {
             // Feed the URI into the target finder, expecting an error.
             let err: Error = null;
             try {
-                await getTargets([fakeFileUri]);
+                await getFilesFromSelection([fakeFileUri]);
             } catch (e) {
                 err = e as Error;
             }
@@ -125,7 +125,7 @@ suite('targeting.ts', () => {
             expect(err).to.not.be.null;
         });
 
-        test('Given no file, returns file active in editor', async () => {
+        test('Given no selection, returns no files', async () => {
             // ===== SETUP =====
             // Open a file in the editor.
             const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
@@ -135,35 +135,10 @@ suite('targeting.ts', () => {
 
             // ===== TEST =====
             // Feed an empty array into the target finder.
-            const targets: string[] = await getTargets([]);
+            const targets: string[] = await getFilesFromSelection([]);
 
             // ===== ASSERTIONS =====
-            expect(targets).to.have.lengthOf(1, 'Wrong nubmer of targets returned');
-            expect(targets[0]).to.equal(openFilePath, 'Wrong file returned');
-        });
-
-        test('Without selection or active file, throws error', async () => {
-            // ===== SETUP =====
-            // Simulate no window being open in the editor.
-            // NOTE: We need to use a stub here instead of/in addition to directly closing
-            //       windows, because sometimes the test context can have a weird "phantom window"
-            //       even if you close anything. This seems to happen when the test instance loses
-            //       focus.
-            Sinon.stub(vscode.window, 'activeTextEditor').value(undefined);
-
-            // ===== TEST =====
-            // Feed an empty array into target finder, expecting an error.
-            let err: Error = null;
-            try {
-                await getTargets([]);
-            } catch (e) {
-                err = e as Error;
-            }
-
-            // ===== ASSERTIONS =====
-            // Expect that an error was thrown.
-            // TODO: test error message instead of error existence.
-            expect(err).to.not.be.null;
+            expect(targets).to.have.lengthOf(0, 'Wrong nubmer of targets returned');
         });
     });
 

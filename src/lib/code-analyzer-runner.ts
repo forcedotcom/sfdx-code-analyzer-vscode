@@ -1,7 +1,7 @@
 
 import {Displayable, ProgressNotification, UxDisplay} from "./display";
 import {Logger} from "./logger";
-import {DiagnosticConvertible, DiagnosticManager} from "./diagnostics";
+import {Violation, DiagnosticManager} from "./diagnostics";
 import * as vscode from "vscode";
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
@@ -27,9 +27,9 @@ export class CodeAnalyzerRunner {
     /**
      * Runs the scanner against the specified file and displays the results.
      * @param commandName The command being run
-     * @param targets The files/folders to run against
+     * @param filesToScan The files to run against
      */
-    async runAndDisplay(commandName: string, targets: string[]): Promise<void> {
+    async runAndDisplay(commandName: string, filesToScan: string[]): Promise<void> {
         const startTime = Date.now();
         try {
             return await vscode.window.withProgress({
@@ -53,10 +53,10 @@ export class CodeAnalyzerRunner {
                     telemetryService: this.telemetryService
                 };
                 const scannerAction = new ScannerAction(commandName, actionDependencies);
-                await scannerAction.runScanner(targets);
+                await scannerAction.runScanner(filesToScan);
             });
         } catch (e) {
-            const errMsg = e instanceof Error ? e.message : e as string;
+            const errMsg = e instanceof Error ? e.stack : e as string;
             this.telemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS, errMsg, {
                 executedCommand: commandName,
                 duration: (Date.now() - startTime).toString()
@@ -87,7 +87,7 @@ class VSCodeDisplayable implements Displayable {
      * @param allTargets The files that were scanned. This may be a superset of the files that actually had violations.
      * @param results The results of a scan.
      */
-    public async results(allTargets: string[], results: DiagnosticConvertible[]): Promise<void> {
+    public async results(allTargets: string[], results: Violation[]): Promise<void> {
         const uniqueFiles: Set<string> = new Set();
         for (const result of results) {
             uniqueFiles.add(result.locations[result.primaryLocationIndex].file);

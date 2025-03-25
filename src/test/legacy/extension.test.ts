@@ -19,9 +19,6 @@ import {messages} from '../../lib/messages';
 import {SettingsManagerImpl} from '../../lib/settings';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
 import * as vscode from 'vscode';
 import {DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
 import {SpyLogger, StubDiagnosticManager, StubTelemetryService} from "./test-utils";
@@ -269,7 +266,7 @@ suite('Extension Test Suite', () => {
 
             test('Throws error if `sf`/`sfdx` is missing', async function () {
                 this.timeout(90000);
-                
+
                 // ===== SETUP =====
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being unavailable.
@@ -447,7 +444,7 @@ suite('Extension Test Suite', () => {
 
         test('Cache stays cleared when there are no existing DFA runs', function () {
             this.timeout(90000);
-            
+
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
 
@@ -482,14 +479,14 @@ suite('Extension Test Suite', () => {
         suiteSetup(() => {
             // Create a diagnostic collection before the test suite starts.
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
-            getTargetsStub = Sinon.stub(targeting, 'getTargets');
+            getTargetsStub = Sinon.stub(targeting, 'getFilesFromSelection');
         });
 
         setup(() => {
             // Ensure the diagnostic collection is clear before each test.
             diagnosticCollection.clear();
 
-            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
         });
 
         teardown(() => {
@@ -498,7 +495,7 @@ suite('Extension Test Suite', () => {
             getTargetsStub.reset();
         });
 
-        test('Should clear diagnostics for a single file', async function () {
+        test('Should clear diagnostics for a single file', function () {
             this.timeout(90000);
 
             // ===== SETUP =====
@@ -512,13 +509,13 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri)).to.be.empty;
         });
 
-        test('Should clear diagnostics for multiple files', async function () {
+        test('Should clear diagnostics for multiple files', function () {
             this.timeout(90000);
 
             // ===== SETUP =====
@@ -535,27 +532,27 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri1, uri2], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri1, uri2]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri1)).to.be.empty;
             expect(diagnosticCollection.get(uri2)).to.be.empty;
         });
 
-        test('Should handle case with no diagnostics to clear', async function () {
+        test('Should handle case with no diagnostics to clear', function () {
             this.timeout(90000);
 
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file4.cls');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri)).to.be.empty;
         });
 
-        test('Should handle case with an empty URI array', async function () {
+        test('Should handle case with an empty URI array', function () {
             this.timeout(90000);
 
             // ===== SETUP =====
@@ -569,13 +566,13 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
         });
 
-        test('Should not affect other diagnostics not in the selected list', async function () {
+        test('Should not affect other diagnostics not in the selected list', function () {
             this.timeout(90000);
 
             // ===== SETUP =====
@@ -595,7 +592,7 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri1], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri1]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri1)).to.be.empty;
@@ -610,7 +607,7 @@ suite('Extension Test Suite', () => {
         setup(() => {
             // Create a new diagnostic collection for each test
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
-            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
         });
 
         teardown(() => {

@@ -17,40 +17,27 @@ import {messages} from './messages';
  * @returns Paths of targeted files.
  * @throws If no files are selected and no file is open in the editor.
  */
-export async function getTargets(selections: vscode.Uri[]): Promise<string[]> {
-    // If files/folders were selected, we should use those.
-    if (selections && selections.length > 0) {
-        // Use a Set to preserve uniqueness.
-        const targets: Set<string> = new Set();
-        for (const selection of selections) {
-            if (!(await exists(selection.fsPath))) {
-                // This should never happen, but we should handle it gracefully regardless.
-                throw new Error(messages.targeting.error.nonexistentSelectedFileGenerator(selection.fsPath));
-            } else if (await isDir(selection.fsPath)) {
-                // Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
-                // latter into the former.
-                const globbablePath = selection.fsPath.replace(/\\/g, '/');
-                const globOut: string[] = await glob(`${globbablePath}/**/*`, {nodir: true});
-                // Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
-                // to its expected form.
+export async function getFilesFromSelection(selections: vscode.Uri[]): Promise<string[]> {
+    // Use a Set to preserve uniqueness.
+    const targets: Set<string> = new Set();
+    for (const selection of selections) {
+        if (!(await exists(selection.fsPath))) {
+            // This should never happen, but we should handle it gracefully regardless.
+            throw new Error(messages.targeting.error.nonexistentSelectedFileGenerator(selection.fsPath));
+        } else if (await isDir(selection.fsPath)) {
+            // Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
+            // latter into the former.
+            const globbablePath = selection.fsPath.replace(/\\/g, '/');
+            const globOut: string[] = await glob(`${globbablePath}/**/*`, {nodir: true});
+            // Globby's results are Unix-formatted. Do a Uri.file roundtrip to return the path
+            // to its expected form.
 
-                globOut.forEach(o => targets.add(vscode.Uri.file(o).fsPath));
-            } else {
-                targets.add(selection.fsPath);
-            }
+            globOut.forEach(o => targets.add(vscode.Uri.file(o).fsPath));
+        } else {
+            targets.add(selection.fsPath);
         }
-        return [...targets];
-    } else if (vscode.window.activeTextEditor) {
-        // In the absence of a command arg, use whatever file is currently
-        // open in the editor.
-        return [vscode.window.activeTextEditor.document.fileName];
-    } else {
-        // If there's no file open in the editor, throw an error indicating that
-        // we're not sure what to scan.
-        // TODO: Potentially enhancement is to default to root of workspace.
-        // TODO: Experiment with keybindings and automated args?
-        throw new Error(messages.targeting.error.noFileSelected);
     }
+    return [...targets];
 }
 
 /**

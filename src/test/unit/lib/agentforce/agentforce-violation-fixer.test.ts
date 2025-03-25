@@ -10,6 +10,8 @@ import {AgentforceViolationFixer} from "../../../../lib/agentforce/agentforce-vi
 import {createTextDocument} from 'jest-mock-vscode'
 import {FixSuggestion} from "../../../../lib/fix-suggestion";
 import {messages} from "../../../../lib/messages";
+import {CodeAnalyzerDiagnostic} from "../../../../lib/diagnostics";
+import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
 
 describe('AgentforceViolationFixer Tests', () => {
     let spyLLMService: SpyLLMService;
@@ -31,8 +33,8 @@ describe('AgentforceViolationFixer Tests', () => {
             '  with spaces and such\n' +
             '  within the content.';
         const sampleDocument: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), sampleContent, 'apex');
-        const sampleDiagnostic: vscode.Diagnostic = new vscode.Diagnostic(new vscode.Range(0, 8, 1, 7), 'dummy message');
-        sampleDiagnostic.code = 'ApexCRUDViolation';
+        const sampleDiagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
+            new vscode.Range(0, 8, 1, 7), 'ApexCRUDViolation');
 
         it('When response is valid JSON with fixedCode and an explanation, then return the fix suggestion correctly', async () => {
             spyLLMService.callLLMReturnValue = '{"fixedCode": "some code fix", "explanation": "some explanation"}';
@@ -57,8 +59,8 @@ describe('AgentforceViolationFixer Tests', () => {
                 '    }\n' +
                 '}';
             const document: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), fileContent, 'apex');
-            const diagnostic: vscode.Diagnostic = new vscode.Diagnostic(new vscode.Range(5, 50, 5, 62), 'dummy message');
-            diagnostic.code = 'ApexBadCrypto';
+            const diagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
+                new vscode.Range(5, 50, 5, 62), 'ApexBadCrypto');
 
             spyLLMService.callLLMReturnValue = '{"fixedCode": "some fixed code"}';
 
@@ -109,8 +111,9 @@ describe('AgentforceViolationFixer Tests', () => {
         });
 
         it('When diagnostic is associated with an unsupported rule, then show error message and log error', async () => {
-            sampleDiagnostic.code = 'SomeRandomRule';
-            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
+            const diagWithUnsupportedRule: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
+                new vscode.Range(0, 8, 1, 7), 'SomeRandomRule');
+            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, diagWithUnsupportedRule);
             expect(fixSuggestion).toBeNull();
             expectErrorGettingShownCorrectly('Unsupported rule: SomeRandomRule');
         });
