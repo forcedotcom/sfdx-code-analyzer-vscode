@@ -41,6 +41,10 @@ export class SettingsManagerImpl implements SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('enableV5');
     }
 
+    public setCodeAnalyzerV5Enabled(value: boolean): void {
+        vscode.workspace.getConfiguration('codeAnalyzer').update('enableV5', value, vscode.ConfigurationTarget.Global);
+    }
+
     public getCodeAnalyzerTags(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
     }
