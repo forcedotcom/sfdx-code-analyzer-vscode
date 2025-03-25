@@ -33,10 +33,9 @@ suite('Extension Test Suite', () => {
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
-    suite('E2E', () => {
+    suite('E2E', function () {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         suiteSetup(async function () {
-            this.timeout(10000);
             // Activate the extension.
             await ext.activate();
         });
@@ -250,8 +249,11 @@ suite('Extension Test Suite', () => {
         let stubTelemetryService: StubTelemetryService;
         let codeAnalyzerRunner: CodeAnalyzerRunner;
 
-        suiteSetup(async function () {
+        setup(function() {
             this.timeout(10000);
+        });
+
+        suiteSetup(async function () {
             // Activate the extension.
             await ext.activate();
 
@@ -401,10 +403,13 @@ suite('Extension Test Suite', () => {
         let context: vscode.ExtensionContext;
 
         suiteSetup(async function () {
-            this.timeout(10000);
             // Activate the extension.
             const extData: SFCAExtensionData = await ext.activate();
             context = extData.context;
+        });
+
+        setup(function () {
+            this.timeout(10000);
         });
 
         teardown(async () => {
@@ -437,15 +442,18 @@ suite('Extension Test Suite', () => {
         });
     });
 
-    suite('#_stopExistingDfaRun()', () => {
+    suite('#_stopExistingDfaRun()', function () {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
-        suiteSetup(async function () {
-            this.timeout(10000);
+        suiteSetup(async () => {
             // Activate the extension.
             const extData: SFCAExtensionData = await ext.activate();
             context = extData.context;
+        });
+
+        setup(function () {
+            this.timeout(10000);
         });
 
         teardown(() => {
