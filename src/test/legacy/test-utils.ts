@@ -3,7 +3,6 @@ import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Properties} from "@salesforce/vscode-service-provider";
 import {DiagnosticManager, CodeAnalyzerDiagnostic} from "../../lib/diagnostics";
 import * as vscode from "vscode";
-import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
 
 export class SpyLogger implements Logger {
     logCallHistory: { msg: string }[] = [];
@@ -94,32 +93,11 @@ export class StubDiagnosticManager implements DiagnosticManager {
         // NO-OP
     }
 
-    dispose() {
+    handleTextDocumentChangeEvent(_event: vscode.TextDocumentChangeEvent): void {
         // NO-OP
     }
-}
 
-
-export class StubLLMServiceProvider implements LLMServiceProvider {
-    private readonly llmService?: LLMService;
-
-    constructor(llmService?: LLMService) {
-        this.llmService = llmService;
-    }
-
-    isLLMServiceAvailable(): Promise<boolean> {
-        return Promise.resolve(!!this.llmService);
-    }
-    getLLMService(): Promise<LLMService> {
-        return Promise.resolve(this.llmService);
-    }
-}
-
-export class SpyLLMService implements LLMService {
-    callLLMResponse: string = 'DummyResponse'
-    callLLMCallHistory: {prompt: string, guidedJsonSchema?: string}[] = []
-    callLLM(prompt: string, guidedJsonSchema?: string): Promise<string> {
-        this.callLLMCallHistory.push({prompt, guidedJsonSchema});
-        return Promise.resolve(this.callLLMResponse)
+    dispose(): void {
+        // NO-OP
     }
 }

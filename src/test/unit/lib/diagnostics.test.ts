@@ -1,5 +1,11 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
-import {CodeAnalyzerDiagnostic, Violation} from "../../../lib/diagnostics";
+import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
+import {FakeDiagnosticCollection} from "../vscode-stubs";
+import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
+
+const sampleUri1: vscode.Uri = vscode.Uri.file('/path/to/file1');
+const sampleUri2: vscode.Uri = vscode.Uri.file('/path/to/file2');
+const sampleUri3: vscode.Uri = vscode.Uri.file('/path/to/file3');
 
 describe('Tests for the CodeAnalyzerDiagnostic class', () => {
     describe('Tests for the fromViolation static constructor method', () => {
@@ -145,6 +151,151 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
             expect(diag.range.start.line).toEqual(0);
         });
     });
+
+    describe('Tests for markStale', () => {
+        it('should update message and severity', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri1, new vscode.Range(0, 0, 0, 1));
+            diag.message = 'hello world';
+            diag.severity = vscode.DiagnosticSeverity.Warning;
+
+            diag.markStale();
+
+            expect(diag.message).toEqual('(STALE: Code has changed. Re-run needed.)\nhello world');
+            expect(diag.severity).toEqual(vscode.DiagnosticSeverity.Information);
+        });
+    });
+
+    describe('Tests for isStale', () => {
+        it('should return false when diagnostic has not been marked stale', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri1, new vscode.Range(0, 0, 0, 1));
+
+            // Initially, the message should not start with the stale prefix
+            expect(diag.isStale()).toEqual(false);
+        });
+
+        it('should return true when diagnostic has been marked stale', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri1, new vscode.Range(0, 0, 0, 1));
+            diag.markStale();
+
+            // Initially, the message should not start with the stale prefix
+            expect(diag.isStale()).toEqual(true);
+        });
+    });
 });
 
-// TODO: Add tests in for the DiagnosticManager
+describe('Tests for the DiagnosticManager class', () => {
+    //  NOTE: The tests for handleTextDocumentChangeEvent method is in its own separate file:
+    //        ./diagnostics-handleTextDocumentChangeEvent.test.ts
+
+    let diagnosticCollection: FakeDiagnosticCollection;
+    let diagnosticManager: DiagnosticManager;
+
+    beforeEach(() => {
+        diagnosticCollection = new FakeDiagnosticCollection();
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+    });
+
+    describe('Tests for addDiagnostics', () => {
+        it('should add diagnostics for each URI', () => {
+            const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri1, new vscode.Range(0, 0, 0, 1));
+            const diag2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri2, new vscode.Range(0, 0, 0, 1));
+            const diag3: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri2, new vscode.Range(0, 0, 0, 1));
+
+            diagnosticManager.addDiagnostics([diag1, diag2, diag3]);
+
+            expect(diagnosticCollection.get(sampleUri1)).toHaveLength(1);
+            expect(diagnosticCollection.get(sampleUri2)).toHaveLength(2);
+        });
+    });
+
+    describe('Tests for clearAllDiagnostics', () => {
+        it('should clear all diagnostics', () => {
+            const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri1, new vscode.Range(0, 0, 0, 1));
+            const diag2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri2, new vscode.Range(0, 0, 0, 1));
+            const diag3: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                sampleUri2, new vscode.Range(0, 0, 0, 1));
+
+            diagnosticManager.addDiagnostics([diag1, diag2, diag3]);
+            diagnosticManager.clearAllDiagnostics();
+
+            expect(diagnosticCollection.get(sampleUri1)).toEqual(undefined);
+            expect(diagnosticCollection.get(sampleUri2)).toEqual(undefined);
+        });
+    });
+
+    describe('Tests for clearDiagnostic', () => {
+        it('should remove a specific diagnostic', () => {
+            const uri = sampleUri1;
+            const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(0, 0, 0, 1));
+            const diag2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(1, 0, 1, 1));
+
+            diagnosticManager.addDiagnostics([diag1, diag2]);
+            diagnosticManager.clearDiagnostic(diag1);
+
+            expect(diagnosticCollection.get(uri)).toEqual([diag2]);
+        });
+    });
+
+    describe('Tests for dispose', () => {
+        it('should clear all diagnostics when disposed', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri1, new vscode.Range(0, 0, 0, 1));
+
+            diagnosticManager.addDiagnostics([diag]);
+            diagnosticManager.dispose();
+
+            expect(diagnosticCollection.get(sampleUri1)).toEqual(undefined);
+        });
+    });
+
+    describe('Tests for clearDiagnosticsForFiles', () => {
+        it('should clear diagnostics for multiple files', () => {
+            const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri1, new vscode.Range(0, 0, 0, 1));
+            const diag2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri2, new vscode.Range(0, 0, 0, 1));
+            const diag3: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri3, new vscode.Range(0, 0, 0, 1));
+
+            diagnosticManager.addDiagnostics([diag1, diag2, diag3]);
+            diagnosticManager.clearDiagnosticsForFiles([sampleUri1, sampleUri2]);
+
+            expect(diagnosticCollection.get(sampleUri1)).toEqual(undefined);
+            expect(diagnosticCollection.get(sampleUri2)).toEqual(undefined);
+            expect(diagnosticCollection.get(sampleUri3)).toHaveLength(1);
+        });
+    });
+
+    describe('Tests for clearDiagnosticsInRange', () => {
+        it('should remove diagnostics within a specified range', () => {
+            const uri = sampleUri1;
+            const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(0, 0, 0, 1));
+            const diag2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(1, 0, 1, 1));
+
+            diagnosticManager.addDiagnostics([diag1, diag2]);
+            const rangeToClear = new vscode.Range(0, 0, 0, 1);
+            diagnosticManager.clearDiagnosticsInRange(uri, rangeToClear);
+
+            const diagnostics = diagnosticCollection.get(uri);
+            expect(diagnostics).toHaveLength(1);
+            expect(diagnostics).toContainEqual(diag2);
+        });
+
+        it('should not remove diagnostics outside the specified range', () => {
+            const uri = sampleUri1;
+            const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(0, 0, 0, 1));
+            const diag2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(2, 0, 2, 1));
+
+            diagnosticManager.addDiagnostics([diag1, diag2]);
+            const rangeToClear = new vscode.Range(1, 0, 1, 1);
+            diagnosticManager.clearDiagnosticsInRange(uri, rangeToClear);
+
+            const diagnostics = diagnosticCollection.get(uri);
+            expect(diagnostics).toHaveLength(2); // Both diagnostics should remain
+        });
+    });
+});

@@ -28,7 +28,7 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
         const codeActions: vscode.CodeAction[] = [];
         const filteredDiagnostics: CodeAnalyzerDiagnostic[] = context.diagnostics
             .filter(d => d instanceof CodeAnalyzerDiagnostic)
-            .filter(d => range.contains(d.range) && A4D_SUPPORTED_RULES.has(d.violation.rule));
+            .filter(d => !d.isStale() && range.contains(d.range) && A4D_SUPPORTED_RULES.has(d.violation.rule));
 
         if (filteredDiagnostics.length == 0) {
             return codeActions;
