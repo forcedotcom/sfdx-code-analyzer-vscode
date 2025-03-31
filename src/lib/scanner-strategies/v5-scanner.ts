@@ -147,7 +147,7 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
         for (const violation of resultsJson.violations) {
             for (const location of violation.locations) {
                 // If the path isn't already absolute, it needs to be made absolute.
-                if (path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+                if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
                     // Relative paths are relative to the RunDir results property.
                     location.file = path.join(resultsJson.runDir, location.file);
                 }

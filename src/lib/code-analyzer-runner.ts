@@ -1,16 +1,22 @@
 
-import {Displayable, ProgressNotification, UxDisplay} from "./display";
+import {Display, ProgressEvent, VSCodeDisplay} from "./display";
 import {Logger} from "./logger";
-import {Violation, DiagnosticManager} from "./diagnostics";
+import {DiagnosticManager} from "./diagnostics";
 import * as vscode from "vscode";
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
 import {SettingsManager} from "./settings";
 import {CliScannerV5Strategy} from "./scanner-strategies/v5-scanner";
 import {CliScannerV4Strategy} from "./scanner-strategies/v4-scanner";
-import {ScannerAction, ScannerDependencies} from "./actions/scanner-action";
+import {ScannerAction} from "./actions/scanner-action";
 import * as Constants from './constants';
 
+// TODO: We should bring clarity about the difference between this class and the ScannerAction class.
+//       My hunch is that they probably could be the same class and consolidating them would simplify things
+//       since they both seem to be doing logging and telemetry stuff.
+//       This class might just become a Factory of the other making its single responsibility to construct dependencies
+//       like the ScannerStrategy and Display. But we'll have to think through it a little more since progress is in the
+//       mix as well.
 export class CodeAnalyzerRunner {
     private readonly diagnosticManager: DiagnosticManager;
     private readonly settingsManager: SettingsManager;
@@ -34,8 +40,9 @@ export class CodeAnalyzerRunner {
         try {
             return await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification
-            }, async (progress) => {
-                const display: UxDisplay = new UxDisplay(new VSCodeDisplayable((notif: ProgressNotification) => progress.report(notif), this.logger));
+            }, async (progress: vscode.Progress<ProgressEvent>) => {
+                const display: Display = new VSCodeDisplay(this.logger, progress);
+
                 const scannerStrategy = this.settingsManager.getCodeAnalyzerV5Enabled()
                     ? new CliScannerV5Strategy({
                         tags: this.settingsManager.getCodeAnalyzerTags()
@@ -46,13 +53,8 @@ export class CodeAnalyzerRunner {
                         rulesCategory: this.settingsManager.getRulesCategory(),
                         normalizeSeverity: this.settingsManager.getNormalizeSeverityEnabled()
                     });
-                const actionDependencies: ScannerDependencies = {
-                    scannerStrategy: scannerStrategy,
-                    display: display,
-                    diagnosticManager: this.diagnosticManager,
-                    telemetryService: this.telemetryService
-                };
-                const scannerAction = new ScannerAction(commandName, actionDependencies);
+                const scannerAction = new ScannerAction(commandName, scannerStrategy, this.diagnosticManager,
+                    this.telemetryService, this.logger, display);
                 await scannerAction.runScanner(filesToScan);
             });
         } catch (e) {
@@ -66,36 +68,5 @@ export class CodeAnalyzerRunner {
             vscode.window.showErrorMessage(messages.error.analysisFailedGenerator(errMsg));
             this.logger.error(errMsg);
         }
-    }
-}
-
-class VSCodeDisplayable implements Displayable {
-    private readonly progressCallback: (notif: ProgressNotification) => void;
-    private readonly logger: Logger;
-
-    public constructor(progressCallback: (notif: ProgressNotification) => void, logger: Logger) {
-        this.progressCallback = progressCallback;
-        this.logger = logger;
-    }
-
-    public progress(notification: ProgressNotification): void {
-        this.progressCallback(notification);
-    }
-
-    /**
-     * Display a Toast summarizing the results of a non-DFA scan, i.e. how many files were scanned, how many had violations, and how many violations were found.
-     * @param allTargets The files that were scanned. This may be a superset of the files that actually had violations.
-     * @param results The results of a scan.
-     */
-    public async results(allTargets: string[], results: Violation[]): Promise<void> {
-        const uniqueFiles: Set<string> = new Set();
-        for (const result of results) {
-            uniqueFiles.add(result.locations[result.primaryLocationIndex].file);
-        }
-        await vscode.window.showInformationMessage(messages.info.finishedScan(allTargets.length, uniqueFiles.size, results.length));
-    }
-
-    public log(msg: string): void {
-        this.logger.log(msg);
     }
 }
