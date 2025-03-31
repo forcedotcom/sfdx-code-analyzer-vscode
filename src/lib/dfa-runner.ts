@@ -43,10 +43,10 @@ export class DfaRunner implements vscode.Disposable {
 
     async shouldProceedWithDfaRun(): Promise<boolean> {
         if (this.context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)) {
-            await vscode.window.showInformationMessage(messages.graphEngine.existingDfaRunText);
+            void vscode.window.showInformationMessage(messages.graphEngine.existingDfaRunText);
             return false;
         }
-        return true;
+        return Promise.resolve(true);
     }
 
     async runDfa(): Promise<void> {
@@ -89,8 +89,8 @@ export class DfaRunner implements vscode.Disposable {
             token.onCancellationRequested(async () => await this.stopExistingDfaRun());
 
             const customCancellationToken: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
-            customCancellationToken.token.onCancellationRequested(async () =>
-                await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
+            customCancellationToken.token.onCancellationRequested(() =>
+                void vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
 
             // We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
             // the root directory of that project as the projectDir argument to run DFA.
@@ -108,8 +108,8 @@ export class DfaRunner implements vscode.Disposable {
             token.onCancellationRequested(async () => await this.stopExistingDfaRun());
 
             const customCancellationToken: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
-            customCancellationToken.token.onCancellationRequested(async () =>
-                await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFoundForPartialRuns));
+            customCancellationToken.token.onCancellationRequested(() =>
+                void vscode.window.showInformationMessage(messages.graphEngine.noViolationsFoundForPartialRuns));
 
             // We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
             // the root directory of that project as the projectDir argument to run DFA.
@@ -127,8 +127,8 @@ export class DfaRunner implements vscode.Disposable {
             token.onCancellationRequested(async () => await this.stopExistingDfaRun());
 
             const customCancellationToken: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
-            customCancellationToken.token.onCancellationRequested(async () =>
-                await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
+            customCancellationToken.token.onCancellationRequested(() =>
+                void vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
 
             // Pull out the file from the target and use it to identify the project directory.
             const currentFile: string = methodLevelTarget[0].substring(0, methodLevelTarget.lastIndexOf('#'));
@@ -182,7 +182,7 @@ export class DfaRunner implements vscode.Disposable {
             try {
                 process.kill(pid as number, SIGKILL);
                 void this.context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-                await vscode.window.showInformationMessage(messages.graphEngine.dfaRunStopped);
+                void vscode.window.showInformationMessage(messages.graphEngine.dfaRunStopped);
             } catch (e) {
                 // Exception is thrown by process.kill if between the time the pid exists and kill is executed, the process
                 // ends by itself. Ideally it should clear the cache, but doing this as an abundant of caution.
@@ -191,8 +191,9 @@ export class DfaRunner implements vscode.Disposable {
                 this.logger.error(`Failed killing DFA process.\n${errMsg}`);
             }
         } else {
-            await vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);
+            void vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);
         }
+        return Promise.resolve();
     }
 
     private violationsCacheExists(): boolean {

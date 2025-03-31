@@ -1,4 +1,6 @@
-import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
+import * as vscode from "vscode";// The vscode module is mocked out. See: scripts/setup.jest.ts
+
+import {Diagnostic} from "vscode";
 
 // This file contains stubs/mocks/etc which are not available in the 'jest-mock-vscode' package
 
@@ -11,5 +13,42 @@ export class StubCodeActionContext implements vscode.CodeActionContext {
         this.diagnostics = options.diagnostics || [];
         this.only = options.only || vscode.CodeActionKind.QuickFix;
         this.triggerKind = options.triggerKind || 2;
+    }
+}
+
+export class FakeDiagnosticCollection implements vscode.DiagnosticCollection {
+    readonly diagMap: Map<string, vscode.Diagnostic[]> = new Map<string, vscode.Diagnostic[]>();
+    name: string = 'dummyCollectionName';
+
+    set(uri: unknown, diagnostics?: Diagnostic[]): void {
+        this.diagMap.set((uri as vscode.Uri).fsPath, diagnostics);
+    }
+
+    delete(uri: vscode.Uri): void {
+        this.diagMap.delete(uri.fsPath);
+    }
+
+    clear(): void {
+        this.diagMap.clear()
+    }
+
+    get(uri: vscode.Uri): readonly vscode.Diagnostic[] | undefined {
+        return this.diagMap.get(uri.fsPath);
+    }
+
+    has(uri: vscode.Uri): boolean {
+        return this.diagMap.has(uri.fsPath);
+    }
+
+    forEach(_callback: (uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[], collection: vscode.DiagnosticCollection) => unknown, _thisArg?: unknown): void {
+        throw new Error("Method not implemented.");
+    }
+
+    [Symbol.iterator](): Iterator<[uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[]], unknown, unknown> {
+        throw new Error("Method not implemented.");
+    }
+
+    dispose(): void {
+        this.clear();
     }
 }

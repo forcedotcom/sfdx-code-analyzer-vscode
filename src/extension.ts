@@ -30,7 +30,6 @@ import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {DfaRunner} from "./lib/dfa-runner";
 import {CodeAnalyzerRunner} from "./lib/code-analyzer-runner";
-import {CodeActionProvider, CodeActionProviderMetadata, DocumentSelector, TextDocument} from "vscode";
 import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-action-provider";
 import {UnifiedDiffActions} from "./lib/unified-diff/unified-diff-actions";
 import {CodeGenieUnifiedDiffTool, UnifiedDiffTool} from "./lib/unified-diff/unified-diff-tool";
@@ -61,7 +60,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const registerCommand = (command: string, callback: (...args: unknown[]) => unknown): void => {
         context.subscriptions.push(vscode.commands.registerCommand(command, callback));
     };
-    const registerCodeActionsProvider = (selector: DocumentSelector, provider: CodeActionProvider, metadata?: CodeActionProviderMetadata): void => {
+    const registerCodeActionsProvider = (selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider, metadata?: vscode.CodeActionProviderMetadata): void => {
         context.subscriptions.push(vscode.languages.registerCodeActionsProvider(selector, provider, metadata));
     }
     const onDidSaveTextDocument = (listener: (e: unknown) => unknown): void => {
@@ -82,6 +81,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const dfaRunner: DfaRunner = new DfaRunner(context, telemetryService, logger);
     context.subscriptions.push(dfaRunner);
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+    vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
     const codeAnalyzerRunner: CodeAnalyzerRunner = new CodeAnalyzerRunner(diagnosticManager, settingsManager, telemetryService, logger);
 
@@ -214,7 +214,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
-        const document: TextDocument = await getActiveDocument();
+        const document: vscode.TextDocument = await getActiveDocument();
         if (document === null) {
             vscode.window.showWarningMessage(messages.noActiveEditor);
             return;
@@ -271,7 +271,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (fixSuggestion.hasExplanation()) {
             // TODO: Figure out why this window isn't showing up most times. Could it be that CodeGenie's diff is
             //       preventing it from doing so??
-            await vscode.window.showInformationMessage(messages.agentforce.explanationOfFix(fixSuggestion.getExplanation()));
+            void vscode.window.showInformationMessage(messages.agentforce.explanationOfFix(fixSuggestion.getExplanation()));
         }
     });
 

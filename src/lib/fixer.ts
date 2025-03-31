@@ -24,7 +24,7 @@ export class Fixer implements vscode.CodeActionProvider {
         const processedLines = new Set<number>();
         // Filter out diagnostics that aren't ours, or are for the wrong line.
         return context.diagnostics.filter(d => d instanceof CodeAnalyzerDiagnostic)
-            .filter(d => range.contains(d.range))
+            .filter(d => !d.isStale() && range.contains(d.range))
             // Get and use the appropriate fix generator.
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.
@@ -177,7 +177,7 @@ export class _PmdFixGenerator extends FixGenerator {
         action.edit.insert(this.document.uri, endOfLine, " // NOPMD");
         action.diagnostics = [this.diagnostic];
         action.command = {
-            command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE,
+            command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, // TODO: This is wrong. We should only be clearing PMD violations on this line - not all within the range
             title: 'Clear Single Diagnostic',
             arguments: [this.document.uri, this.diagnostic.range]
         };
