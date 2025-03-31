@@ -3,7 +3,7 @@ import {messages} from "../messages";
 import * as Constants from "../constants";
 import {LLMServiceProvider} from "../external-services/llm-service";
 import {Logger} from "../logger";
-import {extractRuleName} from "../diagnostics";
+import {CodeAnalyzerDiagnostic} from "../diagnostics";
 import {A4D_SUPPORTED_RULES} from "./supported-rules";
 
 /**
@@ -26,13 +26,9 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
                              _token: vscode.CancellationToken): Promise<vscode.CodeAction[]> {
 
         const codeActions: vscode.CodeAction[] = [];
-
-        // Throw out diagnostics that aren't ours, or are for the wrong line.
-        const filteredDiagnostics: vscode.Diagnostic[] = context.diagnostics.filter((diagnostic: vscode.Diagnostic) =>
-            diagnostic.source
-            && diagnostic.source.endsWith(messages.diagnostics.source.suffix)
-            && range.contains(diagnostic.range)
-            && A4D_SUPPORTED_RULES.has(extractRuleName(diagnostic)));
+        const filteredDiagnostics: CodeAnalyzerDiagnostic[] = context.diagnostics
+            .filter(d => d instanceof CodeAnalyzerDiagnostic)
+            .filter(d => range.contains(d.range) && A4D_SUPPORTED_RULES.has(d.violation.rule));
 
         if (filteredDiagnostics.length == 0) {
             return codeActions;
@@ -49,7 +45,7 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
 
         for (const diagnostic of filteredDiagnostics) {
             const fixAction: vscode.CodeAction = new vscode.CodeAction(
-                messages.agentforce.fixViolationWithA4D(extractRuleName(diagnostic)),
+                messages.agentforce.fixViolationWithA4D(diagnostic.violation.rule),
                 vscode.CodeActionKind.QuickFix
             );
             fixAction.diagnostics = [diagnostic] // Important: this ties the code fix action to the specific diagnostic.

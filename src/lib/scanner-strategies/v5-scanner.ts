@@ -1,10 +1,10 @@
 import {CliScannerStrategy} from './scanner-strategy';
-import { DiagnosticConvertible } from '../diagnostics';
+import {Violation} from '../diagnostics';
 import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
-import { tmpFileWithCleanup } from '../file';
-import { stripAnsi } from '../string-utils';
-import { CODE_ANALYZER_V5_BETA_TEMPLATE } from '../constants';
+import {tmpFileWithCleanup} from '../file';
+import {stripAnsi} from '../string-utils';
+import {CODE_ANALYZER_V5_BETA_TEMPLATE} from '../constants';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -14,7 +14,7 @@ export type CliScannerV5StrategyOptions = {
 
 type ResultsJson = {
     runDir: string;
-    violations: DiagnosticConvertible[];
+    violations: Violation[];
 };
 
 // TODO: When v5 adds support for Graph Engine, we'll want to add its DFA rules to this array.
@@ -54,14 +54,14 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
         }
     }
 
-    public override async scan(targets: string[]): Promise<DiagnosticConvertible[]> {
+    public override async scan(filesToScan: string[]): Promise<Violation[]> {
         const potentiallyLongRunningRules: string[] = await this.getLongRunningRules();
 
         if (potentiallyLongRunningRules.length > 0) {
             await this.confirmPotentiallyLongRunningScan(potentiallyLongRunningRules);
         }
 
-        const resultsJson: ResultsJson = await this.invokeAnalyzer(targets);
+        const resultsJson: ResultsJson = await this.invokeAnalyzer(filesToScan);
 
         return this.processResults(resultsJson);
     }
@@ -141,8 +141,8 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
         return outputJson;
     }
 
-    private processResults(resultsJson: ResultsJson): DiagnosticConvertible[] {
-        const processedConvertibles: DiagnosticConvertible[] = [];
+    private processResults(resultsJson: ResultsJson): Violation[] {
+        const processedViolations: Violation[] = [];
 
         for (const violation of resultsJson.violations) {
             for (const location of violation.locations) {
@@ -151,10 +151,9 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
                     // Relative paths are relative to the RunDir results property.
                     location.file = path.join(resultsJson.runDir, location.file);
                 }
-
             }
-            processedConvertibles.push(violation);
+            processedViolations.push(violation);
         }
-        return processedConvertibles;
+        return processedViolations;
     }
 }

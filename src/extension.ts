@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './lib/settings';
 import * as targeting from './lib/targeting'
-import {DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
+import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import {Fixer} from './lib/fixer';
 import {CoreExtensionService} from './lib/core-extension-service';
@@ -30,7 +30,7 @@ import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {DfaRunner} from "./lib/dfa-runner";
 import {CodeAnalyzerRunner} from "./lib/code-analyzer-runner";
-import {CodeActionProvider, CodeActionProviderMetadata, DocumentSelector} from "vscode";
+import {CodeActionProvider, CodeActionProviderMetadata, DocumentSelector, TextDocument} from "vscode";
 import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-action-provider";
 import {UnifiedDiffActions} from "./lib/unified-diff/unified-diff-actions";
 import {CodeGenieUnifiedDiffTool, UnifiedDiffTool} from "./lib/unified-diff/unified-diff-tool";
@@ -81,7 +81,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
     const dfaRunner: DfaRunner = new DfaRunner(context, telemetryService, logger);
     context.subscriptions.push(dfaRunner);
-    const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, telemetryService, logger);
+    const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     context.subscriptions.push(diagnosticManager);
     const codeAnalyzerRunner: CodeAnalyzerRunner = new CodeAnalyzerRunner(diagnosticManager, settingsManager, telemetryService, logger);
 
@@ -97,15 +97,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
     registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
-        if (!vscode.window.activeTextEditor) {
-            throw new Error(messages.targeting.error.noFileSelected);
+        const document: vscode.TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
         }
-
-        // Note that the active editor window could be the output window instead of the actual file editor, so we
-        // force focus it first to ensure we are getting the correct editor
-        await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
-        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
-
         return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
     });
     // ... also invoked by opening a file if the user has set things to do so.
@@ -122,15 +118,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     });
 
     // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
-    registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
-        const targetUris: vscode.Uri[] = multiSelect && multiSelect.length > 0
-            ? multiSelect
-            : [selection];
+    registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
+        const selection: vscode.Uri[] = (multiSelection && multiSelection.length > 0) ? multiSelection : [singleSelection];
         // TODO: We may wish to consider moving away from this target resolution, and just passing in files and folders
         //       as given to us. It's possible the current style could lead to overflowing the CLI when a folder has
         //       many files.
-        const targetStrings: string[] = await targeting.getTargets(targetUris);
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_SELECTED, targetStrings);
+        const selectedFiles: string[] = await targeting.getFilesFromSelection(selection);
+        if (selectedFiles.length == 0) { // I have not found a way to hit this, but we should check just in case
+            vscode.window.showWarningMessage(messages.targeting.error.noFileSelected);
+            return;
+        }
+        await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_SELECTED, selectedFiles);
     });
 
 
@@ -142,14 +140,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     //       present instead of always showing them. Maybe there is a way to watch the diagnostics changing.
 
     // COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' always
-    registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE, async () =>
-            diagnosticManager.clearDiagnosticsForSelectedFiles([], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE));
+    registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE, async () => {
+        const document: vscode.TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
+        }
+        diagnosticManager.clearDiagnosticsForFiles([document.uri]);
+    });
 
     // COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE: Invokable by 'explorer/context' always
     // ... and also invoked by a Quick Fix button that appears on diagnostics. TODO: This should change because we should only be suppressing diagnostics of a specific type - not all of them.
-    registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
-            diagnosticManager.clearDiagnosticsForSelectedFiles(multiSelect && multiSelect.length > 0 ? multiSelect : [selection],
-            Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE));
+    registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
+        const selection: vscode.Uri[] = (multiSelection && multiSelection.length > 0) ? multiSelection : [singleSelection];
+        const selectedFiles: string[] = await targeting.getFilesFromSelection(selection);
+        diagnosticManager.clearDiagnosticsForFiles(selectedFiles.map(f => vscode.Uri.file(f)));
+    });
 
 
     // =================================================================================================================
@@ -208,8 +214,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
-        const targets: string[] = await targeting.getTargets([]);
-        return await ApexGuruFunctions.runApexGuruOnFile(vscode.Uri.file(targets[0]),
+        const document: TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
+        }
+        return await ApexGuruFunctions.runApexGuruOnFile(document.uri,
             Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
     });
 
@@ -237,17 +247,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
     // Invoked by the "quick fix" buttons on A4D enabled diagnostics
-    registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: vscode.Diagnostic) => {
+    registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
         const fixSuggestion: FixSuggestion = await agentforceViolationFixer.suggestFix(document, diagnostic);
         if (!fixSuggestion) {
             return;
         }
 
-        logger.debug(`Agentforce Fix Diff:\n` + 
+        logger.debug(`Agentforce Fix Diff:\n` +
             `=== ORIGINAL CODE ===:\n${fixSuggestion.getOriginalCodeToBeFixed()}\n\n` +
             `=== FIXED CODE ===:\n${fixSuggestion.getFixedCode()}`);
 
-        diagnosticManager.clearDiagnostic(document.uri, diagnostic);
+        diagnosticManager.clearDiagnostic(diagnostic);
 
         // TODO: We really need to either improve or replace the CodeGenie unified diff tool. Ideally, we would be
         //  passing the fixSuggestion to some sort of callback that when the diff is rejected, restore the diagnostic
@@ -278,8 +288,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         // this for now since A4D is the only source for the unified diff so far.
         const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_ACCEPT}`;
         // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
-        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
-
+        const document: vscode.TextDocument = await getActiveDocument();
         await unifiedDiffActions.acceptDiffHunk(commandSource, document, diffHunk);
     });
 
@@ -289,7 +298,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         // this for now since A4D is the only source for the unified diff so far.
         const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_REJECT}`;
         // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
-        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+        const document: vscode.TextDocument = await getActiveDocument();
         await unifiedDiffActions.rejectDiffHunk(commandSource, document, diffHunk);
 
         // Work Around: For reject & reject all, we really should be restoring the diagnostic that we removed
@@ -305,7 +314,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         // this for now since A4D is the only source for the unified diff so far.
         const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL}`;
         // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
-        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+        const document: vscode.TextDocument = await getActiveDocument();
 
         await unifiedDiffActions.acceptAll(commandSource, document);
     });
@@ -316,7 +325,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         // this for now since A4D is the only source for the unified diff so far.
         const commandSource: string = `${Constants.QF_COMMAND_A4D_FIX}>${CODEGENIE_UNIFIED_DIFF_REJECT_ALL}`;
         // Also, CodeGenie diff tool does not pass in the document, and so we assume it is the active one since the user clicked the button.
-        const document: vscode.TextDocument = vscode.window.activeTextEditor.document;
+        const document: vscode.TextDocument = await getActiveDocument();
         await unifiedDiffActions.rejectAll(commandSource, document);
 
         // Work Around: For reject & reject all, we really should be restoring the diagnostic that we removed
@@ -376,4 +385,14 @@ async function establishVariableInContext(varUsedInPackageJson: string, getValue
     vscode.workspace.onDidChangeConfiguration(async () => {
         await vscode.commands.executeCommand('setContext', varUsedInPackageJson, await getValueFcn());
     });
+}
+
+async function getActiveDocument(): Promise<vscode.TextDocument | null> {
+    // Note that the active editor window could be the output window instead of the actual file editor, so we
+    // force focus it first to ensure we are getting the correct editor
+    await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+    if (!vscode.window.activeTextEditor) {
+        return null;
+    }
+    return vscode.window.activeTextEditor.document;
 }

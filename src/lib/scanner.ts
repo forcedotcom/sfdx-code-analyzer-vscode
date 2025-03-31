@@ -6,7 +6,7 @@
  */
 import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './settings';
-import {ExecutionResult} from '../types';
+import {V4ExecutionResult} from './scanner-strategies/v4-scanner';
 import * as Constants from './constants';
 import * as cspawn from 'cross-spawn';
 
@@ -32,7 +32,7 @@ export class ScanRunner {
         const args: string[] = this.createDfaArgArray(targets, projectDir, cacheFilePath);
 
         // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context);
+        const executionResult: V4ExecutionResult = await this.invokeDfaAnalyzer(args, context);
 
         // Process the results.
         return this.processDfaResults(executionResult);
@@ -97,7 +97,7 @@ export class ScanRunner {
      * Uses the provided arguments to run a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
      */
-    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
+    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<V4ExecutionResult> {
         return new Promise((res) => {
             const cp = cspawn.spawn('sf', args);
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, cp.pid);
@@ -110,7 +110,7 @@ export class ScanRunner {
 
             cp.on('exit', () => {
                 // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as ExecutionResult);
+                res(JSON.parse(stdout) as V4ExecutionResult);
                 void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             });
 
@@ -125,7 +125,7 @@ export class ScanRunner {
      * @throws If {@code executionResult.warnings} contains any warnings about methods not being found.
      * @throws if {@code executionResult.status} is non-zero.
      */
-    private processDfaResults(executionResult: ExecutionResult): string {
+    private processDfaResults(executionResult: V4ExecutionResult): string {
         // 0 is the status code indicating a successful analysis.
         if (executionResult.status === 0) {
             // Since we're using HTML format, the results should always be a string.

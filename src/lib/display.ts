@@ -1,4 +1,4 @@
-import { DiagnosticConvertible } from "./diagnostics";
+import { Violation } from "./diagnostics";
 
 export type ProgressNotification = {
     message?: string;
@@ -8,7 +8,7 @@ export type ProgressNotification = {
 export interface Display {
     displayProgress(notification: ProgressNotification): void;
 
-    displayResults(allTargets: string[], results: DiagnosticConvertible[]): Promise<void>;
+    displayResults(allTargets: string[], results: Violation[]): Promise<void>;
 
     displayLog(msg: string): void;
 }
@@ -24,7 +24,7 @@ export class UxDisplay implements Display {
         this.displayable.progress(notification);
     }
 
-    public async displayResults(allTargets: string[], results: DiagnosticConvertible[]): Promise<void> {
+    public async displayResults(allTargets: string[], results: Violation[]): Promise<void> {
         await this.displayable.results(allTargets, results);
     }
 
@@ -36,7 +36,7 @@ export class UxDisplay implements Display {
 export interface Displayable {
     progress(notification: ProgressNotification): void;
 
-    results(allTargets: string[], results: DiagnosticConvertible[]): Promise<void>;
+    results(allTargets: string[], results: Violation[]): Promise<void>;
 
     log(msg: string): void;
 }

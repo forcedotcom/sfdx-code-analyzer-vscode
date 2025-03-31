@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 import {createTextDocument} from "jest-mock-vscode";
 import {RangeExpander} from "../../../lib/range-expander";
 
