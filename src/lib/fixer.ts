@@ -23,8 +23,8 @@ export class Fixer implements vscode.CodeActionProvider {
     public provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
         const processedLines = new Set<number>();
         // Filter out diagnostics that aren't ours, or are for the wrong line.
-        const codeAnalyzerDiags: CodeAnalyzerDiagnostic[] = context.diagnostics.filter(d => d instanceof CodeAnalyzerDiagnostic);
-        return codeAnalyzerDiags.filter(d => range.contains(d.range))
+        return context.diagnostics.filter(d => d instanceof CodeAnalyzerDiagnostic)
+            .filter(d => range.contains(d.range))
             // Get and use the appropriate fix generator.
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.

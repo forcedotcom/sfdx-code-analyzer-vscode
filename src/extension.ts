@@ -98,6 +98,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
     registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
         const document: vscode.TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
+        }
         return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
     });
     // ... also invoked by opening a file if the user has set things to do so.
@@ -138,6 +142,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' always
     registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE, async () => {
         const document: vscode.TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
+        }
         diagnosticManager.clearDiagnosticsForFiles([document.uri]);
     });
 
@@ -207,6 +215,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
         const document: TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
+        }
         return await ApexGuruFunctions.runApexGuruOnFile(document.uri,
             Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
     });
@@ -375,13 +387,12 @@ async function establishVariableInContext(varUsedInPackageJson: string, getValue
     });
 }
 
-async function getActiveDocument(): Promise<vscode.TextDocument> {
+async function getActiveDocument(): Promise<vscode.TextDocument | null> {
     // Note that the active editor window could be the output window instead of the actual file editor, so we
     // force focus it first to ensure we are getting the correct editor
     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
-
     if (!vscode.window.activeTextEditor) {
-        throw new Error(messages.noActiveEditor);
+        return null;
     }
     return vscode.window.activeTextEditor.document;
 }
