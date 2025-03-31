@@ -68,7 +68,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             expect(Array.from(diagnosticCollection.diagMap.keys())).toEqual([
-                process.platform.startsWith('win') ? '\\\\anotherFile.cls' : '/anotherFile.cls']);
+                process.platform.startsWith('win') ? '\\anotherFile.cls' : '/anotherFile.cls']);
             expect(diagnosticCollection.get(diagForOtherDoc.uri)).toHaveLength(1);
             expect(diagnosticCollection.get(diagForOtherDoc.uri)[0]).toEqual(diagForOtherDoc);
             expect(diagForOtherDoc.range).toEqual(rangeForOtherDoc); // Should still have the same range

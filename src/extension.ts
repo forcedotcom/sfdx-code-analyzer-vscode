@@ -271,7 +271,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (fixSuggestion.hasExplanation()) {
             // TODO: Figure out why this window isn't showing up most times. Could it be that CodeGenie's diff is
             //       preventing it from doing so??
-            await vscode.window.showInformationMessage(messages.agentforce.explanationOfFix(fixSuggestion.getExplanation()));
+            void vscode.window.showInformationMessage(messages.agentforce.explanationOfFix(fixSuggestion.getExplanation()));
         }
     });
 
