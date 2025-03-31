@@ -10,7 +10,7 @@ import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
  */
 
 describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEvent method`, () => {
-    const sampleUri: vscode.Uri = vscode.Uri.file('someFile.cls');
+    const sampleUri: vscode.Uri = vscode.Uri.file('/someFile.cls');
     const sampleLines: string[] = [
         'This is line 0.',
         'And this is line 1.',
@@ -60,14 +60,15 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
 
         it('When there are diagnostics for another document but not one for the changed document, then no-op', () => {
             const rangeForOtherDoc: vscode.Range = new vscode.Range(2, 1, 2, 4);
-            const diagForOtherDoc: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('anotherFile.cls'), rangeForOtherDoc);
+            const diagForOtherDoc: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('/anotherFile.cls'), rangeForOtherDoc);
             diagnosticManager.addDiagnostics([diagForOtherDoc]);
 
             const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
                 new vscode.Range(0, 2, 0, 9), 'some replacement text');
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
-            expect(Array.from(diagnosticCollection.diagMap.keys())).toEqual(['anotherFile.cls']);
+            expect(Array.from(diagnosticCollection.diagMap.keys())).toEqual([
+                process.platform.startsWith('win') ? '\\\\anotherFile.cls' : '/anotherFile.cls']);
             expect(diagnosticCollection.get(diagForOtherDoc.uri)).toHaveLength(1);
             expect(diagnosticCollection.get(diagForOtherDoc.uri)[0]).toEqual(diagForOtherDoc);
             expect(diagForOtherDoc.range).toEqual(rangeForOtherDoc); // Should still have the same range

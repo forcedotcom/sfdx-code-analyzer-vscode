@@ -6,6 +6,7 @@
  */
 export const messages = {
     noActiveEditor: "Unable to perform action: No active editor.",
+    staleDiagnosticPrefix: "(STALE: The code has changed. Re-run the scan.)",
     stoppingV4SupportSoon: "We plan to stop supporting v4.x of Code Analyzer in the coming months. We highly recommend that you start using v5.x, which is currently in Beta, by setting 'Code Analyzer: Enable V5' to true. For information on v5.x, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
     scanProgressReport: {
         identifyingTargets: {

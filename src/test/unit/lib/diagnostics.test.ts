@@ -1,7 +1,9 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
+
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
+import {messages} from "../../../lib/messages";
 
 const sampleUri1: vscode.Uri = vscode.Uri.file('/path/to/file1');
 const sampleUri2: vscode.Uri = vscode.Uri.file('/path/to/file2');
@@ -161,7 +163,7 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
 
             diag.markStale();
 
-            expect(diag.message).toEqual('(STALE: Code has changed. Re-run needed.)\nhello world');
+            expect(diag.message).toEqual(messages.staleDiagnosticPrefix + '\nhello world');
             expect(diag.severity).toEqual(vscode.DiagnosticSeverity.Information);
         });
     });

@@ -29,7 +29,7 @@ export type Violation = {
     resources: string[];
 }
 
-const STALE_PREFIX = '(STALE: Code has changed. Re-run needed.)\n';
+const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
 
 /**
  * Extended Diagnostic class to hold violation information and uri to make our life easier
