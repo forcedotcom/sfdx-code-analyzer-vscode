@@ -47,11 +47,11 @@ export class SettingsManagerImpl implements SettingsManager {
     }
 
     public getCodeAnalyzerUseV4Deprecated(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('useV4Deprecated');
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('Use v4 (Deprecated)');
     }
 
     public setCodeAnalyzerUseV4Deprecated(value: boolean): void {
-        void vscode.workspace.getConfiguration('codeAnalyzer').update('useV4Deprecated', value, vscode.ConfigurationTarget.Global);
+        void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', value, vscode.ConfigurationTarget.Global);
     }
 
 

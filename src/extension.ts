@@ -95,9 +95,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     await establishVariableInContext('sfca.codeAnalyzerV4Enabled', () => Promise.resolve(settingsManager.getCodeAnalyzerUseV4Deprecated()));
 
-    // Monitor the "codeAnalyzer.useV4Deprecated" setting with telemetry
+    // Monitor the "codeAnalyzer.Use v4 (Deprecated)" setting with telemetry
     vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
-        if (event.affectsConfiguration('codeAnalyzer.useV4Deprecated')) {
+        if (event.affectsConfiguration('codeAnalyzer.Use v4 (Deprecated)')) {
             telemetryService.sendCommandEvent(Constants.TELEM_SETTING_USEV4, {
                 value: settingsManager.getCodeAnalyzerUseV4Deprecated().toString()});
         }
@@ -349,13 +349,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
 
     if(settingsManager.getCodeAnalyzerUseV4Deprecated()) {
-        const button1Text: string = "Start using V5";
+        const button1Text: string = "Start using v5";
         const button2Text: string = "Show settings";
         vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, button1Text, button2Text).then(selection => {
             if (selection === button1Text) {
                 settingsManager.setCodeAnalyzerUseV4Deprecated(false);
             } else if (selection === button2Text) {
-                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.useV4Deprecated');
+                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.Use v4 (Deprecated)');
                 vscode.commands.executeCommand('vscode.open', settingUri);
             }
         });

@@ -147,10 +147,10 @@
                         "default": false,
                         "description": "(Pilot) Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
                     },
-                    "codeAnalyzer.useV4Deprecated": {
+                    "codeAnalyzer.Use v4 (Deprecated)": {
                         "type": "boolean",
                         "default": false,
-                        "markdownDescription": "Use Code Analyzer v4 (Deprecated) instead of Code Analyzer v5.\n\nWe no longer provide support for Code Analyzer v4.x and will soon be removing this setting, so we highly recommend you use [Code Analyzer v5.x](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html) instead. Selecting this setting will ignore the Code Analyzer v5 settings and use the v4 settings instead.\n\nCreate an [issue](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues) if you are having trouble switching to v5.x."
+                        "markdownDescription": "Use Code Analyzer v4 (Deprecated) instead of Code Analyzer v5.\n\nWe no longer support Code Analyzer v4 and will soon remove this setting. We highly recommend that you use [Code Analyzer v5](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html) instead. Selecting this setting ignores the Code Analyzer v5 settings and uses the v4 settings instead.\n\nIf you have having trouble switching to v5, create an [issue](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues)."
                     }
                 }
             },
@@ -160,12 +160,12 @@
                     "codeAnalyzer.configFile": {
                         "type": "string",
                         "default": "",
-                        "markdownDescription": "Path to a [Code Analyzer configuration](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html) file used to customize the engines and rules.\n\nCode Analyzer has an internal default configuration for its rule and engine properties. If you want to override these defaults, you can either add a 'code-analyzer.yml' or 'code-analyzer.yaml' file at the root of your project or explicitly specify your configuration file path with this setting.\n\nThis setting is equivalent to the `--config` flag from the CLI. See [configuration schema](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-toplevel.html)."
+                        "markdownDescription": "Path to a [Code Analyzer configuration file](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-custom.html) used to customize the engines and rules.\n\nCode Analyzer has an internal default configuration for its rule and engine properties. If you want to override these defaults, you can either add a 'code-analyzer.yml' or 'code-analyzer.yaml' file at the root of your project or explicitly specify your configuration file path with this setting.\n\nThis setting is equivalent to the `--config-file` flag of the CLI commands. See [configuration schema](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/config-toplevel.html)."
                     },
                     "codeAnalyzer.ruleSelectors": {
                         "type": "string",
                         "default": "Recommended",
-                        "markdownDescription": "The rule selector(s) for the set of rules to use when scanning your code with Code Analyzer v5.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag from the CLI. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
+                        "markdownDescription": "Selection of rules used to scan your code with Code Analyzer v5.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
                     }
                 }
             },
