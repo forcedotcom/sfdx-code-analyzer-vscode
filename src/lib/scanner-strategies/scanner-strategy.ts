@@ -3,17 +3,17 @@ import {SfCli} from '../sf-cli';
 import {messages} from '../messages';
 
 
-export abstract class ScannerStrategy {
-    public abstract validateEnvironment(): Promise<void>;
+export interface ScannerStrategy {
+    validateEnvironment(): Promise<void>;
 
-    public abstract scan(filesToScan: string[]): Promise<Violation[]>;
+    scan(filesToScan: string[]): Promise<Violation[]>;
 
-    public abstract getScannerName(): string;
+    getScannerName(): string;
 }
 
 
-export abstract class CliScannerStrategy extends ScannerStrategy {
-    public override async validateEnvironment(): Promise<void> {
+export abstract class CliScannerStrategy implements ScannerStrategy {
+    public async validateEnvironment(): Promise<void> {
         if (!await SfCli.isSfCliInstalled()) {
             throw new Error(messages.error.sfMissing);
         }
@@ -21,4 +21,8 @@ export abstract class CliScannerStrategy extends ScannerStrategy {
     }
 
     protected abstract validatePlugin(): Promise<void>;
+
+    public abstract scan(filesToScan: string[]): Promise<Violation[]>;
+
+    public abstract getScannerName(): string;
 }
