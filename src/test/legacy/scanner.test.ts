@@ -368,6 +368,19 @@ class StubSettingsManager implements SettingsManager {
         this.resetSettings();
     }
 
+    getCodeAnalyzerUseV4Deprecated(): boolean {
+        throw new Error('Method not implemented.');
+    }
+    setCodeAnalyzerUseV4Deprecated(_value: boolean): void {
+        throw new Error('Method not implemented.');
+    }
+    getCodeAnalyzerConfigFile(): string | undefined {
+        throw new Error('Method not implemented.');
+    }
+    getCodeAnalyzerRuleSelectors(): string | undefined {
+        throw new Error('Method not implemented.');
+    }
+
     public resetSettings(): void {
         this.graphEngineDisableWarningViolations = false;
         this.graphEngineThreadTimeout = 900000;
@@ -377,10 +390,6 @@ class StubSettingsManager implements SettingsManager {
 
     getCodeAnalyzerV5Enabled(): boolean {
         throw new Error('Method not implemented.');
-    }
-
-    getCodeAnalyzerTags(): string {
-        throw new Error('Method not implemented');
     }
 
     getPmdCustomConfigFile(): string {

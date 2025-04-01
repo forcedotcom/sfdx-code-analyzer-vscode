@@ -73,7 +73,7 @@ suite('Extension Test Suite', () => {
             async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
                 // ===== SETUP =====
                 // Set V5's enablement to the desired state.
-                Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+                Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
 
                 // ===== TEST =====
                 // Run the "scan active file" command.
@@ -118,7 +118,7 @@ suite('Extension Test Suite', () => {
                 async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
                     // ===== SETUP =====
                     // Set V5's enablement to the desired state.
-                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
 
                     // ===== TEST =====
                     // Run the "scan selected files" command.
@@ -171,7 +171,7 @@ suite('Extension Test Suite', () => {
                 async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
                     // ===== SETUP =====
                     // Set V5's enablement to the desired state.
-                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
 
                     // ===== TEST =====
                     // Run the "scan selected files" command.

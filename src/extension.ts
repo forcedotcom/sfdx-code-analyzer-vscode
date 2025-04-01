@@ -93,7 +93,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Code Analyzer Run Functionality
     // =================================================================================================================
-    await establishVariableInContext('sfca.codeAnalyzerV4Enabled', () => Promise.resolve(!settingsManager.getCodeAnalyzerV5Enabled()));
+    await establishVariableInContext('sfca.codeAnalyzerV4Enabled', () => Promise.resolve(settingsManager.getCodeAnalyzerUseV4Deprecated()));
+
+    // Monitor the "codeAnalyzer.useV4Deprecated" setting with telemetry
+    vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
+        if (event.affectsConfiguration('codeAnalyzer.useV4Deprecated')) {
+            telemetryService.sendCommandEvent(Constants.TELEM_SETTING_USEV4, {
+                value: settingsManager.getCodeAnalyzerUseV4Deprecated().toString()});
+        }
+    });
 
     // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
     registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
@@ -340,14 +348,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // ==  Finalize activation
     // =================================================================================================================
 
-    if(!settingsManager.getCodeAnalyzerV5Enabled()) {
-        const button1Text: string = "Enable V5";
-        const button2Text: string = "Show 'EnableV5' in Settings";
+    if(settingsManager.getCodeAnalyzerUseV4Deprecated()) {
+        const button1Text: string = "Start using V5";
+        const button2Text: string = "Show settings";
         vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, button1Text, button2Text).then(selection => {
             if (selection === button1Text) {
-                settingsManager.setCodeAnalyzerV5Enabled(true);
+                settingsManager.setCodeAnalyzerUseV4Deprecated(false);
             } else if (selection === button2Text) {
-                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.enableV5');
+                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.useV4Deprecated');
                 vscode.commands.executeCommand('vscode.open', settingUri);
             }
         });
