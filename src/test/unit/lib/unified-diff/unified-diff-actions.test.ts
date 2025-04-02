@@ -1,4 +1,5 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
+
 import {UnifiedDiffActions} from "../../../../lib/unified-diff/unified-diff-actions";
 import {
     SpyLogger,
@@ -31,8 +32,8 @@ describe('UnifiedDiffActions Tests', () => {
             await unifiedDiffActions.createDiff('dummyCommandSource', sampleDocument, suggestedNewDocumentCode);
 
             expect(spyUnifiedDiffTool.createDiffCallHistory).toHaveLength(1);
-            expect(spyUnifiedDiffTool.createDiffCallHistory[0].code).toEqual(suggestedNewDocumentCode);
-            expect(spyUnifiedDiffTool.createDiffCallHistory[0].file).toContain('someFile.cls');
+            expect(spyUnifiedDiffTool.createDiffCallHistory[0].document).toEqual(sampleDocument);
+            expect(spyUnifiedDiffTool.createDiffCallHistory[0].newCode).toEqual(suggestedNewDocumentCode);
 
             expect(spyTelemetryService.sendCommandEventCallHistory).toHaveLength(1);
             expect(spyTelemetryService.sendCommandEventCallHistory[0]).toEqual({

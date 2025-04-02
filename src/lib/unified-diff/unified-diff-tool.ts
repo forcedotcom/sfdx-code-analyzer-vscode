@@ -1,7 +1,8 @@
+import * as vscode from 'vscode';
 import {DiffHunk, VSCodeUnifiedDiff} from "../../shared/UnifiedDiff";
 
 export interface UnifiedDiffTool<T> {
-    createDiff(code: string, file?: string): Promise<void>
+    createDiff(document: vscode.TextDocument, newCode: string, file?: string): Promise<void>
     acceptDiffHunk(diffHunk: T): Promise<number>
     rejectDiffHunk(diffHunk: T): Promise<void>
     acceptAll(): Promise<number>
@@ -9,8 +10,8 @@ export interface UnifiedDiffTool<T> {
 }
 
 export class CodeGenieUnifiedDiffTool implements UnifiedDiffTool<DiffHunk> {
-    async createDiff(code: string, file?: string): Promise<void> {
-        await VSCodeUnifiedDiff.singleton.unifiedDiff(code, file);
+    async createDiff(document: vscode.TextDocument, newCode: string): Promise<void> {
+        await VSCodeUnifiedDiff.singleton.unifiedDiff(document, newCode);
     }
 
     async acceptDiffHunk(diffHunk: DiffHunk): Promise<number> {

@@ -1,3 +1,5 @@
+import * as vscode from "vscode";// The vscode module is mocked out. See: scripts/setup.jest.ts
+
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {UnifiedDiffTool} from "../../lib/unified-diff/unified-diff-tool";
 import {Logger} from "../../lib/logger";
@@ -82,10 +84,9 @@ export class SpyDisplay implements Display {
 }
 
 export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
-    createDiffCallHistory: { code: string, file?: string }[] = [];
-
-    createDiff(code: string, file?: string): Promise<void> {
-        this.createDiffCallHistory.push({code, file});
+    createDiffCallHistory: {document: vscode.TextDocument, newCode: string }[] = [];
+    createDiff(document: vscode.TextDocument, newCode: string): Promise<void> {
+        this.createDiffCallHistory.push({document, newCode});
         return Promise.resolve();
     }
 
@@ -121,7 +122,7 @@ export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
 }
 
 export class ThrowingUnifiedDiffTool implements UnifiedDiffTool<object> {
-    createDiff(_code: string, _file?: string): Promise<void> {
+    createDiff(_document: vscode.TextDocument, _newCode: string): Promise<void> {
         throw new Error("Error from createDiff");
     }
 

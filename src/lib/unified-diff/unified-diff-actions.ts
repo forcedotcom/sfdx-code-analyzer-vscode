@@ -18,7 +18,7 @@ export class UnifiedDiffActions<T> {
     async createDiff(commandSource: string, document: vscode.TextDocument, suggestedNewDocumentCode: string): Promise<void> {
         const startTime: number = Date.now();
         try {
-            await this.unifiedDiffTool.createDiff(suggestedNewDocumentCode, document.fileName);
+            await this.unifiedDiffTool.createDiff(document, suggestedNewDocumentCode);
         } catch (err) {
             this.handleError(err, Constants.TELEM_DIFF_SUGGESTION_FAILED, commandSource, Date.now() - startTime);
             return;
