@@ -15,6 +15,8 @@ export const CODEGENIE_UNIFIED_DIFF_REJECT_ALL = 'unifiedDiff.rejectAll';
 
 const CODEGENIE_EXECUTE_CALLBACK = 'unifiedDiff.executeCallback';
 
+type AsyncCallback = () => Promise<void>;
+
 /**
 * Enum representing the type of diff.
 */
@@ -46,6 +48,32 @@ type DecorationData = {
 */
 export class UnifiedDiff {
     readonly document: vscode.TextDocument;
+
+    /**
+     * TODO - Add description here
+     */
+    allowAbilityToAcceptOrRejectIndividualHunks: boolean = true;
+
+    /**
+     * TODO - Add description here
+     */
+    acceptCallback?: AsyncCallback;
+
+    /**
+     * TODO - Add description here
+     */
+    acceptAllCallback?: AsyncCallback;
+
+    /**
+     * TODO - Add description here
+     */
+    rejectCallback?: AsyncCallback;
+
+    /**
+     * TODO - Add description here
+     */
+    rejectAllCallback?: AsyncCallback;
+
 
     protected sourceCode: string;
     protected targetCode: string;
@@ -218,64 +246,74 @@ export class UnifiedDiff {
     */
     public renderCodeLenses(): vscode.CodeLens[] {
         const codeLenses: vscode.CodeLens[] = [];
+
+        type DiffHunkWithRange = DiffHunk & {
+            range: vscode.Range
+        };
+
         let currentLine = 0;
+        const hunksWithRanges: DiffHunkWithRange[] = this.hunks.map((hunk: DiffHunk, i: number, allHunks: DiffHunk[]) => {
+            const hunkWithRange: DiffHunkWithRange = {
+                ...hunk,
+                range: new vscode.Range(currentLine, 0, currentLine + hunk.lines.length - 1, 0)
+            };
+            currentLine += hunk.lines.length;
+            return hunkWithRange;
+        });
 
-        for (let i = 0; i < this.hunks.length; i++) {
-            const hunk = this.hunks[i];
-            try {
-                if (hunk.type === DiffType.Unmodified) {
-                    continue;
-                }
+        const hunksToDisplay: DiffHunkWithRange[] = hunksWithRanges.filter((hunk: DiffHunkWithRange, i: number, allHunks: DiffHunkWithRange[]) => {
+            // skip hunk if it is unmodified or if it is an 'insert' after a 'delete'
+            const toSkip: boolean = hunk.type === DiffType.Unmodified ||
+                (i > 0 && allHunks[i - 1].type === DiffType.Delete && hunk.type === DiffType.Insert);
+            return !toSkip;
+        });
 
-                // skip options for next hunk if it is an insert after a delete
-                if (i > 0) {
-                    const prevHunk = this.hunks[i - 1];
-                    if (prevHunk.type === DiffType.Delete && hunk.type === DiffType.Insert) {
-                        continue;
-                    }
-                }
+        let allSuffix: string = ' All';
 
-                const range = new vscode.Range(currentLine, 0, currentLine + hunk.lines.length - 1, 0);
-
-                const defaultAcceptCallback: ()=>Promise<void> = async (): Promise<void> => {
-                    await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, hunk, range);
+        for (const hunk of hunksToDisplay) {
+            if (this.allowAbilityToAcceptOrRejectIndividualHunks) {
+                const defaultAcceptCallback: AsyncCallback = async (): Promise<void> => {
+                    await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT, hunk, hunk.range);
                 };
-                codeLenses.push(new vscode.CodeLens(range, {
+                codeLenses.push(new vscode.CodeLens(hunk.range, {
                     title: '$(check) Accept',
                     command: CODEGENIE_EXECUTE_CALLBACK,
-                    arguments: [defaultAcceptCallback]
+                    arguments: [this.acceptCallback || defaultAcceptCallback]
                 }));
 
-                const defaultRejectCallback: ()=>Promise<void> = async (): Promise<void> => {
+                const defaultRejectCallback: AsyncCallback = async (): Promise<void> => {
                     await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_REJECT, hunk);
                 }
-                codeLenses.push(new vscode.CodeLens(range, {
+                codeLenses.push(new vscode.CodeLens(hunk.range, {
                     title: '$(x) Reject',
                     command: CODEGENIE_EXECUTE_CALLBACK,
-                    arguments: [defaultRejectCallback]
+                    arguments: [this.rejectCallback || defaultRejectCallback]
                 }));
-
-                const defaultAcceptAllCallback: ()=>Promise<void> = async (): Promise<void> => {
-                    await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL);
-                };
-                codeLenses.push(new vscode.CodeLens(range, {
-                    title: '$(check) Accept All',
-                    command: CODEGENIE_EXECUTE_CALLBACK,
-                    arguments: [defaultAcceptAllCallback]
-                }));
-
-                const defaultRejectAllCallback: ()=>Promise<void> = async (): Promise<void> => {
-                    await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL);
-                };
-                codeLenses.push(new vscode.CodeLens(range, {
-                    title: '$(x) Reject All',
-                    command: CODEGENIE_EXECUTE_CALLBACK,
-                    arguments: [defaultRejectAllCallback]
-                }));
-
-            } finally {
-                currentLine += hunk.lines.length;
+            } else if (hunksToDisplay.length === 1) {
+                // If not displaying the "Accept All" and "Reject All" buttons and there is only 1 hunk, then
+                // we can remove the safely remove the word " All" from the acceptAll and rejectAll buttons.
+                allSuffix = '';
             }
+
+            const defaultAcceptAllCallback: AsyncCallback = async (): Promise<void> => {
+                await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_ACCEPT_ALL);
+            };
+                codeLenses.push(new vscode.CodeLens(hunk.range, {
+                title: '$(check) Accept' + allSuffix,
+                command: CODEGENIE_EXECUTE_CALLBACK,
+                arguments: [this.acceptAllCallback || defaultAcceptAllCallback]
+            }));
+
+            const defaultRejectAllCallback: AsyncCallback = async (): Promise<void> => {
+                await vscode.commands.executeCommand(CODEGENIE_UNIFIED_DIFF_REJECT_ALL);
+            };
+            codeLenses.push(new vscode.CodeLens(hunk.range, {
+                title: '$(x) Reject' + allSuffix,
+                command: CODEGENIE_EXECUTE_CALLBACK,
+                arguments: [this.rejectAllCallback || defaultRejectAllCallback]
+            }));
+
+            currentLine += hunk.lines.length;
         }
 
         return codeLenses;
@@ -398,7 +436,7 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
         context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(this.onDocumentChanged, this));
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this));
 
-        context.subscriptions.push(vscode.commands.registerCommand(CODEGENIE_EXECUTE_CALLBACK, async (callBack: ()=>Promise<void>): Promise<void> => {
+        context.subscriptions.push(vscode.commands.registerCommand(CODEGENIE_EXECUTE_CALLBACK, async (callBack: AsyncCallback): Promise<void> => {
             await callBack();
         }));
     }
@@ -509,23 +547,20 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
     }
 
     /**
-     * Start a unified diff for the given code and file.
-     * @param document Document associated with the diff
-     * @param newCode New code to diff the document's current code against.
+     * Show the UnifiedDiff
+     * @param diff UnifiedDiff
      */
-    public async unifiedDiff(document: vscode.TextDocument, newCode: string) {
-        await this.revertUnifiedDiff(document);
-
-        const diff = new UnifiedDiff(document, newCode);
+    public async showUnifiedDiff(diff: UnifiedDiff) {
+        await this.revertUnifiedDiff(diff.document);
 
         if (diff.getHunks().length === 0 || (diff.getHunks().length === 1 && diff.getHunks()[0].type === DiffType.Unmodified)) {
             vscode.window.showInformationMessage('Agentforce Fix: No changes to diff.');
             return;
         }
 
-        this.unifiedDiffs.set(document.uri.toString(), diff);
+        this.unifiedDiffs.set(diff.document.uri.toString(), diff);
 
-        await this.renderUnifiedDiff(document);
+        await this.renderUnifiedDiff(diff.document);
     }
 
 
