@@ -26,6 +26,7 @@ export const QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSug
 export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
 
 // telemetry event keys
+export const TELEM_SETTING_USEV4 = 'sfdx__codeanalyzer_setting_useV4';
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_complete';
@@ -40,7 +41,8 @@ export const TELEM_DIFF_REJECT_FAILED = 'sfdx__eGPT_clear_failure';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
-export const CODE_ANALYZER_V5_BETA_TEMPLATE = 'code-analyzer 5.0.0-beta';
+export const CODE_ANALYZER_V5_TEMPLATE = 'code-analyzer 5.';
+export const CODE_ANALYZER_V5_ALPHA_TEMPLATE = 'code-analyzer 5.0.0-alpha';
 
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';

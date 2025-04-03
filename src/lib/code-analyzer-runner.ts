@@ -43,15 +43,16 @@ export class CodeAnalyzerRunner {
             }, async (progress: vscode.Progress<ProgressEvent>) => {
                 const display: Display = new VSCodeDisplay(this.logger, progress);
 
-                const scannerStrategy = this.settingsManager.getCodeAnalyzerV5Enabled()
-                    ? new CliScannerV5Strategy({
-                        tags: this.settingsManager.getCodeAnalyzerTags()
-                    })
-                    : new CliScannerV4Strategy({
+                const scannerStrategy = this.settingsManager.getCodeAnalyzerUseV4Deprecated()
+                    ? new CliScannerV4Strategy({
                         engines: this.settingsManager.getEnginesToRun(),
                         pmdCustomConfigFile: this.settingsManager.getPmdCustomConfigFile(),
                         rulesCategory: this.settingsManager.getRulesCategory(),
                         normalizeSeverity: this.settingsManager.getNormalizeSeverityEnabled()
+                    })
+                    : new CliScannerV5Strategy({
+                        ruleSelector: this.settingsManager.getCodeAnalyzerRuleSelectors(),
+                        configFile: this.settingsManager.getCodeAnalyzerConfigFile()
                     });
                 const scannerAction = new ScannerAction(commandName, scannerStrategy, this.diagnosticManager,
                     this.telemetryService, this.logger, display);

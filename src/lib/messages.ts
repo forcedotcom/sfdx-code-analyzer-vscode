@@ -7,7 +7,7 @@
 export const messages = {
     noActiveEditor: "Unable to perform action: No active editor.",
     staleDiagnosticPrefix: "(STALE: The code has changed. Re-run the scan.)",
-    stoppingV4SupportSoon: "We plan to stop supporting v4.x of Code Analyzer in the coming months. We highly recommend that you start using v5.x, which is currently in Beta, by setting 'Code Analyzer: Enable V5' to true. For information on v5.x, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
+    stoppingV4SupportSoon: "We no longer support Code Analyzer v4 and will soon remove it from this VS Code extension. We highly recommend that you start using v5 by unselecting the 'Code Analyzer: Use v4 (Deprecated)' setting. For information on v5, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
     scanProgressReport: {
         identifyingTargets: {
             message: "Code Analyzer is identifying targets.",
@@ -73,8 +73,8 @@ export const messages = {
     error: {
         analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
-        sfMissing: "To use this extension, first install Salesforce CLI `sf` or `sfdx` commands.",
-        sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`.",
+        sfMissing: "To use this extension, first install Salesforce CLI.",
+        sfdxScannerMissing: "To use the 'Code Analyzer: Use v4 (Deprecated)' setting, you must first install the `@salesforce/sfdx-scanner` Salesforce CLI plugin. But we no longer support v4, so we recommend that you use v5 instead and unselect the 'Code Analyzer: Use v4 (Deprecated)' setting.",
         codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     }
