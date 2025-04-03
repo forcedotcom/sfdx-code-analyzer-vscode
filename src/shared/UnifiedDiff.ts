@@ -203,9 +203,9 @@ export class UnifiedDiff {
     * Render decorations on the given document.
     * @param document Document to render decorations on.
     */
-    public renderDecorations(document: vscode.TextDocument) {
-        const editor = vscode.window.activeTextEditor;
-        if (!editor || editor.document !== document) {
+    public renderDecorations() {
+        const editor: vscode.TextEditor | null = getEditorForTextDocument(this.document);
+        if (!editor) {
             return;
         }
 
@@ -483,30 +483,30 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
 
         this.unifiedDiffs.set(diff.document.uri.toString(), diff);
 
-        await this.renderUnifiedDiff(diff.document);
+        await this.renderUnifiedDiff(diff);
     }
 
     private async unifiedDiffAccept(diff: UnifiedDiff, hunk: DiffHunk) {
         diff.acceptHunk(hunk);
-        await this.renderUnifiedDiff(diff.document);
+        await this.renderUnifiedDiff(diff);
         this.checkRedundantUnifiedDiff(diff.document);
     }
 
     private async unifiedDiffReject(diff: UnifiedDiff, hunk: DiffHunk): Promise<void> {
         diff.rejectHunk(hunk);
-        await this.renderUnifiedDiff(diff.document);
+        await this.renderUnifiedDiff(diff);
         this.checkRedundantUnifiedDiff(diff.document);
     }
 
     private async unifiedDiffAcceptAll(diff: UnifiedDiff): Promise<void> {
         diff.setSourceCode(diff.getTargetCode());
-        await this.renderUnifiedDiff(diff.document);
+        await this.renderUnifiedDiff(diff);
         this.checkRedundantUnifiedDiff(diff.document);
     }
 
     private async unifiedDiffRejectAll(diff: UnifiedDiff): Promise<void> {
         diff.setTargetCode(diff.getSourceCode());
-        await this.renderUnifiedDiff(diff.document);
+        await this.renderUnifiedDiff(diff);
         this.checkRedundantUnifiedDiff(diff.document);
     }
 
@@ -520,7 +520,11 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
         if (!editor) {
             return;
         }
-        this.renderUnifiedDiff(editor.document);
+        const diff: UnifiedDiff = this.unifiedDiffs.get(editor.document.uri.toString());
+        if (!diff) {
+            return;
+        }
+        this.renderUnifiedDiff(diff);
     }
 
     /**
@@ -547,41 +551,32 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
             return;
         }
         await new Promise((resolve) => setTimeout(resolve, 10));
-        const diff = this.unifiedDiffs.get(document.uri.toString());
+        const diff: UnifiedDiff = this.unifiedDiffs.get(document.uri.toString());
         if (!diff) {
             return;
         }
-        const editor = vscode.window.visibleTextEditors.find((e) => e.document.uri.toString() === document.uri.toString());
+        const editor: vscode.TextEditor = getEditorForTextDocument(document);
         if (!editor) {
             return;
         }
         if (document.getText() === diff.getUnifiedCode()) {
             return;
         }
-        await this.renderUnifiedDiff(document);
+        await this.renderUnifiedDiff(diff);
         vscode.window.showWarningMessage('Please accept/reject all changes before editing the file.');
     }
 
-    /**
-    * Render unified diff for the given document.
-    * @param document Document to render unified diff for.
-    */
-    protected async renderUnifiedDiff(document: vscode.TextDocument) {
-        const diff = this.unifiedDiffs.get(document.uri.toString());
-        if (!diff) {
-            return;
-        }
-
+    protected async renderUnifiedDiff(diff: UnifiedDiff) {
         const edit = new vscode.WorkspaceEdit();
-        const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
-        edit.replace(document.uri, fullRange, diff.getUnifiedCode());
+        const fullRange = new vscode.Range(diff.document.positionAt(0), diff.document.positionAt(diff.document.getText().length));
+        edit.replace(diff.document.uri, fullRange, diff.getUnifiedCode());
         await vscode.workspace.applyEdit(edit);
 
-        diff.renderDecorations(document);
+        diff.renderDecorations();
         this.onDidChangeCodeLensesEmitter.fire();
 
-        const editor = vscode.window.activeTextEditor;
-        if (editor && editor.document.uri.toString() === document.uri.toString()) {
+        const editor: vscode.TextEditor = getEditorForTextDocument(diff.document);
+        if (editor) {
             if (diff.getHunks().length > 0) {
                 const hunk = diff.getHunks().find((hunk) => hunk.type !== DiffType.Unmodified);
                 if (hunk) {
@@ -604,7 +599,7 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
             return;
         }
         diff.setTargetCode(diff.getSourceCode());
-        await this.renderUnifiedDiff(document);
+        await this.renderUnifiedDiff(diff);
         this.unifiedDiffs.delete(document.uri.toString());
     }
 
@@ -621,4 +616,13 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
             this.unifiedDiffs.delete(document.uri.toString());
         }
     }
+}
+
+function getEditorForTextDocument(document: vscode.TextDocument) : vscode.TextEditor | null {
+    for (const editor of vscode.window.visibleTextEditors) {
+        if (editor.document.uri.toString() === document.uri.toString()) {
+            return editor;
+        }
+    }
+    return null;
 }
