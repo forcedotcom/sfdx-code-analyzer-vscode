@@ -425,6 +425,7 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
 
     protected unifiedDiffs = new Map<string, UnifiedDiff>();
 
+
     /**
     * Activate the extension.
     * @param context Activation context for the extension.
@@ -467,6 +468,10 @@ export class VSCodeUnifiedDiff implements vscode.CodeLensProvider {
 
 
 
+
+    public hasDiff(document :vscode.TextDocument): boolean {
+        return this.unifiedDiffs.has(document.uri.toString());
+    }
 
     /**
     * Accept a hunk.

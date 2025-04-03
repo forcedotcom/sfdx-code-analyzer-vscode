@@ -15,6 +15,10 @@ export class UnifiedDiffActions<T> {
         this.logger = logger;
     }
 
+    hasDiff(document: vscode.TextDocument): boolean {
+        return this.unifiedDiffTool.hasDiff(document);
+    }
+
     async createDiff(commandSource: string, document: vscode.TextDocument, suggestedNewDocumentCode: string): Promise<void> {
         const startTime: number = Date.now();
         try {

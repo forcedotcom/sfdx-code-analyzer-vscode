@@ -84,6 +84,15 @@ export class SpyDisplay implements Display {
 }
 
 export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
+    hasDiffReturnValue: boolean = false;
+    hasDiffCallHistory: {document: vscode.TextDocument}[] = [];
+
+    hasDiff(document: vscode.TextDocument): boolean {
+        this.hasDiffCallHistory.push({document});
+        return this.hasDiffReturnValue;
+    }
+
+
     createDiffCallHistory: {document: vscode.TextDocument, newCode: string }[] = [];
     createDiff(document: vscode.TextDocument, newCode: string): Promise<void> {
         this.createDiffCallHistory.push({document, newCode});
@@ -122,6 +131,10 @@ export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
 }
 
 export class ThrowingUnifiedDiffTool implements UnifiedDiffTool<object> {
+    hasDiff(_document: vscode.TextDocument): boolean {
+        throw new Error("Error from hasDiff");
+    }
+
     createDiff(_document: vscode.TextDocument, _newCode: string): Promise<void> {
         throw new Error("Error from createDiff");
     }

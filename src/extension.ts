@@ -256,6 +256,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // Invoked by the "quick fix" buttons on A4D enabled diagnostics
     registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
+        if (unifiedDiffActions.hasDiff(document)) {
+            vscode.window.showWarningMessage("Please accept/reject the existing diff in this file before performing this action.");
+            return;
+        }
+
         const fixSuggestion: FixSuggestion = await agentforceViolationFixer.suggestFix(document, diagnostic);
         if (!fixSuggestion) {
             return;
