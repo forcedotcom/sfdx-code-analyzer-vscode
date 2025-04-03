@@ -3,14 +3,18 @@ import {UnifiedDiffTool} from "./unified-diff-tool";
 import * as Constants from "../constants";
 import * as vscode from "vscode";
 import {Logger} from "../logger";
+import {CodeAnalyzerDiagnostic, DiagnosticManager} from "../diagnostics";
+import {FixSuggestion} from "../fix-suggestion";
 
-export class UnifiedDiffActions<T> {
-    private readonly unifiedDiffTool: UnifiedDiffTool<T>;
+export class UnifiedDiffActions {
+    private readonly unifiedDiffTool: UnifiedDiffTool;
+    private readonly diagnosticManager: DiagnosticManager;
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
 
-    constructor(unifiedDiffTool: UnifiedDiffTool<T>, telemetryService: TelemetryService, logger: Logger) {
+    constructor(unifiedDiffTool: UnifiedDiffTool, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger) {
         this.unifiedDiffTool = unifiedDiffTool;
+        this.diagnosticManager = diagnosticManager;
         this.telemetryService = telemetryService;
         this.logger = logger;
     }
@@ -19,82 +23,46 @@ export class UnifiedDiffActions<T> {
         return this.unifiedDiffTool.hasDiff(document);
     }
 
-    async createDiff(commandSource: string, document: vscode.TextDocument, suggestedNewDocumentCode: string): Promise<void> {
+    async showDiffFor(commandSource: string, codeFixSuggestion: FixSuggestion): Promise<void> {
+        const diagnostic: CodeAnalyzerDiagnostic = codeFixSuggestion.codeFixData.diagnostic as CodeAnalyzerDiagnostic;
+        const document: vscode.TextDocument = codeFixSuggestion.codeFixData.document;
+        const suggestedNewDocumentCode: string = codeFixSuggestion.getFixedDocumentCode();
+        const numLinesInFix: number = codeFixSuggestion.getFixedCodeLines().length;
+
+        // TODO: These callbacks are A4D specific... so they shouldn't be here... unless we rename this class as A4DActions or something.
+        const acceptCallback: ()=>Promise<void> = (): Promise<void> => {
+            this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_ACCEPT, {
+                commandSource: commandSource,
+                completionNumLines: numLinesInFix.toString(),
+                languageType: document.languageId
+            });
+
+            return Promise.resolve();
+        };
+
+        const rejectCallback: ()=>Promise<void> = (): Promise<void> => {
+            this.diagnosticManager.addDiagnostics([diagnostic]); // Put back the diagnostic
+
+            this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_REJECT, {
+                commandSource: commandSource,
+                languageType: document.languageId
+            });
+
+            return Promise.resolve();
+        };
+
         const startTime: number = Date.now();
         try {
-            await this.unifiedDiffTool.createDiff(document, suggestedNewDocumentCode);
+            this.diagnosticManager.clearDiagnostic(diagnostic);
+            await this.unifiedDiffTool.createDiff(document, suggestedNewDocumentCode, acceptCallback, rejectCallback);
         } catch (err) {
-            this.handleError(err, Constants.TELEM_DIFF_SUGGESTION_FAILED, commandSource, Date.now() - startTime);
+            this.handleError(err, Constants.TELEM_A4D_SUGGESTION_FAILED, commandSource, Date.now() - startTime);
             return;
         }
 
-        this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_SUGGESTION, {
+        this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_SUGGESTION, {
             commandSource: commandSource,
             languageType: document.languageId
-        });
-    }
-
-    async acceptAll(commandSource: string, document: vscode.TextDocument): Promise<void> {
-        const startTime: number = Date.now();
-        let acceptedLines: number;
-        try {
-            acceptedLines = await this.unifiedDiffTool.acceptAll();
-        } catch (err) {
-            this.handleError(err, Constants.TELEM_DIFF_ACCEPT_FAILED, commandSource, Date.now() - startTime);
-            return;
-        }
-
-        this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_ACCEPT, {
-            commandSource: commandSource,
-            completionNumLines: acceptedLines.toString(),
-            languageType: document.languageId
-        });
-    }
-
-    async acceptDiffHunk(commandSource: string, document: vscode.TextDocument, diffHunk: T): Promise<void> {
-        const startTime: number = Date.now();
-        let acceptedLines: number;
-        try {
-            acceptedLines = await this.unifiedDiffTool.acceptDiffHunk(diffHunk);
-        } catch (err) {
-            this.handleError(err, Constants.TELEM_DIFF_ACCEPT_FAILED, commandSource, Date.now() - startTime);
-            return;
-        }
-
-        this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_ACCEPT, {
-            commandSource: commandSource,
-            completionNumLines: acceptedLines.toString(),
-            languageType: document.languageId
-        });
-    }
-
-    async rejectAll(commandSource: string, document: vscode.TextDocument): Promise<void> {
-        const startTime: number = Date.now();
-        try {
-            await this.unifiedDiffTool.rejectAll();
-        } catch (err) {
-            this.handleError(err, Constants.TELEM_DIFF_REJECT_FAILED, commandSource, Date.now() - startTime);
-            return;
-        }
-
-        this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_REJECT, {
-            commandSource: commandSource,
-            languageType: document.languageId
-        });
-    }
-
-    async rejectDiffHunk(commandSource: string, file: vscode.TextDocument, diffHunk: T): Promise<void> {
-        const startTime: number = Date.now();
-        try {
-            await this.unifiedDiffTool.rejectDiffHunk(diffHunk);
-        } catch (err) {
-            this.handleError(err, Constants.TELEM_DIFF_REJECT_FAILED, commandSource, Date.now() - startTime);
-            return;
-        }
-
-        this.telemetryService.sendCommandEvent(Constants.TELEM_DIFF_REJECT, {
-            commandSource: commandSource,
-            languageType: file.languageId
         });
     }
 

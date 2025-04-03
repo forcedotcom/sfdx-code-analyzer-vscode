@@ -82,79 +82,79 @@ export class SpyDisplay implements Display {
         this.displayErrorCallHistory.push({msg});
     }
 }
-
-export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
-    hasDiffReturnValue: boolean = false;
-    hasDiffCallHistory: {document: vscode.TextDocument}[] = [];
-
-    hasDiff(document: vscode.TextDocument): boolean {
-        this.hasDiffCallHistory.push({document});
-        return this.hasDiffReturnValue;
-    }
-
-
-    createDiffCallHistory: {document: vscode.TextDocument, newCode: string }[] = [];
-    createDiff(document: vscode.TextDocument, newCode: string): Promise<void> {
-        this.createDiffCallHistory.push({document, newCode});
-        return Promise.resolve();
-    }
-
-    acceptDiffHunkReturnValue: number = 9;
-    acceptDiffHunkCallHistory: { diffHunk: object }[] = [];
-
-    acceptDiffHunk(diffHunk: object): Promise<number> {
-        this.acceptDiffHunkCallHistory.push({diffHunk});
-        return Promise.resolve(this.acceptDiffHunkReturnValue);
-    }
-
-    rejectDiffHunkCallHistory: { diffHunk: object }[] = [];
-
-    rejectDiffHunk(diffHunk: object): Promise<void> {
-        this.rejectDiffHunkCallHistory.push({diffHunk});
-        return Promise.resolve();
-    }
-
-    acceptAllReturnValue: number = 16;
-    acceptAllCallCount: number = 0;
-
-    acceptAll(): Promise<number> {
-        this.acceptAllCallCount++;
-        return Promise.resolve(this.acceptAllReturnValue);
-    }
-
-    rejectAllCallCount: number = 0;
-
-    rejectAll(): Promise<void> {
-        this.rejectAllCallCount++;
-        return Promise.resolve();
-    }
-}
-
-export class ThrowingUnifiedDiffTool implements UnifiedDiffTool<object> {
-    hasDiff(_document: vscode.TextDocument): boolean {
-        throw new Error("Error from hasDiff");
-    }
-
-    createDiff(_document: vscode.TextDocument, _newCode: string): Promise<void> {
-        throw new Error("Error from createDiff");
-    }
-
-    acceptDiffHunk(_diffHunk: object): Promise<number> {
-        throw new Error("Error from acceptDiffHunk");
-    }
-
-    rejectDiffHunk(_diffHunk: object): Promise<void> {
-        throw new Error("Error from rejectDiffHunk");
-    }
-
-    acceptAll(): Promise<number> {
-        throw new Error("Error from acceptAll");
-    }
-
-    rejectAll(): Promise<void> {
-        throw new Error("Error from rejectAll");
-    }
-}
+//
+// export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
+//     hasDiffReturnValue: boolean = false;
+//     hasDiffCallHistory: {document: vscode.TextDocument}[] = [];
+//
+//     hasDiff(document: vscode.TextDocument): boolean {
+//         this.hasDiffCallHistory.push({document});
+//         return this.hasDiffReturnValue;
+//     }
+//
+//
+//     createDiffCallHistory: {document: vscode.TextDocument, newCode: string }[] = [];
+//     createDiff(document: vscode.TextDocument, newCode: string): Promise<void> {
+//         this.createDiffCallHistory.push({document, newCode});
+//         return Promise.resolve();
+//     }
+//
+//     acceptDiffHunkReturnValue: number = 9;
+//     acceptDiffHunkCallHistory: { diffHunk: object }[] = [];
+//
+//     acceptDiffHunk(diffHunk: object): Promise<number> {
+//         this.acceptDiffHunkCallHistory.push({diffHunk});
+//         return Promise.resolve(this.acceptDiffHunkReturnValue);
+//     }
+//
+//     rejectDiffHunkCallHistory: { diffHunk: object }[] = [];
+//
+//     rejectDiffHunk(diffHunk: object): Promise<void> {
+//         this.rejectDiffHunkCallHistory.push({diffHunk});
+//         return Promise.resolve();
+//     }
+//
+//     acceptAllReturnValue: number = 16;
+//     acceptAllCallCount: number = 0;
+//
+//     acceptAll(): Promise<number> {
+//         this.acceptAllCallCount++;
+//         return Promise.resolve(this.acceptAllReturnValue);
+//     }
+//
+//     rejectAllCallCount: number = 0;
+//
+//     rejectAll(): Promise<void> {
+//         this.rejectAllCallCount++;
+//         return Promise.resolve();
+//     }
+// }
+//
+// export class ThrowingUnifiedDiffTool implements UnifiedDiffTool<object> {
+//     hasDiff(_document: vscode.TextDocument): boolean {
+//         throw new Error("Error from hasDiff");
+//     }
+//
+//     createDiff(_document: vscode.TextDocument, _newCode: string): Promise<void> {
+//         throw new Error("Error from createDiff");
+//     }
+//
+//     acceptDiffHunk(_diffHunk: object): Promise<number> {
+//         throw new Error("Error from acceptDiffHunk");
+//     }
+//
+//     rejectDiffHunk(_diffHunk: object): Promise<void> {
+//         throw new Error("Error from rejectDiffHunk");
+//     }
+//
+//     acceptAll(): Promise<number> {
+//         throw new Error("Error from acceptAll");
+//     }
+//
+//     rejectAll(): Promise<void> {
+//         throw new Error("Error from rejectAll");
+//     }
+// }
 
 export class SpyLLMService implements LLMService {
     callLLMReturnValue: string = 'dummyReturnValue';

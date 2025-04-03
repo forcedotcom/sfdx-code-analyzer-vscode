@@ -39,8 +39,23 @@ export class FixSuggestion {
         return this.codeFixData.document.getText(this.codeFixData.rangeToBeFixed);
     }
 
+    getFixedCodeLines(): string[] { // TODO: Determine if we should be caching this result
+        const fixedLines: string[] = this.codeFixData.fixedCode.split(/\r?\n/);
+        const commonIndentation: string = findCommonLeadingWhitespace(fixedLines);
+        const trimmedFixedLines: string[] = fixedLines.map(l => l.slice(commonIndentation.length));
+
+        // Assuming the trimmed fixed code always has an indentation amount that is <= the original, calculate the
+        // indentation amount that we need to prepend onto the trimmedFixedLines to make the indentation match the
+        // original file.
+        const indentToAdd: string = removeSuffix(
+            getLineIndentation(this.codeFixData.document.lineAt(this.codeFixData.rangeToBeFixed.start.line).text),
+            getLineIndentation(trimmedFixedLines[0]));
+
+        return trimmedFixedLines.map(line => indentToAdd + line);
+    }
+
     getFixedCode(): string {
-        return this.getFixedCodeLinesWithCorrectedIndentation().join(this.getNewLine());
+        return this.getFixedCodeLines().join(this.getNewLine());
     }
 
     getOriginalDocumentCode(): string {
@@ -54,24 +69,9 @@ export class FixSuggestion {
 
         return [
             ... originalBeforeLines,
-            ... this.getFixedCodeLinesWithCorrectedIndentation(),
+            ... this.getFixedCodeLines(),
             ... originalAfterLines
         ].join(this.getNewLine());
-    }
-
-    private getFixedCodeLinesWithCorrectedIndentation(): string[] {
-        const fixedLines: string[] = this.codeFixData.fixedCode.split(/\r?\n/);
-        const commonIndentation: string = findCommonLeadingWhitespace(fixedLines);
-        const trimmedFixedLines: string[] = fixedLines.map(l => l.slice(commonIndentation.length));
-
-        // Assuming the trimmed fixed code always has an indentation amount that is <= the original, calculate the
-        // indentation amount that we need to prepend onto the trimmedFixedLines to make the indentation match the
-        // original file.
-        const indentToAdd: string = removeSuffix(
-            getLineIndentation(this.codeFixData.document.lineAt(this.codeFixData.rangeToBeFixed.start.line).text),
-            getLineIndentation(trimmedFixedLines[0]));
-
-        return trimmedFixedLines.map(line => indentToAdd + line);
     }
 
     private getNewLine(): string {
