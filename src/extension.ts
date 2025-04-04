@@ -34,6 +34,7 @@ import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-act
 import {UnifiedDiffActions} from "./lib/unified-diff/unified-diff-actions";
 import {CodeGenieUnifiedDiffTool, UnifiedDiffTool} from "./lib/unified-diff/unified-diff-tool";
 import {FixSuggestion} from "./lib/fix-suggestion";
+import {ScanManager} from './lib/scan-manager';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -66,8 +67,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const onDidSaveTextDocument = (listener: (e: unknown) => unknown): void => {
         context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(listener));
     }
-    const onDidOpenTextDocument = (listener: (e: unknown) => unknown): void => {
-        context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(listener));
+    const onDidChangeActiveTextEditor = (listener: (e: unknown) => unknown): void => {
+        context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(listener));
     }
 
     // Prepare utilities
@@ -84,6 +85,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
     const codeAnalyzerRunner: CodeAnalyzerRunner = new CodeAnalyzerRunner(diagnosticManager, settingsManager, telemetryService, logger);
+    const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
+    context.subscriptions.push(scanManager);
+
 
     // We need to do this first in case any other services need access to those provided by the core extension.
     // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
@@ -112,16 +116,33 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
         return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
     });
-    // ... also invoked by opening a file if the user has set things to do so.
-    onDidOpenTextDocument(async (textDocument: vscode.TextDocument) => {
-        if (settingsManager.getAnalyzeOnOpen() && _isValidFileForAnalysis(textDocument.uri)) {
-            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [textDocument.fileName]);
+
+    // "Analyze On Open" and "Analyze on Save" functionality:
+    onDidChangeActiveTextEditor(async (editor: vscode.TextEditor) => {
+        if (!settingsManager.getAnalyzeOnOpen()) {
+            return; // Do nothing if "Analyze On Open" is not enabled
+        }
+        const isFile: boolean = editor !== undefined && editor.document.uri.scheme === 'file';
+        const isValidFile: boolean = isFile && _isValidFileForAnalysis(editor.document.uri);
+        const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
+        if (isValidFileThatHasNotBeenScannedYet) {
+            scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
+            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [editor.document.fileName]);
         }
     });
-    // ... also invoked by saving a file if the user has set things to do so.
-    onDidSaveTextDocument(async (textDocument: vscode.TextDocument) => {
-        if (settingsManager.getAnalyzeOnSave() && _isValidFileForAnalysis(textDocument.uri)) {
-            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [textDocument.fileName]);
+    onDidSaveTextDocument(async (document: vscode.TextDocument) => {
+        const isFile: boolean = document !== undefined && document.uri.scheme === 'file';
+        const isValidFile: boolean = isFile && _isValidFileForAnalysis(document.uri);
+        if (!isValidFile) {
+            return;
+        }
+        // If a file has been saved, then it means it most likely has been modified and may need to be scanned again,
+        // so we remove it from the already scanned list.
+        scanManager.removeFileFromAlreadyScannedFiles(document.fileName);
+
+        if (settingsManager.getAnalyzeOnSave()) {
+            scanManager.addFileToAlreadyScannedFiles(document.fileName);
+            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
         }
     });
 
@@ -312,8 +333,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         // Work Around: For reject & reject all, we really should be restoring the diagnostic that we removed
         // but CodeGenie doesn't let us keep the diagnostic information around at this point. So instead we must
         // rerun the scan instead to get the diagnostic restored.
-        await document.save(); // TODO: saving the document should be built in to the runAndDisplay command in my opinion
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+        await document.save(); // TODO: This whole space will be refactored soon so that we don't need to do a save and rerun.
+        if (!settingsManager.getAnalyzeOnSave()) {
+            return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+        }
     });
 
     // Invoked by the "Accept All" button on the CodeGenie Unified Diff tool
@@ -339,8 +362,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         // Work Around: For reject & reject all, we really should be restoring the diagnostic that we removed
         // but CodeGenie doesn't let us keep the diagnostic information around at this point. So instead we must
         // rerun the scan instead to get the diagnostic restored.
-        await document.save(); // TODO: saving the document should be built in to the runAndDisplay command in my opinion
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+        await document.save(); // TODO: This whole space will be refactored soon so that we don't need to do a save and rerun.
+        if (!settingsManager.getAnalyzeOnSave()) {
+            return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+        }
     });
 
 
@@ -380,8 +405,8 @@ export function deactivate(): void {
 //       ... --workspace option on Code Analyzer v5 or something. I think that regex has situations that work on all
 //       ....files. So We might not be able to get this perfect. Need to discuss this soon.
 export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
-    const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts'];
-    return allowedFileTypes.includes(path.extname(documentUri.path));
+    const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
+    return allowedFileTypes.includes(path.extname(documentUri.fsPath));
 }
 
 // Inside our package.json you'll see things like:
