@@ -34,6 +34,7 @@ import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-act
 import {UnifiedDiffActions} from "./lib/unified-diff/unified-diff-actions";
 import {CodeGenieUnifiedDiffTool, UnifiedDiffTool} from "./lib/unified-diff/unified-diff-tool";
 import {FixSuggestion} from "./lib/fix-suggestion";
+import {ScanManager} from './lib/scan-manager';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -84,8 +85,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
     const codeAnalyzerRunner: CodeAnalyzerRunner = new CodeAnalyzerRunner(diagnosticManager, settingsManager, telemetryService, logger);
-    const scanMonitor: ScanMonitor = new ScanMonitor();
-    context.subscriptions.push(scanMonitor);
+    const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
+    context.subscriptions.push(scanManager);
 
 
     // We need to do this first in case any other services need access to those provided by the core extension.
@@ -116,24 +117,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
     });
 
+    // "Analyze On Open" and "Analyze on Save" functionality:
     onDidChangeActiveTextEditor(async (editor: vscode.TextEditor) => {
-        const shouldScan: boolean = editor !== undefined && editor.document.uri.scheme === 'file' && settingsManager.getAnalyzeOnOpen() &&
-            _isValidFileForAnalysis(editor.document.uri) && !scanMonitor.haveAlreadyScannedFile(editor.document.fileName);
-        if (shouldScan) {
-            scanMonitor.addFileToAlreadyScannedFiles(editor.document.fileName);
+        if (!settingsManager.getAnalyzeOnOpen()) {
+            return; // Do nothing if "Analyze On Open" is not enabled
+        }
+        const isFile: boolean = editor !== undefined && editor.document.uri.scheme === 'file';
+        const isValidFile: boolean = isFile && _isValidFileForAnalysis(editor.document.uri);
+        const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
+        if (isValidFileThatHasNotBeenScannedYet) {
+            scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
             await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [editor.document.fileName]);
         }
     });
-
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
-        if (document !== undefined && document.uri.scheme === 'file') {
-            scanMonitor.removeFileFromAlreadyScannedFiles(document.fileName);
+        const isFile: boolean = document !== undefined && document.uri.scheme === 'file';
+        const isValidFile: boolean = isFile && _isValidFileForAnalysis(document.uri);
+        if (!isValidFile) {
+            return;
+        }
+        // If a file has been saved, then it means it most likely has been modified and may need to be scanned again,
+        // so we remove it from the already scanned list.
+        scanManager.removeFileFromAlreadyScannedFiles(document.fileName);
 
-            const shouldScan: boolean = settingsManager.getAnalyzeOnSave() && _isValidFileForAnalysis(document.uri);
-            if (shouldScan) {
-                scanMonitor.addFileToAlreadyScannedFiles(document.fileName);
-                await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
-            }
+        if (settingsManager.getAnalyzeOnSave()) {
+            scanManager.addFileToAlreadyScannedFiles(document.fileName);
+            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
         }
     });
 
@@ -396,7 +405,7 @@ export function deactivate(): void {
 //       ... --workspace option on Code Analyzer v5 or something. I think that regex has situations that work on all
 //       ....files. So We might not be able to get this perfect. Need to discuss this soon.
 export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
-    const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts'];
+    const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
     return allowedFileTypes.includes(path.extname(documentUri.fsPath));
 }
 
@@ -409,26 +418,6 @@ async function establishVariableInContext(varUsedInPackageJson: string, getValue
     vscode.workspace.onDidChangeConfiguration(async () => {
         await vscode.commands.executeCommand('setContext', varUsedInPackageJson, await getValueFcn());
     });
-}
-
-class ScanMonitor implements vscode.Disposable {
-    private alreadyScannedFiles: Set<string> = new Set();
-
-    haveAlreadyScannedFile(file: string): boolean {
-        return this.alreadyScannedFiles.has(file);
-    }
-    
-    removeFileFromAlreadyScannedFiles(file: string): void {
-        this.alreadyScannedFiles.delete(file);
-    }
-    
-    addFileToAlreadyScannedFiles(file: string) {
-        this.alreadyScannedFiles.add(file);
-    }
-
-    public dispose(): void {
-        this.alreadyScannedFiles.clear();
-    }
 }
 
 async function getActiveDocument(): Promise<vscode.TextDocument | null> {
