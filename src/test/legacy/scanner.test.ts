@@ -344,7 +344,7 @@ suite('ScanRunner', () => {
 
         test('Adds process Id to the cache', () => {
             // ===== SETUP =====
-            const args:string[] = [];
+            const args:string[] = ['scanner', 'run', 'dfa', '--target', 'doesNotMatter', '--json'];
             const scanner = new ScanRunner();
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
