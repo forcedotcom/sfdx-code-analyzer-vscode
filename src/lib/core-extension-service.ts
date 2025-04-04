@@ -5,9 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import {Extension} from 'vscode';
 import * as semver from 'semver';
-import { AuthFields } from '../types';
 import {SettingsManagerImpl} from './settings';
 
 import { CORE_EXTENSION_ID, MINIMUM_REQUIRED_VERSION_CORE_EXTENSION } from './constants';
@@ -36,7 +34,7 @@ export class CoreExtensionService {
         // of the extensions activate method. If the activate method hasn't been called, then this won't be filled in.
         // Also note that the type of the return of the activate method is the templated type T of the Extension<T>.
 
-        const coreExtension: Extension<CoreExtensionApi> = vscode.extensions.getExtension(CORE_EXTENSION_ID);
+        const coreExtension: vscode.Extension<CoreExtensionApi> = vscode.extensions.getExtension(CORE_EXTENSION_ID);
         if (!coreExtension) {
             console.log(`${CORE_EXTENSION_ID} not found; cannot load core dependencies. Returning undefined instead.`);
             return undefined;
@@ -105,6 +103,35 @@ interface WorkspaceContext {
     // We need the connection, but no other instance methods currently
     getConnection(): Promise<Connection>;
 }
+
+export type AuthFields = {
+    accessToken?: string;
+    alias?: string;
+    authCode?: string;
+    clientId?: string;
+    clientSecret?: string;
+    created?: string;
+    createdOrgInstance?: string;
+    devHubUsername?: string;
+    instanceUrl?: string;
+    instanceApiVersion?: string;
+    instanceApiVersionLastRetrieved?: string;
+    isDevHub?: boolean;
+    loginUrl?: string;
+    orgId?: string;
+    password?: string;
+    privateKey?: string;
+    refreshToken?: string;
+    scratchAdminUsername?: string;
+    snapshot?: string;
+    userId?: string;
+    username?: string;
+    usernames?: string[];
+    userProfileName?: string;
+    expirationDate?: string;
+    tracksSource?: boolean;
+};
+
 
 // See https://github.com/forcedotcom/sfdx-core/blob/main/src/org/connection.ts#L69
 export interface Connection {

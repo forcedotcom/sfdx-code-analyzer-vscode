@@ -1,28 +1,27 @@
 import {CliScannerStrategy} from './scanner-strategy';
-import { DiagnosticConvertible } from '../diagnostics';
+import {Violation} from '../diagnostics';
 import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
-import { tmpFileWithCleanup } from '../file';
-import { stripAnsi } from '../string-utils';
-import { CODE_ANALYZER_V5_BETA_TEMPLATE } from '../constants';
+import {tmpFileWithCleanup} from '../file';
+import {stripAnsi} from '../string-utils';
+import {CODE_ANALYZER_V5_ALPHA_TEMPLATE, CODE_ANALYZER_V5_TEMPLATE} from '../constants';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 export type CliScannerV5StrategyOptions = {
-    tags: string;
+    ruleSelector: string;
+    configFile: string;
 };
 
 type ResultsJson = {
     runDir: string;
-    violations: DiagnosticConvertible[];
+    violations: Violation[];
 };
-
-// TODO: When v5 adds support for Graph Engine, we'll want to add its DFA rules to this array.
-const POTENTIALLY_LONG_RUNNING_RULES: string[] = [];
 
 export class CliScannerV5Strategy extends CliScannerStrategy {
     private readonly options: CliScannerV5StrategyOptions;
     private readonly name: string = '@salesforce/plugin-code-analyzer@^5 via CLI';
+    private codeAnalyzerIsInstalled?: boolean;
 
     public constructor(options: CliScannerV5StrategyOptions) {
         super();
@@ -34,10 +33,12 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
     }
 
     protected override async validatePlugin(): Promise<void> {
-        // @salesforce/plugin-code-analyzer is a JIT plugin, but the output format only stabilized
-        // in the beta release, so we need to make sure that the beta release is either already installed,
-        // or the version that will be installed via JIT installation.
-        const codeAnalyzerIsInstalled: boolean = await new Promise((res) => {
+        // TODO: In the future, we might remove this validation step since code-analyzer is a JIT plugin. But we'll
+        //       leave it for a few releases while code-analyzer v5 stabilizes.
+        if (this.codeAnalyzerIsInstalled) {
+            return; // We do not continue to validate if we have passed validation at least once.
+        }
+        this.codeAnalyzerIsInstalled = await new Promise((res) => {
             const cp = cspawn.spawn('sf', ['plugins']);
             let stdout = '';
 
@@ -46,72 +47,34 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
             });
 
             cp.on('exit', code => {
-                return res(code === 0 && stripAnsi(stdout).includes(CODE_ANALYZER_V5_BETA_TEMPLATE));
+                const output: string = stripAnsi(stdout);
+                // @salesforce/plugin-code-analyzer is a JIT plugin, but the output format was not stabilized in the
+                // alpha release, so we need to make sure that the isn't using an alpha release.
+                return res(code === 0 && output.includes(CODE_ANALYZER_V5_TEMPLATE) && !output.includes(CODE_ANALYZER_V5_ALPHA_TEMPLATE));
             });
         });
-        if (!codeAnalyzerIsInstalled) {
+        if (!this.codeAnalyzerIsInstalled) {
             throw new Error(messages.error.codeAnalyzerMissing);
         }
     }
 
-    public override async scan(targets: string[]): Promise<DiagnosticConvertible[]> {
-        const potentiallyLongRunningRules: string[] = await this.getLongRunningRules();
-
-        if (potentiallyLongRunningRules.length > 0) {
-            await this.confirmPotentiallyLongRunningScan(potentiallyLongRunningRules);
-        }
-
-        const resultsJson: ResultsJson = await this.invokeAnalyzer(targets);
+    public override async scan(filesToScan: string[]): Promise<Violation[]> {
+        const resultsJson: ResultsJson = await this.invokeAnalyzer(filesToScan);
 
         return this.processResults(resultsJson);
     }
 
-    private async getLongRunningRules(): Promise<string[]> {
-        const args: string[] = [
-            'code-analyzer', 'rules',
-            '-r', this.options.tags || 'Recommended'
-        ];
-
-        const output: string = await new Promise((res, rej) => {
-            const cp = cspawn.spawn('sf', args);
-
-            let stdout = '';
-            let stderr = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.stderr.on('data', data => {
-                stderr += data;
-            });
-
-            cp.on('exit', (status) => {
-                if (status === 0) {
-                    return res(stdout);
-                } else {
-                    return rej(new Error(stderr));
-                }
-            });
-        });
-
-        return POTENTIALLY_LONG_RUNNING_RULES.filter(r => output.includes(r));
-    }
-
-    private confirmPotentiallyLongRunningScan(_rules: string[]): Promise<boolean> {
-        // TODO: When v5 adds support for Graph Engine, we'll want to implement the body of this method.
-        // We could add a new method called `.confirm` to the `Display` class and pass an instance of that in
-        // as part of the Options in the constructor, and then use that to prompt the user to confirm that they
-        // actually want to run what could potentially be a pretty long-running scan.
-        return Promise.resolve(true);
-    }
-
     private async invokeAnalyzer(targets: string[]): Promise<ResultsJson> {
-        const args: string[] = [
+        let args: string[] = [
             'code-analyzer', 'run',
-            '-r', this.options.tags || 'Recommended',
-            '-w', `"${targets.join('","')}"`
+            '-w', `"${targets.join('","')}"`,
         ];
+        if (this.options.ruleSelector) {
+            args = [...args, '-r', this.options.ruleSelector];
+        }
+        if (this.options.configFile) {
+            args = [...args, '-c', this.options.configFile];
+        }
 
         const outputFile: string = await tmpFileWithCleanup('.json');
 
@@ -136,25 +99,22 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
 
         const outputString: string = await fs.promises.readFile(outputFile, 'utf-8');
 
-        const outputJson: ResultsJson = JSON.parse(outputString) as ResultsJson;
-
-        return outputJson;
+        return JSON.parse(outputString) as ResultsJson;
     }
 
-    private processResults(resultsJson: ResultsJson): DiagnosticConvertible[] {
-        const processedConvertibles: DiagnosticConvertible[] = [];
+    private processResults(resultsJson: ResultsJson): Violation[] {
+        const processedViolations: Violation[] = [];
 
         for (const violation of resultsJson.violations) {
             for (const location of violation.locations) {
                 // If the path isn't already absolute, it needs to be made absolute.
-                if (path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+                if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
                     // Relative paths are relative to the RunDir results property.
                     location.file = path.join(resultsJson.runDir, location.file);
                 }
-
             }
-            processedConvertibles.push(violation);
+            processedViolations.push(violation);
         }
-        return processedConvertibles;
+        return processedViolations;
     }
 }

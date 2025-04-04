@@ -9,6 +9,8 @@ import {expect} from 'chai';
 import * as path from 'path';
 import * as Constants from '../../lib/constants';
 import {_NoOpFixGenerator, _PmdFixGenerator, _ApexGuruFixGenerator} from '../../lib/fixer';
+import {CodeAnalyzerDiagnostic} from "../../lib/diagnostics";
+import { createSampleCodeAnalyzerDiagnostic } from '../unit/test-utils';
 
 suite('fixer.ts', () => {
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
@@ -47,14 +49,8 @@ suite('fixer.ts', () => {
                     const doc = await vscode.workspace.openTextDocument(xmlDocUri);
                     await vscode.window.showTextDocument(doc);
                     // Create a fake diagnostic.
-                    const diag = new vscode.Diagnostic(
-                        new vscode.Range(
-                            new vscode.Position(7, 1),
-                            new vscode.Position(7, 15)
-                        ),
-                        'This message is unimportant',
-                        vscode.DiagnosticSeverity.Warning
-                    );
+                    const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                        xmlDocUri, new vscode.Range(7, 1, 7, 15));
 
                     // Instantiate our fixer.
                     const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -81,14 +77,8 @@ suite('fixer.ts', () => {
                     const existingFixes = new Set<number>();
                     test('Appends suppression to end of commentless line', () => {
                         // Create our fake diagnostic, positioned at the line with no comment at the end.
-                        const diag = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(7, 4),
-                                new vscode.Position(7, 10)
-                            ),
-                            'This message is unimportant',
-                            vscode.DiagnosticSeverity.Warning
-                        );
+                        const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                            fileUri, new vscode.Range(7, 4, 7, 10));
 
                         // Instantiate our fixer.
                         const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -106,14 +96,8 @@ suite('fixer.ts', () => {
                     test('Does not add suppression if suppression for that same line already exists', () => {
                         existingFixes.add(7);
                         // Create our fake diagnostic whose start position is the same as the existing fix already added
-                        const diag = new vscode.Diagnostic(
-                            new vscode.Range(
-                                new vscode.Position(7, 0),
-                                new vscode.Position(8, 0)
-                            ),
-                            'This message is unimportant',
-                            vscode.DiagnosticSeverity.Warning
-                        );
+                        const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                            fileUri, new vscode.Range(7, 0, 8, 0));
 
                         // Instantiate our fixer.
                         const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -159,14 +143,8 @@ suite('fixer.ts', () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass1.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
-                            const diag = new vscode.Diagnostic(
-                                new vscode.Range(
-                                    new vscode.Position(7, 4),
-                                    new vscode.Position(7, 10)
-                                ),
-                                'This message is unimportant',
-                                vscode.DiagnosticSeverity.Warning
-                            );
+                            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                                fileUri, new vscode.Range(7, 4, 7, 10));
 
                             // Instantiate our fixer
                             const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -183,14 +161,8 @@ suite('fixer.ts', () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
-                            const diag = new vscode.Diagnostic(
-                                new vscode.Range(
-                                    new vscode.Position(10, 0),
-                                    new vscode.Position(10, 1)
-                                ),
-                                'This message is unimportant',
-                                vscode.DiagnosticSeverity.Warning
-                            );
+                            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                                fileUri, new vscode.Range(10, 0, 10, 1));
 
                             // Instantiate our fixer
                             const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -207,14 +179,8 @@ suite('fixer.ts', () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
-                            const diag = new vscode.Diagnostic(
-                                new vscode.Range(
-                                    new vscode.Position(17, 0),
-                                    new vscode.Position(17, 1)
-                                ),
-                                'This message is unimportant',
-                                vscode.DiagnosticSeverity.Warning
-                            );
+                            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                                fileUri, new vscode.Range(17, 0, 17, 1));
 
                             // Instantiate our fixer
                             const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -231,14 +197,8 @@ suite('fixer.ts', () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
-                            const diag = new vscode.Diagnostic(
-                                new vscode.Range(
-                                    new vscode.Position(23, 0),
-                                    new vscode.Position(23, 1)
-                                ),
-                                'This message is unimportant',
-                                vscode.DiagnosticSeverity.Warning
-                            );
+                            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                                fileUri, new vscode.Range(23, 0, 23, 1));
 
                             // Instantiate our fixer
                             const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -254,14 +214,8 @@ suite('fixer.ts', () => {
                             const fileUri = vscode.Uri.file(path.join(codeFixturesPath, 'fixer-tests', 'MyClass2.cls'));
 
                             await vscode.workspace.openTextDocument(fileUri);
-                            const diag = new vscode.Diagnostic(
-                                new vscode.Range(
-                                    new vscode.Position(27, 0),
-                                    new vscode.Position(27, 1)
-                                ),
-                                'This message is unimportant',
-                                vscode.DiagnosticSeverity.Warning
-                            );
+                            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                                fileUri, new vscode.Range(27, 0, 27, 1));
 
                             // Instantiate our fixer
                             const fixGenerator: _PmdFixGenerator = new _PmdFixGenerator(doc, diag);
@@ -496,14 +450,8 @@ suite('fixer.ts', () => {
 
             test('Should generate a suppression fix if line is not processed', () => {
                 // Create a fake diagnostic.
-                const diag = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(7, 4),
-                        new vscode.Position(7, 10)
-                    ),
-                    'some message',
-                    vscode.DiagnosticSeverity.Warning
-                );
+                const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                    fileUri, new vscode.Range(7, 4, 7, 10));
                 diag.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(fileUri, new vscode.Position(0, 0)),
@@ -530,14 +478,8 @@ suite('fixer.ts', () => {
                 processedLines.add(7);
 
                 // Create a fake diagnostic.
-                const diag = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(7, 4),
-                        new vscode.Position(7, 10)
-                    ),
-                    'This message is unimportant',
-                    vscode.DiagnosticSeverity.Warning
-                );
+                const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                    fileUri, new vscode.Range(7, 4, 7, 10));
                 diag.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(fileUri, new vscode.Position(0, 0)),
@@ -570,14 +512,8 @@ suite('fixer.ts', () => {
 
             test('Should generate the correct ApexGuru suppression code action', () => {
                 // Create a fake diagnostic.
-                const diag = new vscode.Diagnostic(
-                    new vscode.Range(
-                        new vscode.Position(7, 4),
-                        new vscode.Position(7, 10)
-                    ),
-                    'Some message',
-                    vscode.DiagnosticSeverity.Warning
-                );
+                const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(
+                    fileUri, new vscode.Range(7, 4, 7, 10));
                 diag.relatedInformation = [
                     new vscode.DiagnosticRelatedInformation(
                         new vscode.Location(fileUri, new vscode.Position(0, 0)),

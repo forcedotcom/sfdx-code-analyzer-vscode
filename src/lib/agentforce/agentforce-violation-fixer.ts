@@ -9,12 +9,12 @@ import * as vscode from 'vscode';
 import {makePrompt, GUIDED_JSON_SCHEMA, LLMResponse, PromptInputs} from './llm-prompt';
 import {LLMService, LLMServiceProvider} from "../external-services/llm-service";
 import {Logger} from "../logger";
-import {extractRuleName} from "../diagnostics";
 import {A4D_SUPPORTED_RULES, RuleInfo, ViolationContextScope} from "./supported-rules";
 import {RangeExpander} from "../range-expander";
 import {FixSuggestion} from "../fix-suggestion";
 import {messages} from "../messages";
 import {getErrorMessage, getErrorMessageWithStack} from "../utils";
+import {CodeAnalyzerDiagnostic} from "../diagnostics";
 
 export class AgentforceViolationFixer {
     private readonly llmServiceProvider: LLMServiceProvider;
@@ -30,11 +30,11 @@ export class AgentforceViolationFixer {
      * @param document
      * @param diagnostic
      */
-    async suggestFix(document: vscode.TextDocument, diagnostic: vscode.Diagnostic): Promise<FixSuggestion | null> {
+    async suggestFix(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
         try {
             const llmService: LLMService = await this.llmServiceProvider.getLLMService();
 
-            const ruleName: string = extractRuleName(diagnostic);
+            const ruleName: string = diagnostic.violation.rule;
             const ruleInfo: RuleInfo = A4D_SUPPORTED_RULES.get(ruleName);
             if (!ruleInfo) {
                 // Should never get called since suggestFix should only be called on supported rules

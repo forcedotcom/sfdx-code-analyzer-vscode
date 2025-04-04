@@ -12,7 +12,7 @@ import {ScanRunner} from '../../lib/scanner';
 import * as vscode from 'vscode';
 import * as Constants from '../../lib/constants';
 
-import {ExecutionResult} from '../../types';
+import {V4ExecutionResult} from '../../lib/scanner-strategies/v4-scanner';
 import {SFCAExtensionData} from "../../extension";
 
 suite('ScanRunner', () => {
@@ -240,7 +240,7 @@ suite('ScanRunner', () => {
         test('Returns HTML-formatted violations after successful scan', () => {
             // ===== SETUP =====
             // Create spoofed result with some HTML output.
-            const spoofedOutput: ExecutionResult = {
+            const spoofedOutput: V4ExecutionResult = {
                 status: 0,
                 result: `<!DOCTYPE html><html></html>`
             };
@@ -259,7 +259,7 @@ suite('ScanRunner', () => {
         test('Returns empty string after violation-less scan', () => {
             // ===== SETUP =====
             // Create spoofed results without any violations.
-            const spoofedOutput: ExecutionResult = {
+            const spoofedOutput: V4ExecutionResult = {
                 status: 0,
                 // TODO: This may change with time.
                 result: "Executed engines: sfge. No rule violations found."
@@ -280,7 +280,7 @@ suite('ScanRunner', () => {
             // ===== SETUP =====
             // Create spoofed output including a warning about a targeted method
             // not being found.
-            const spoofedOutput: ExecutionResult = {
+            const spoofedOutput: V4ExecutionResult = {
                 status: 0,
                 result: "Executed engines: sfge. No rule violations found.",
                 warnings: [
@@ -309,7 +309,7 @@ suite('ScanRunner', () => {
         test('Throws error message from failed scan', () => {
             // ===== SETUP =====
             // Create spoofed output indicating an error.
-            const spoofedOutput: ExecutionResult = {
+            const spoofedOutput: V4ExecutionResult = {
                 status: 50,
                 message: "Some error occurred. OH NO!"
             };
@@ -368,6 +368,19 @@ class StubSettingsManager implements SettingsManager {
         this.resetSettings();
     }
 
+    getCodeAnalyzerUseV4Deprecated(): boolean {
+        throw new Error('Method not implemented.');
+    }
+    setCodeAnalyzerUseV4Deprecated(_value: boolean): void {
+        throw new Error('Method not implemented.');
+    }
+    getCodeAnalyzerConfigFile(): string | undefined {
+        throw new Error('Method not implemented.');
+    }
+    getCodeAnalyzerRuleSelectors(): string | undefined {
+        throw new Error('Method not implemented.');
+    }
+
     public resetSettings(): void {
         this.graphEngineDisableWarningViolations = false;
         this.graphEngineThreadTimeout = 900000;
@@ -377,10 +390,6 @@ class StubSettingsManager implements SettingsManager {
 
     getCodeAnalyzerV5Enabled(): boolean {
         throw new Error('Method not implemented.');
-    }
-
-    getCodeAnalyzerTags(): string {
-        throw new Error('Method not implemented');
     }
 
     getPmdCustomConfigFile(): string {

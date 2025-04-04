@@ -1,44 +1,49 @@
-import { DiagnosticConvertible } from "./diagnostics";
+import vscode from "vscode";
+import {Logger} from "./logger";
 
-export type ProgressNotification = {
+export type ProgressEvent = {
     message?: string;
     increment?: number;
 };
 
 export interface Display {
-    displayProgress(notification: ProgressNotification): void;
-
-    displayResults(allTargets: string[], results: DiagnosticConvertible[]): Promise<void>;
-
-    displayLog(msg: string): void;
+    displayProgress(progressEvent: ProgressEvent): void;
+    displayInfo(infoMsg: string): void;
+    displayWarning(warnMsg: string): void;
+    displayError(errorMsg: string): void;
 }
 
-export class UxDisplay implements Display {
-    private readonly displayable: Displayable;
+export class VSCodeDisplay implements Display {
+    private readonly logger: Logger;
+    private readonly progressReporter: vscode.Progress<ProgressEvent> | undefined;
 
-    public constructor(displayable: Displayable) {
-        this.displayable = displayable;
+    public constructor(logger: Logger, progressReporter?: vscode.Progress<ProgressEvent>) {
+        this.logger = logger;
+        this.progressReporter = progressReporter;
     }
 
-    public displayProgress(notification: ProgressNotification): void {
-        this.displayable.progress(notification);
+    public displayProgress(progressEvent: ProgressEvent): void {
+        if (this.progressReporter) {
+            this.progressReporter.report(progressEvent);
+        }
+        this.logger.trace(`[${progressEvent.increment}] ${progressEvent.message}`);
     }
 
-    public async displayResults(allTargets: string[], results: DiagnosticConvertible[]): Promise<void> {
-        await this.displayable.results(allTargets, results);
+    displayInfo(infoMsg: string): void {
+        // Not waiting for promise because we didn't add buttons and don't care if user ignores the message.
+        void vscode.window.showInformationMessage(infoMsg);
+        this.logger.log(infoMsg);
     }
 
-    public displayLog(msg: string): void {
-        this.displayable.log(msg);
+    displayWarning(warnMsg: string): void {
+        // Not waiting for promise because we didn't add buttons and don't care if user ignores the message.
+        void vscode.window.showWarningMessage(warnMsg);
+        this.logger.warn(warnMsg);
+    }
+
+    displayError(errorMsg: string): void {
+        // Not waiting for promise because we didn't add buttons and don't care if user ignores the message.
+        void vscode.window.showErrorMessage(errorMsg);
+        this.logger.error(errorMsg);
     }
 }
-
-export interface Displayable {
-    progress(notification: ProgressNotification): void;
-
-    results(allTargets: string[], results: DiagnosticConvertible[]): Promise<void>;
-
-    log(msg: string): void;
-}
-
-

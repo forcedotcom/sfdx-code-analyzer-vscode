@@ -24,15 +24,21 @@ jobs:
           PR_INTO_DEV_OR_RELEASE_REGEX="^(FIX|CHANGE|NEW)([[:space:]]*\([^)]+\))?[[:space:]]*:?[[:space:]]*@W-[[:digit:]]{8,9}@.+"
 
           # Validate PR title based on base_ref and head_ref
-          if [[ "$base_ref" == "dev" && "${{ startsWith(github.head_ref, 'm2d/') }}" == "true" && ! "$title_upper" =~ $MAIN2DEV_REGEX ]]; then
-            echo "::error::Invalid PR title: '$title'. Please follow the format: Main2Dev (__) @W-XXXXXXXX@ Merging.*\d+\.\d+\.\d+"
-            exit 1
-          elif [[ "$base_ref" == "main" && ! "$title_upper" =~ $RELEASE2MAIN_REGEX ]]; then
-            echo "::error::Invalid PR title: '$title'. Please follow the format: RELEASE @W-XXXXXXXX@ Summary"
-            exit 1
-          elif [[ ("$base_ref" == "dev" || "${{ startsWith(github.base_ref, 'release-') }}" == "true") && ! "$title_upper" =~ $PR_INTO_DEV_OR_RELEASE_REGEX ]]; then
-            echo "::error::Invalid PR title: '$title'. Please follow the format: FIX|CHANGE|NEW (__) @W-XXXXXXXX@ Summary"
-            exit 1
+          if [[ "$base_ref" == "dev" && "${{ startsWith(github.head_ref, 'm2d/') }}" == "true" ]]; then
+            if [[ ! "$title_upper" =~ $MAIN2DEV_REGEX ]]; then
+              echo "::error::Invalid PR title: '$title'. Please follow the format: Main2Dev (__) @W-XXXXXXXX@ Merging.*\d+\.\d+\.\d+"
+              exit 1
+            fi
+          elif [[ "$base_ref" == "main" ]]; then
+            if [[ ! "$title_upper" =~ $RELEASE2MAIN_REGEX ]]; then
+              echo "::error::Invalid PR title: '$title'. Please follow the format: RELEASE @W-XXXXXXXX@ Summary"
+              exit 1
+            fi
+          elif [[ "$base_ref" == "dev" || "${{ startsWith(github.base_ref, 'release-') }}" == "true" ]]; then
+            if [[ ! "$title_upper" =~ $PR_INTO_DEV_OR_RELEASE_REGEX ]]; then
+              echo "::error::Invalid PR title: '$title'. Please follow the format: FIX|CHANGE|NEW (__) @W-XXXXXXXX@ Summary"
+              exit 1
+            fi
           else
             echo "PR title '$title' automatically accepted for $base_ref branch."
           fi

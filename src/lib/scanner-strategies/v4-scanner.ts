@@ -1,9 +1,51 @@
 import {CliScannerStrategy} from './scanner-strategy';
-import { DiagnosticConvertible } from '../diagnostics';
+import {Violation} from '../diagnostics';
 import {exists} from '../file';
-import {ExecutionResult, PathlessRuleViolation} from '../../types';
 import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
+
+export type BaseV4Violation = {
+    ruleName: string;
+    message: string;
+    severity: number;
+    normalizedSeverity?: number;
+    category: string;
+    url?: string;
+    exception?: boolean;
+};
+
+export type PathlessV4RuleViolation = BaseV4Violation & {
+    line: number;
+    column: number;
+    endLine?: number;
+    endColumn?: number;
+};
+
+export type DfaV4RuleViolation = BaseV4Violation & {
+    sourceLine: number;
+    sourceColumn: number;
+    sourceType: string;
+    sourceMethodName: string;
+    sinkLine: number|null;
+    sinkColumn: number|null;
+    sinkFileName: string|null;
+};
+
+export type V4RuleViolation = PathlessV4RuleViolation | DfaV4RuleViolation;
+
+export type V4RuleResult = {
+    engine: string;
+    fileName: string;
+    violations: V4RuleViolation[];
+};
+
+export type V4ExecutionResult = {
+    status: number;
+    result?: V4RuleResult[]|string;
+    warnings?: string[];
+    message?: string;
+};
+
 
 export type CliScannerV4StrategyOptions = {
     engines: string;
@@ -31,12 +73,12 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
         return Promise.resolve();
     }
 
-    public override async scan(targets: string[]): Promise<DiagnosticConvertible[]> {
+    public override async scan(filesToScan: string[]): Promise<Violation[]> {
         // Create the arg array.
-        const args: string[] = await this.createArgArray(targets);
+        const args: string[] = await this.createArgArray(filesToScan);
 
         // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeAnalyzer(args);
+        const executionResult: V4ExecutionResult = await this.invokeAnalyzer(args);
 
         // Process the results.
         return this.processResults(executionResult);
@@ -70,7 +112,7 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
         return args;
     }
 
-    private async invokeAnalyzer(args: string[]): Promise<ExecutionResult> {
+    private async invokeAnalyzer(args: string[]): Promise<V4ExecutionResult> {
         return new Promise((res) => {
             const cp = cspawn.spawn('sf', args);
 
@@ -82,22 +124,22 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
 
             cp.on('exit', () => {
                 // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as ExecutionResult);
+                res(JSON.parse(stdout) as V4ExecutionResult);
             });
         });
     }
 
-    private processResults(executionResult: ExecutionResult): DiagnosticConvertible[] {
+    private processResults(executionResult: V4ExecutionResult): Violation[] {
         // 0 is the status code for a successful analysis.
         if (executionResult.status === 0) {
             // If the results were a string, that indicates that no results were found.
             if (typeof executionResult.result === 'string') {
                 return [];
             } else {
-                const convertedResults: DiagnosticConvertible[] = [];
+                const convertedResults: Violation[] = [];
                 for (const {engine, fileName, violations} of executionResult.result) {
                     for (const violation of violations) {
-                        const pathlessViolation: PathlessRuleViolation = violation as PathlessRuleViolation;
+                        const pathlessViolation: PathlessV4RuleViolation = violation as PathlessV4RuleViolation;
                         convertedResults.push({
                             rule: pathlessViolation.ruleName,
                             engine,

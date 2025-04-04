@@ -7,7 +7,7 @@
 import * as vscode from 'vscode';
 import {messages} from './messages';
 import * as Constants from './constants';
-import { extractRuleName } from './diagnostics';
+import {CodeAnalyzerDiagnostic} from "./diagnostics";
 
 /**
  * Class for creating and adding {@link vscode.CodeAction}s allowing violations to be fixed or suppressed.
@@ -22,13 +22,9 @@ export class Fixer implements vscode.CodeActionProvider {
      */
     public provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): vscode.CodeAction[] {
         const processedLines = new Set<number>();
-        // Iterate over all diagnostics.
-        return context.diagnostics
-            // Throw out diagnostics that aren't ours, or are for the wrong line.
-            .filter(diagnostic =>
-                diagnostic.source &&
-                diagnostic.source.endsWith(messages.diagnostics.source.suffix)
-                && range.contains(diagnostic.range))
+        // Filter out diagnostics that aren't ours, or are for the wrong line.
+        return context.diagnostics.filter(d => d instanceof CodeAnalyzerDiagnostic)
+            .filter(d => !d.isStale() && range.contains(d.range))
             // Get and use the appropriate fix generator.
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.
@@ -42,9 +38,8 @@ export class Fixer implements vscode.CodeActionProvider {
      * @param diagnostic
      * @returns
      */
-    private getFixGenerator(document: vscode.TextDocument, diagnostic: vscode.Diagnostic): FixGenerator {
-        const engineName: string = diagnostic.source?.split(' ')[0];
-        switch (engineName) {
+    private getFixGenerator(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): FixGenerator {
+        switch (diagnostic.violation.engine) {
             case 'pmd':
             case 'pmd-custom':
                 return new _PmdFixGenerator(document, diagnostic);
@@ -62,14 +57,14 @@ export class Fixer implements vscode.CodeActionProvider {
  */
 abstract class FixGenerator {
     protected document: vscode.TextDocument;
-    protected diagnostic: vscode.Diagnostic;
+    protected diagnostic: CodeAnalyzerDiagnostic;
 
     /**
      *
      * @param document A document to which fixes should be added
      * @param diagnostic The diagnostic from which fixes should be generated
      */
-    public constructor(document: vscode.TextDocument, diagnostic: vscode.Diagnostic) {
+    public constructor(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) {
         this.document = document;
         this.diagnostic = diagnostic;
     }
@@ -78,7 +73,7 @@ abstract class FixGenerator {
      * Abstract template method for generating fixes.
      * @abstract
      */
-    public abstract generateFixes(processedLines: Set<number>, document?: vscode.TextDocument, diagnostic?: vscode.Diagnostic): vscode.CodeAction[];
+    public abstract generateFixes(processedLines: Set<number>, document?: vscode.TextDocument, diagnostic?: CodeAnalyzerDiagnostic): vscode.CodeAction[];
 }
 
 /**
@@ -97,7 +92,7 @@ export class _ApexGuruFixGenerator extends FixGenerator {
      * Generate an array of fixes, if possible.
      * @returns
      */
-    public generateFixes(processedLines: Set<number>, document: vscode.TextDocument, diagnostic: vscode.Diagnostic): vscode.CodeAction[] {
+    public generateFixes(processedLines: Set<number>, document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): vscode.CodeAction[] {
         console.log(diagnostic);
         const fixes: vscode.CodeAction[] = [];
         const lineNumber = this.diagnostic.range.start.line;
@@ -182,7 +177,7 @@ export class _PmdFixGenerator extends FixGenerator {
         action.edit.insert(this.document.uri, endOfLine, " // NOPMD");
         action.diagnostics = [this.diagnostic];
         action.command = {
-            command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE,
+            command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, // TODO: This is wrong. We should only be clearing PMD violations on this line - not all within the range
             title: 'Clear Single Diagnostic',
             arguments: [this.document.uri, this.diagnostic.range]
         };
@@ -194,7 +189,7 @@ export class _PmdFixGenerator extends FixGenerator {
         // Find the end-of-line position of the class declaration where the diagnostic is found.
         const classStartPosition = this.findClassStartPosition(this.diagnostic, this.document);
 
-        const ruleName: string = extractRuleName(this.diagnostic);
+        const ruleName: string = this.diagnostic.violation.rule;
         const suppressionTag: string = ruleName ? `PMD.${ruleName}` :
             `PMD`; // TODO: Figure out when this would ever be the case?? I don't think we should blindly suppress everything
         const suppressMsg: string = messages.fixer.suppressPmdViolationsOnClass(ruleName);
@@ -257,7 +252,7 @@ export class _PmdFixGenerator extends FixGenerator {
      * Assumes that the class declaration starts with the keyword "class".
      * @returns The position at the start of the class.
      */
-    public findClassStartPosition(diagnostic: vscode.Diagnostic, document: vscode.TextDocument): vscode.Position {
+    public findClassStartPosition(diagnostic: CodeAnalyzerDiagnostic, document: vscode.TextDocument): vscode.Position {
         const text = document.getText();
         const diagnosticLine = diagnostic.range.start.line;
 
