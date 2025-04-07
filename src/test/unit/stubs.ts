@@ -1,10 +1,12 @@
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
-import {UnifiedDiffTool} from "../../lib/unified-diff/unified-diff-tool";
 import {Logger} from "../../lib/logger";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
 import {ScannerStrategy} from "../../lib/scanner-strategies/scanner-strategy";
-import {Violation} from "../../lib/diagnostics";
+import {CodeAnalyzerDiagnostic, Violation} from "../../lib/diagnostics";
 import {Display, ProgressEvent} from "../../lib/display";
+import {UnifiedDiffService} from "../../lib/unified-diff-service";
+import {TextDocument} from "vscode";
+import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -60,85 +62,28 @@ export class SpyLogger implements Logger {
 }
 
 export class SpyDisplay implements Display {
-    displayProgressCallHistory: {progressEvent: ProgressEvent}[] = [];
+    displayProgressCallHistory: { progressEvent: ProgressEvent }[] = [];
+
     displayProgress(progressEvent: ProgressEvent): void {
         this.displayProgressCallHistory.push({progressEvent});
     }
 
-    displayInfoCallHistory: {msg: string}[] = [];
+    displayInfoCallHistory: { msg: string }[] = [];
+
     displayInfo(msg: string): void {
         this.displayInfoCallHistory.push({msg});
     }
 
-    displayWarningCallHistory: {msg: string}[] = [];
+    displayWarningCallHistory: { msg: string }[] = [];
+
     displayWarning(msg: string): void {
         this.displayWarningCallHistory.push({msg});
     }
 
-    displayErrorCallHistory: {msg: string}[] = [];
+    displayErrorCallHistory: { msg: string }[] = [];
+
     displayError(msg: string): void {
         this.displayErrorCallHistory.push({msg});
-    }
-}
-
-export class SpyUnifiedDiffTool implements UnifiedDiffTool<object> {
-    createDiffCallHistory: { code: string, file?: string }[] = [];
-
-    createDiff(code: string, file?: string): Promise<void> {
-        this.createDiffCallHistory.push({code, file});
-        return Promise.resolve();
-    }
-
-    acceptDiffHunkReturnValue: number = 9;
-    acceptDiffHunkCallHistory: { diffHunk: object }[] = [];
-
-    acceptDiffHunk(diffHunk: object): Promise<number> {
-        this.acceptDiffHunkCallHistory.push({diffHunk});
-        return Promise.resolve(this.acceptDiffHunkReturnValue);
-    }
-
-    rejectDiffHunkCallHistory: { diffHunk: object }[] = [];
-
-    rejectDiffHunk(diffHunk: object): Promise<void> {
-        this.rejectDiffHunkCallHistory.push({diffHunk});
-        return Promise.resolve();
-    }
-
-    acceptAllReturnValue: number = 16;
-    acceptAllCallCount: number = 0;
-
-    acceptAll(): Promise<number> {
-        this.acceptAllCallCount++;
-        return Promise.resolve(this.acceptAllReturnValue);
-    }
-
-    rejectAllCallCount: number = 0;
-
-    rejectAll(): Promise<void> {
-        this.rejectAllCallCount++;
-        return Promise.resolve();
-    }
-}
-
-export class ThrowingUnifiedDiffTool implements UnifiedDiffTool<object> {
-    createDiff(_code: string, _file?: string): Promise<void> {
-        throw new Error("Error from createDiff");
-    }
-
-    acceptDiffHunk(_diffHunk: object): Promise<number> {
-        throw new Error("Error from acceptDiffHunk");
-    }
-
-    rejectDiffHunk(_diffHunk: object): Promise<void> {
-        throw new Error("Error from rejectDiffHunk");
-    }
-
-    acceptAll(): Promise<number> {
-        throw new Error("Error from acceptAll");
-    }
-
-    rejectAll(): Promise<void> {
-        throw new Error("Error from rejectAll");
     }
 }
 
@@ -193,13 +138,87 @@ export class StubScannerStrategy implements ScannerStrategy {
     }
 
     scanReturnValue: Violation[] = [];
+
     scan(_filesToScan: string[]): Promise<Violation[]> {
         return Promise.resolve(this.scanReturnValue);
     }
 
     getScannerNameReturnValue: string = 'dummyScannerName';
+
     getScannerName(): string {
         return this.getScannerNameReturnValue;
     }
+}
 
+export class SpyUnifiedDiffService implements UnifiedDiffService {
+    register(): void {
+        // no-op
+    }
+
+    dispose() {
+        // no op
+    }
+
+    hasDiffReturnValue: boolean = false;
+    hasDiffCallHistory: { document: TextDocument }[] = [];
+    hasDiff(document: TextDocument): boolean {
+        this.hasDiffCallHistory.push({document});
+        return this.hasDiffReturnValue;
+    }
+
+    showDiffCallHistory: {
+        document: TextDocument,
+        newCode: string,
+        acceptCallback: () => Promise<void>,
+        rejectCallback: () => Promise<void>
+    }[] = [];
+    showDiff(document: TextDocument, newCode: string, acceptCallback: () => Promise<void>, rejectCallback: () => Promise<void>): Promise<void> {
+        this.showDiffCallHistory.push({document, newCode, acceptCallback, rejectCallback});
+        return Promise.resolve();
+    }
+
+    clearDiffCallHistory: {document: TextDocument}[] = [];
+    clearDiff(document: TextDocument): Promise<void> {
+        this.clearDiffCallHistory.push({document});
+        return Promise.resolve();
+    }
+}
+
+export class ThrowingUnifiedDiffService implements UnifiedDiffService {
+    register(): void {
+        // no-op
+    }
+
+    dispose() {
+        // no-op
+    }
+
+    hasDiff(_document: TextDocument): boolean {
+        return false;
+    }
+
+    showDiff(_document: TextDocument, _newCode: string, _acceptCallback: () => Promise<void>, _rejectCallback: () => Promise<void>): Promise<void> {
+        throw new Error('Error thrown from: showDiff');
+    }
+
+    clearDiff(_document: TextDocument): Promise<void> {
+        // no-op
+        return Promise.resolve();
+    }
+}
+
+
+export class SpyFixSuggester implements FixSuggester {
+    suggestFixReturnValue: FixSuggestion | null = null;
+    suggestFixCallHistory: {document: TextDocument, diagnostic: CodeAnalyzerDiagnostic}[] = [];
+    suggestFix(document: TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
+        this.suggestFixCallHistory.push({document, diagnostic});
+        return Promise.resolve(this.suggestFixReturnValue);
+    }
+}
+
+export class ThrowingFixSuggester implements FixSuggester {
+    suggestFix(_document: TextDocument, _diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
+        throw new Error('Error thrown from: suggestFix');
+    }
 }

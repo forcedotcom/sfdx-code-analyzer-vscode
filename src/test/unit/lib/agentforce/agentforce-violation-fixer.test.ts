@@ -9,7 +9,6 @@ import {
 import {AgentforceViolationFixer} from "../../../../lib/agentforce/agentforce-violation-fixer";
 import {createTextDocument} from 'jest-mock-vscode'
 import {FixSuggestion} from "../../../../lib/fix-suggestion";
-import {messages} from "../../../../lib/messages";
 import {CodeAnalyzerDiagnostic} from "../../../../lib/diagnostics";
 import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
 
@@ -81,49 +80,36 @@ describe('AgentforceViolationFixer Tests', () => {
             expect(fixSuggestion.codeFixData.fixedCode).toEqual('some code fix');
         });
 
-        it('When response is valid JSON but without fixedCode, then return null, show error message, and log error', async () => {
+        it('When response is valid JSON but without fixedCode, then throw exception', async () => {
             spyLLMService.callLLMReturnValue = '{"useless":3}';
-            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
-            expect(fixSuggestion).toBeNull();
-            expectErrorGettingShownCorrectly("Response from LLM is missing the 'fixedCode' property.");
+            await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
+                'Response from LLM is missing the \'fixedCode\' property.');
         });
 
-        it('When response is invalid JSON, then return null, show error message, and log error', async () => {
+        it('When response is invalid JSON, then throw exception', async () => {
             spyLLMService.callLLMReturnValue = 'oops - not json';
-            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
-            expect(fixSuggestion).toBeNull();
-            expectErrorGettingShownCorrectly('Response from LLM is not valid JSON');
+            await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
+                'Response from LLM is not valid JSON');
         });
 
-        it('When LLMServiceProvider throws an exception, then show error message and log error', async () => {
+        it('When LLMServiceProvider throws an exception, then throw exception', async () => {
             violationFixer = new AgentforceViolationFixer(new ThrowingLLMServiceProvider(), spyLogger);
-            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
-            expect(fixSuggestion).toBeNull();
-            expectErrorGettingShownCorrectly('Error from getLLMService');
+            await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
+                'Error from getLLMService');
         });
 
-        it('When LLMService throws an exception, then show error message and log error', async () => {
+        it('When LLMService throws an exception, then throw exception', async () => {
             llmServiceProvider = new StubLLMServiceProvider(new ThrowingLLMService());
             violationFixer = new AgentforceViolationFixer(llmServiceProvider, spyLogger);
-            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
-            expect(fixSuggestion).toBeNull();
-            expectErrorGettingShownCorrectly('Error from callLLM');
+            await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
+                'Error from callLLM');
         });
 
-        it('When diagnostic is associated with an unsupported rule, then show error message and log error', async () => {
+        it('When diagnostic is associated with an unsupported rule, then throw exception', async () => {
             const diagWithUnsupportedRule: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
                 new vscode.Range(0, 8, 1, 7), 'SomeRandomRule');
-            const fixSuggestion: FixSuggestion = await violationFixer.suggestFix(sampleDocument, diagWithUnsupportedRule);
-            expect(fixSuggestion).toBeNull();
-            expectErrorGettingShownCorrectly('Unsupported rule: SomeRandomRule');
+            await expect(violationFixer.suggestFix(sampleDocument, diagWithUnsupportedRule)).rejects.toThrow(
+                'Unsupported rule: SomeRandomRule');
         });
-
-        function expectErrorGettingShownCorrectly(expectErrorSubMessage: string): void {
-            expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining(messages.agentforce.failedA4DResponse));
-            expect(spyLogger.errorCallHistory).toHaveLength(1);
-            expect(spyLogger.errorCallHistory[0].msg).toContain(messages.agentforce.failedA4DResponse);
-            expect(spyLogger.errorCallHistory[0].msg).toContain(expectErrorSubMessage);
-        }
     });
 });
