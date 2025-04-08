@@ -32,12 +32,10 @@ export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_faile
 export const TELEM_SUCCESSFUL_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_complete';
 export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
-export const TELEM_DIFF_SUGGESTION = 'sfdx__eGPT_suggest';
-export const TELEM_DIFF_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
-export const TELEM_DIFF_ACCEPT = 'sfdx__eGPT_accept';
-export const TELEM_DIFF_ACCEPT_FAILED = 'sfdx__eGPT_accept_failure';
-export const TELEM_DIFF_REJECT = 'sfdx__eGPT_clear';
-export const TELEM_DIFF_REJECT_FAILED = 'sfdx__eGPT_clear_failure';
+export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
+export const TELEM_A4D_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
+export const TELEM_A4D_ACCEPT = 'sfdx__eGPT_accept';
+export const TELEM_A4D_REJECT = 'sfdx__eGPT_clear';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
