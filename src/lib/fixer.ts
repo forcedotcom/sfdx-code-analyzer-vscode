@@ -24,7 +24,10 @@ export class Fixer implements vscode.CodeActionProvider {
         const processedLines = new Set<number>();
         // Filter out diagnostics that aren't ours, or are for the wrong line.
         return context.diagnostics.filter(d => d instanceof CodeAnalyzerDiagnostic)
-            .filter(d => !d.isStale() && range.contains(d.range))
+            .filter(d => !d.isStale())
+            // Technically, I don't think VS Code sends in diagnostics that aren't overlapping with the users selection,
+            // but just in case they do, then this last filter is an additional sanity check just to be safe
+            .filter(d => range.intersection(d.range) != undefined)
             // Get and use the appropriate fix generator.
             .map(diagnostic => this.getFixGenerator(document, diagnostic).generateFixes(processedLines, document, diagnostic))
             // Combine all the fixes into one array.

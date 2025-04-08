@@ -483,7 +483,7 @@ export class CodeGenieUnifiedDiffService implements vscode.CodeLensProvider, vsc
         await this.revertUnifiedDiff(diff.document);
 
         if (diff.getHunks().length === 0 || (diff.getHunks().length === 1 && diff.getHunks()[0].type === DiffType.Unmodified)) {
-            vscode.window.showInformationMessage('Agentforce Fix: No changes to diff.');
+            vscode.window.showInformationMessage('No changes to diff.');
             return;
         }
 

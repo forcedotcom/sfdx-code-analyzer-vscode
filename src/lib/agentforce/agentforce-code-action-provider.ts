@@ -28,7 +28,10 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
         const codeActions: vscode.CodeAction[] = [];
         const filteredDiagnostics: CodeAnalyzerDiagnostic[] = context.diagnostics
             .filter(d => d instanceof CodeAnalyzerDiagnostic)
-            .filter(d => !d.isStale() && range.contains(d.range) && A4D_SUPPORTED_RULES.has(d.violation.rule));
+            .filter(d => !d.isStale() && A4D_SUPPORTED_RULES.has(d.violation.rule))
+            // Technically, I don't think VS Code sends in diagnostics that aren't overlapping with the users selection,
+            // but just in case they do, then this last filter is an additional sanity check just to be safe
+            .filter(d => range.intersection(d.range) != undefined);
 
         if (filteredDiagnostics.length == 0) {
             return codeActions;
