@@ -50,3 +50,9 @@ export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
 export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
+
+// Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
+export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
+export const CONTEXT_VAR_V4_ENABLED = 'sfca.codeAnalyzerV4Enabled';
+export const CONTEXT_VAR_PARTIAL_RUNS_ENABLED = 'sfca.partialRunsEnabled';
+export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';

@@ -224,7 +224,7 @@
             "commandPalette": [
                 {
                     "command": "sfca.runOnActiveFile",
-                    "when": "true"
+                    "when": "sfca.extensionActivated"
                 },
                 {
                     "command": "sfca.runOnSelected",
@@ -236,11 +236,11 @@
                 },
                 {
                     "command": "sfca.runDfa",
-                    "when": "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
+                    "when": "sfca.extensionActivated && sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
-                    "when": "true"
+                    "when": "sfca.extensionActivated"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnSelectedFile",
@@ -252,39 +252,39 @@
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnCurrentFile",
-                    "when": "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ],
             "editor/context": [
                 {
                     "command": "sfca.runOnActiveFile",
-                    "when": "true"
+                    "when": "sfca.extensionActivated"
                 },
                 {
                     "command": "sfca.runDfaOnSelectedMethod",
-                    "when": "sfca.codeAnalyzerV4Enabled"
+                    "when": "sfca.extensionActivated && sfca.codeAnalyzerV4Enabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
-                    "when": "true"
+                    "when": "sfca.extensionActivated"
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnCurrentFile",
-                    "when": "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ],
             "explorer/context": [
                 {
                     "command": "sfca.runOnSelected",
-                    "when": "true"
+                    "when": "sfca.extensionActivated"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnSelectedFile",
-                    "when": "true"
+                    "when": "sfca.extensionActivated"
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                    "when": "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
         },

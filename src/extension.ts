@@ -89,7 +89,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Code Analyzer Run Functionality
     // =================================================================================================================
-    await establishVariableInContext('sfca.codeAnalyzerV4Enabled', () => Promise.resolve(settingsManager.getCodeAnalyzerUseV4Deprecated()));
+    await establishVariableInContext(Constants.CONTEXT_VAR_V4_ENABLED,
+        () => Promise.resolve(settingsManager.getCodeAnalyzerUseV4Deprecated()));
 
     // Monitor the "codeAnalyzer.Use v4 (Deprecated)" setting with telemetry
     vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
@@ -196,7 +197,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // It is possible that the cache was not cleared when VS Code exited the last time. Just to be on the safe side, we clear the DFA process cache at activation.
     void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-    await establishVariableInContext('sfca.partialRunsEnabled', () => Promise.resolve(settingsManager.getSfgePartialSfgeRunsEnabled()));
+    await establishVariableInContext(Constants.CONTEXT_VAR_PARTIAL_RUNS_ENABLED,
+        () => Promise.resolve(settingsManager.getSfgePartialSfgeRunsEnabled()));
 
     // COMMAND_RUN_DFA_ON_SELECTED_METHOD: Invokable by 'editor/context' only when "sfca.codeAnalyzerV4Enabled"
     registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
@@ -226,7 +228,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             // if it is possible to monitor changes to the users org so we can re-trigger this check.
             await ApexGuruFunctions.isApexGuruEnabledInOrg(logger);
 
-    await establishVariableInContext('sfca.apexGuruEnabled', isApexGuruEnabled);
+    await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
 
     // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
@@ -298,6 +300,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     }
 
     telemetryService.sendExtensionActivationEvent(extensionHrStart);
+    await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
     logger.log('Extension sfdx-code-analyzer-vscode activated.');
     return {
         logger: logger,
@@ -308,7 +311,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 }
 
 // This method is called when your extension is deactivated
-export function deactivate(): void {
+export async function deactivate(): Promise<void> {
+    await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, false);
 }
 
 // TODO: We either need to give the user control over which files the auto-scan on open/save feature works for...
