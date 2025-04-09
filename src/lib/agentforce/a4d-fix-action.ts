@@ -17,7 +17,8 @@ export class A4DFixAction {
     private readonly logger: Logger;
     private readonly display: Display;
 
-    constructor(fixSuggester: FixSuggester, unifiedDiffService: UnifiedDiffService, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger, display: Display) {
+    constructor(fixSuggester: FixSuggester, unifiedDiffService: UnifiedDiffService, diagnosticManager: DiagnosticManager,
+                telemetryService: TelemetryService, logger: Logger, display: Display) {
         this.fixSuggester = fixSuggester;
         this.unifiedDiffService = unifiedDiffService;
         this.diagnosticManager = diagnosticManager;
@@ -73,17 +74,20 @@ export class A4DFixAction {
 
         const rejectCallback: ()=>Promise<void> = (): Promise<void> => {
             this.diagnosticManager.addDiagnostics([diagnostic]); // Put back the diagnostic
-
             this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_REJECT, {
                 commandSource: Constants.QF_COMMAND_A4D_FIX,
                 languageType: document.languageId
             });
-
             return Promise.resolve();
         };
 
         this.diagnosticManager.clearDiagnostic(diagnostic);
-        await this.unifiedDiffService.showDiff(document, suggestedNewDocumentCode, acceptCallback, rejectCallback);
+        try {
+            await this.unifiedDiffService.showDiff(document, suggestedNewDocumentCode, acceptCallback, rejectCallback);
+        } catch (err) {
+            this.diagnosticManager.addDiagnostics([diagnostic]); // Put back the diagnostic
+            throw err;
+        }
 
         this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_SUGGESTION, {
             commandSource: Constants.QF_COMMAND_A4D_FIX,

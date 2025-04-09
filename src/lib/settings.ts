@@ -28,6 +28,9 @@ export interface SettingsManager {
     getNormalizeSeverityEnabled(): boolean;
     getRulesCategory(): string;
     getSfgePartialSfgeRunsEnabled(): boolean;
+
+    // Other Settings that we may depend on
+    getEditorCodeLensEnabled(): boolean;
 }
 
 export class SettingsManagerImpl implements SettingsManager {
@@ -105,5 +108,12 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getSfgePartialSfgeRunsEnabled(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.partialGraphEngineScans').get('enabled');
+    }
+
+    // =================================================================================================================
+    // ==== Other Settings that we may depend on
+    // =================================================================================================================
+    public getEditorCodeLensEnabled(): boolean {
+        return vscode.workspace.getConfiguration('editor').get('codeLens');
     }
 }

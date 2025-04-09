@@ -261,7 +261,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Unified Diff Service
     // =================================================================================================================
-    const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl();
+    const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl(settingsManager);
     unifiedDiffService.register();
     context.subscriptions.push(unifiedDiffService);
 

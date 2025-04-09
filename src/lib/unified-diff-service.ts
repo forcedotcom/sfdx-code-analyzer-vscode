@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import {UnifiedDiff, CodeGenieUnifiedDiffService} from "../shared/UnifiedDiff";
+import {SettingsManager} from "./settings";
+import {messages} from "./messages";
 
 export interface UnifiedDiffService extends vscode.Disposable {
     register(): void;
@@ -13,9 +15,11 @@ export interface UnifiedDiffService extends vscode.Disposable {
  */
 export class UnifiedDiffServiceImpl implements UnifiedDiffService {
     private readonly codeGenieUnifiedDiffService: CodeGenieUnifiedDiffService;
+    private readonly settingsManager: SettingsManager;
 
-    constructor() {
+    constructor(settingsManager: SettingsManager) {
         this.codeGenieUnifiedDiffService = new CodeGenieUnifiedDiffService();
+        this.settingsManager = settingsManager;
     }
 
     register(): void {
@@ -31,6 +35,7 @@ export class UnifiedDiffServiceImpl implements UnifiedDiffService {
     }
 
     async showDiff(document: vscode.TextDocument, newCode: string, acceptCallback: ()=>Promise<void>, rejectCallback: ()=>Promise<void>): Promise<void> {
+        this.validateCanShowDiff();
         const diff = new UnifiedDiff(document, newCode);
         diff.allowAbilityToAcceptOrRejectIndividualHunks = false;
         diff.acceptAllCallback = acceptCallback;
@@ -40,6 +45,19 @@ export class UnifiedDiffServiceImpl implements UnifiedDiffService {
 
     async clearDiff(document: vscode.TextDocument): Promise<void> {
         await this.codeGenieUnifiedDiffService.revertUnifiedDiff(document);
+    }
+
+    private validateCanShowDiff(): void {
+        if (!this.settingsManager.getEditorCodeLensEnabled()) {
+            const button1Text: string = "Show settings";
+            void vscode.window.showWarningMessage(messages.unifiedDiff.editorCodeLensMustBeEnabled, button1Text).then(selection => {
+                if (selection === button1Text) {
+                    const settingUri = vscode.Uri.parse('vscode://settings/editor.codeLens');
+                    vscode.commands.executeCommand('vscode.open', settingUri);
+                }
+            });
+            throw new Error(messages.unifiedDiff.editorCodeLensMustBeEnabled);
+        }
     }
 }
 
