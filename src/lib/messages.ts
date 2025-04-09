@@ -30,7 +30,8 @@ export const messages = {
         noFixSuggested: "No fix was suggested."
     },
     unifiedDiff: {
-        mustAcceptOrRejectDiffFirst: "You must accept/reject the existing diff in this file before performing this action."
+        mustAcceptOrRejectDiffFirst: "You must accept/reject the existing diff in this file before performing this action.",
+        editorCodeLensMustBeEnabled: "This action requires the 'Editor: Code Lens' setting to be enabled."
     },
     apexGuru: {
         progress: {
@@ -81,5 +82,9 @@ export const messages = {
         sfdxScannerMissing: "To use the 'Code Analyzer: Use v4 (Deprecated)' setting, you must first install the `@salesforce/sfdx-scanner` Salesforce CLI plugin. But we no longer support v4, so we recommend that you use v5 instead and unselect the 'Code Analyzer: Use v4 (Deprecated)' setting.",
         codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
+    },
+    buttons: {
+        showSettings: 'Show settings',
+        startUsingV5: 'Start using v5'
     }
 };

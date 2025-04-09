@@ -261,7 +261,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Unified Diff Service
     // =================================================================================================================
-    const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl();
+    const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl(settingsManager);
     unifiedDiffService.register();
     context.subscriptions.push(unifiedDiffService);
 
@@ -287,12 +287,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
 
     if(settingsManager.getCodeAnalyzerUseV4Deprecated()) {
-        const button1Text: string = "Start using v5";
-        const button2Text: string = "Show settings";
-        vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, button1Text, button2Text).then(selection => {
-            if (selection === button1Text) {
+        vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, messages.buttons.startUsingV5, messages.buttons.showSettings).then(selection => {
+            if (selection === messages.buttons.startUsingV5) {
                 settingsManager.setCodeAnalyzerUseV4Deprecated(false);
-            } else if (selection === button2Text) {
+            } else if (selection === messages.buttons.showSettings) {
                 const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.Use v4 (Deprecated)');
                 vscode.commands.executeCommand('vscode.open', settingUri);
             }

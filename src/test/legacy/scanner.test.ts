@@ -456,4 +456,7 @@ class StubSettingsManager implements SettingsManager {
         throw new Error('Method not implemented.');
     }
 
+    getEditorCodeLensEnabled(): boolean {
+        throw new Error('Method not implemented.');
+    }
 }

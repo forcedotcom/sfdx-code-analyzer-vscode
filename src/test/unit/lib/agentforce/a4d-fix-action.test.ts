@@ -164,7 +164,7 @@ describe('Tests for A4DFixAction', () => {
         });
     });
 
-    it('When fix is suggested, but diff tool throws exception, then display error message and send exception telemetry event', async () => {
+    it('When fix is suggested, but diff tool throws exception, then display error message, restore diagnostic, and send exception telemetry event', async () => {
         const unifiedDiffService: stubs.ThrowingUnifiedDiffService = new stubs.ThrowingUnifiedDiffService();
         a4dFixAction = new A4DFixAction(fixSuggester, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
 
@@ -182,5 +182,7 @@ describe('Tests for A4DFixAction', () => {
             'sfdx__eGPT_suggest_failure');
         expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
             'sfca.a4dFix');
+
+        expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
     });
 });
