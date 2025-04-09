@@ -49,9 +49,8 @@ export class UnifiedDiffServiceImpl implements UnifiedDiffService {
 
     private validateCanShowDiff(): void {
         if (!this.settingsManager.getEditorCodeLensEnabled()) {
-            const button1Text: string = "Show settings";
-            void vscode.window.showWarningMessage(messages.unifiedDiff.editorCodeLensMustBeEnabled, button1Text).then(selection => {
-                if (selection === button1Text) {
+            void vscode.window.showWarningMessage(messages.unifiedDiff.editorCodeLensMustBeEnabled, messages.buttons.showSettings).then(selection => {
+                if (selection === messages.buttons.showSettings) {
                     const settingUri = vscode.Uri.parse('vscode://settings/editor.codeLens');
                     vscode.commands.executeCommand('vscode.open', settingUri);
                 }
