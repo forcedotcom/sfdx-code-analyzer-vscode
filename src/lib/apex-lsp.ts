@@ -23,9 +23,21 @@ export class ApexLsp {
      * Get an array of {@link GenericSymbol}s indicating the classes, methods, etc defined
      * in the provided file.
      * @param documentUri
-     * @returns An array of symbols if the server is available, otherwise undefined
+     * @returns An array of symbols if the server is available, otherwise empty
      */
     public static async getSymbols(documentUri: vscode.Uri): Promise<GenericSymbol[]> {
-        return vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', documentUri);
+        const hierarchicalSymbols: GenericSymbol[] = (await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', documentUri)) || [];
+        return flattenSymbols(hierarchicalSymbols);
     }
+}
+
+function flattenSymbols(symbols: GenericSymbol[]): GenericSymbol[] {
+    const flattened: GenericSymbol[] = [];
+    for (const symbol of symbols) {
+        flattened.push(symbol);
+        if ('children' in symbol) {
+            flattened.push(...flattenSymbols(symbol.children)); // Recursively flatten children
+        }
+    }
+    return flattened;
 }
