@@ -42,13 +42,12 @@ describe('Tests for A4DFixAction', () => {
         a4dFixAction = new A4DFixAction(fixSuggester, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
     });
 
-    it('When diff already exists on document, then return with warning msg displayed', async () => {
-        unifiedDiffService.hasDiffReturnValue = true;
+    it('When unified diff service cannot show diff, then return without trying to show diff', async () => {
+        unifiedDiffService.verifyCanShowDiffReturnValue = false;
 
         await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
 
-        expect(display.displayWarningCallHistory).toHaveLength(1);
-        expect(display.displayWarningCallHistory[0].msg).toEqual(messages.unifiedDiff.mustAcceptOrRejectDiffFirst);
+        expect(display.displayWarningCallHistory).toHaveLength(0);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
     });
 
@@ -60,6 +59,7 @@ describe('Tests for A4DFixAction', () => {
         expect(display.displayInfoCallHistory).toHaveLength(1);
         expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
+        expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
     });
 
     it('When error is thrown while suggesting fix, then display error message and send exception telemetry event', async () => {
@@ -113,7 +113,6 @@ describe('Tests for A4DFixAction', () => {
             rangeToBeFixed: new vscode.Range(1, 0, 1, 17),
             fixedCode: 'hello World'
         }, 'This is some explanation');
-
 
         await a4dFixAction.run(sampleDocument, sampleDiagnostic2);
 
@@ -183,6 +182,22 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
             'sfca.a4dFix');
 
+        expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
+    });
+
+    it('When fix suggested is exactly the same as the original code, then show info message saying that no fix was suggested', async () => {
+        fixSuggester.suggestFixReturnValue = new FixSuggestion({
+            document: sampleDocument,
+            diagnostic: sampleDiagnostic1,
+            rangeToBeFixed: new vscode.Range(0, 0, 0, 4),
+            fixedCode: 'some' // same as before
+        });;
+
+        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+        expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
+        expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
     });
 });

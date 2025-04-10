@@ -30,7 +30,7 @@ export const messages = {
         noFixSuggested: "No fix was suggested."
     },
     unifiedDiff: {
-        mustAcceptOrRejectDiffFirst: "You must accept/reject the existing diff in this file before performing this action.",
+        mustAcceptOrRejectDiffFirst: "You must accept or reject all changes before performing this action.",
         editorCodeLensMustBeEnabled: "This action requires the 'Editor: Code Lens' setting to be enabled."
     },
     apexGuru: {

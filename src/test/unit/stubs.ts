@@ -7,6 +7,7 @@ import {Display, ProgressEvent} from "../../lib/display";
 import {UnifiedDiffService} from "../../lib/unified-diff-service";
 import {TextDocument} from "vscode";
 import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
+import {SettingsManager} from "../../lib/settings";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -159,11 +160,11 @@ export class SpyUnifiedDiffService implements UnifiedDiffService {
         // no op
     }
 
-    hasDiffReturnValue: boolean = false;
-    hasDiffCallHistory: { document: TextDocument }[] = [];
-    hasDiff(document: TextDocument): boolean {
-        this.hasDiffCallHistory.push({document});
-        return this.hasDiffReturnValue;
+    verifyCanShowDiffReturnValue: boolean = true;
+    verifyCanShowDiffCallHistory: { document: TextDocument }[] = [];
+    verifyCanShowDiff(document: TextDocument): boolean {
+        this.verifyCanShowDiffCallHistory.push({document});
+        return this.verifyCanShowDiffReturnValue;
     }
 
     showDiffCallHistory: {
@@ -174,12 +175,6 @@ export class SpyUnifiedDiffService implements UnifiedDiffService {
     }[] = [];
     showDiff(document: TextDocument, newCode: string, acceptCallback: () => Promise<void>, rejectCallback: () => Promise<void>): Promise<void> {
         this.showDiffCallHistory.push({document, newCode, acceptCallback, rejectCallback});
-        return Promise.resolve();
-    }
-
-    clearDiffCallHistory: {document: TextDocument}[] = [];
-    clearDiff(document: TextDocument): Promise<void> {
-        this.clearDiffCallHistory.push({document});
         return Promise.resolve();
     }
 }
@@ -193,17 +188,12 @@ export class ThrowingUnifiedDiffService implements UnifiedDiffService {
         // no-op
     }
 
-    hasDiff(_document: TextDocument): boolean {
-        return false;
+    verifyCanShowDiff(_document: TextDocument): boolean {
+        return true;
     }
 
     showDiff(_document: TextDocument, _newCode: string, _acceptCallback: () => Promise<void>, _rejectCallback: () => Promise<void>): Promise<void> {
         throw new Error('Error thrown from: showDiff');
-    }
-
-    clearDiff(_document: TextDocument): Promise<void> {
-        // no-op
-        return Promise.resolve();
     }
 }
 
@@ -221,4 +211,88 @@ export class ThrowingFixSuggester implements FixSuggester {
     suggestFix(_document: TextDocument, _diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
         throw new Error('Error thrown from: suggestFix');
     }
+}
+
+
+export class StubSettingsManager implements SettingsManager {
+
+    // =================================================================================================================
+    // ==== General Settings
+    // =================================================================================================================
+    getAnalyzeOnOpenReturnValue: boolean = false;
+    getAnalyzeOnOpen(): boolean {
+        return this.getAnalyzeOnOpenReturnValue;
+    }
+
+    getAnalyzeOnSaveReturnValue: boolean = false;
+    getAnalyzeOnSave(): boolean {
+        return this.getAnalyzeOnSaveReturnValue;
+    }
+
+    getApexGuruEnabledReturnValue: boolean = false;
+    getApexGuruEnabled(): boolean {
+        return this.getApexGuruEnabledReturnValue;
+    }
+
+    getCodeAnalyzerUseV4DeprecatedReturnValue: boolean = false;
+    getCodeAnalyzerUseV4Deprecated(): boolean {
+        return this.getCodeAnalyzerUseV4DeprecatedReturnValue;
+    }
+
+    setCodeAnalyzerUseV4Deprecated(value: boolean): void {
+        this.getCodeAnalyzerUseV4DeprecatedReturnValue = value;
+    }
+
+    // =================================================================================================================
+    // ==== v5 Settings
+    // =================================================================================================================
+    getCodeAnalyzerConfigFileReturnValue: string = '';
+    getCodeAnalyzerConfigFile(): string {
+        return this.getCodeAnalyzerConfigFileReturnValue;
+    }
+
+    getCodeAnalyzerRuleSelectorsReturnValue: string = 'Recommended';
+    getCodeAnalyzerRuleSelectors(): string {
+        return this.getCodeAnalyzerRuleSelectorsReturnValue;
+    }
+
+    // =================================================================================================================
+    // ==== v4 Settings (Deprecated)
+    // =================================================================================================================
+    getPmdCustomConfigFile(): string {
+        throw new Error("Method not implemented.");
+    }
+    getGraphEngineDisableWarningViolations(): boolean {
+        throw new Error("Method not implemented.");
+    }
+    getGraphEngineThreadTimeout(): number {
+        throw new Error("Method not implemented.");
+    }
+    getGraphEnginePathExpansionLimit(): number {
+        throw new Error("Method not implemented.");
+    }
+    getGraphEngineJvmArgs(): string {
+        throw new Error("Method not implemented.");
+    }
+    getEnginesToRun(): string {
+        throw new Error("Method not implemented.");
+    }
+    getNormalizeSeverityEnabled(): boolean {
+        throw new Error("Method not implemented.");
+    }
+    getRulesCategory(): string {
+        throw new Error("Method not implemented.");
+    }
+    getSfgePartialSfgeRunsEnabled(): boolean {
+        throw new Error("Method not implemented.");
+    }
+
+    // =================================================================================================================
+    // ==== Other Settings that we may depend on
+    // =================================================================================================================
+    getEditorCodeLensEnabledReturnValue: boolean = true;
+    getEditorCodeLensEnabled(): boolean {
+        return this.getEditorCodeLensEnabledReturnValue;
+    }
+
 }

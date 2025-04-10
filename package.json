@@ -92,7 +92,8 @@
         "showcoverage-legacy": "open ./coverage/legacy/lcov-report/index.html"
     },
     "activationEvents": [
-        "workspaceContains:sfdx-project.json"
+        "workspaceContains:sfdx-project.json",
+        "onLanguage:apex"
     ],
     "main": "./out/extension.js",
     "contributes": {

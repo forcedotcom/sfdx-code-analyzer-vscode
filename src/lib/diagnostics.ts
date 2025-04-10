@@ -70,11 +70,14 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
         }
         const diagnostic: CodeAnalyzerDiagnostic = new CodeAnalyzerDiagnostic(violation);
 
-        // Some violation's have ranges that are too noisy, so for now we manually fix them here while we wait on:
-        // - https://github.com/pmd/pmd/issues/5511 for 'ApexSharingViolations'
-        // - https://github.com/pmd/pmd/issues/5614 for 'ApexDoc'
-        // - https://github.com/pmd/pmd/issues/5616 for 'ExcessiveParameterList'
-        if (['ApexDoc', 'ApexSharingViolations', 'ExcessiveParameterList'].includes(violation.rule)) {
+        // Some violations have ranges that are too noisy, so for now we manually fix them here while we wait on PMD to fix them:
+        const rulesToReduceViolationsToSingleLine: string[] = [
+            'ApexDoc',                                      // https://github.com/pmd/pmd/issues/5614
+            'ApexUnitTestMethodShouldHaveIsTestAnnotation', // https://github.com/pmd/pmd/issues/5669
+            'AvoidGlobalModifer',                           // https://github.com/pmd/pmd/issues/5668
+            'ApexSharingViolations',                        // https://github.com/pmd/pmd/issues/5511
+            'ExcessiveParameterList'];                      // https://github.com/pmd/pmd/issues/5616
+        if (rulesToReduceViolationsToSingleLine.includes(violation.rule)) {
             diagnostic.range = new vscode.Range(diagnostic.range.start.line, diagnostic.range.start.character,
                 diagnostic.range.start.line, Number.MAX_SAFE_INTEGER);
         }
