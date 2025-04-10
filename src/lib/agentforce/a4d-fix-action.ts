@@ -30,8 +30,7 @@ export class A4DFixAction {
     async run(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<void> {
         const startTime: number = Date.now();
         try {
-            if (this.unifiedDiffService.hasDiff(document)) {
-                this.display.displayWarning(messages.unifiedDiff.mustAcceptOrRejectDiffFirst);
+            if (!this.unifiedDiffService.verifyCanShowDiff(document)) {
                 return;
             }
 
@@ -41,9 +40,15 @@ export class A4DFixAction {
                 return;
             }
 
+            const originalCode: string = fixSuggestion.getOriginalCodeToBeFixed();
+            const fixedCode: string = fixSuggestion.getFixedCode();
+            if (originalCode === fixedCode) {
+                this.display.displayInfo(messages.agentforce.noFixSuggested);
+                return;
+            }
             this.logger.debug(`Agentforce Fix Diff:\n` +
-                `=== ORIGINAL CODE ===:\n${fixSuggestion.getOriginalCodeToBeFixed()}\n\n` +
-                `=== FIXED CODE ===:\n${fixSuggestion.getFixedCode()}`);
+                `=== ORIGINAL CODE ===:\n${originalCode}\n\n` +
+                `=== FIXED CODE ===:\n${fixedCode}`);
 
             await this.displayDiffFor(fixSuggestion);
 
@@ -52,7 +57,6 @@ export class A4DFixAction {
             }
         } catch (err) {
             this.handleError(err, Constants.TELEM_A4D_SUGGESTION_FAILED, Date.now() - startTime);
-            await this.unifiedDiffService.clearDiff(document);
             return;
         }
     }

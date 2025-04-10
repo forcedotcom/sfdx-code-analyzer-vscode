@@ -476,6 +476,31 @@ export class CodeGenieUnifiedDiffService implements vscode.CodeLensProvider, vsc
     }
 
     /**
+     * Returns the UnifiedDiff associated with document or undefined if there isn't one
+     * @param document
+     */
+    public getDiff(document: vscode.TextDocument): UnifiedDiff | undefined {
+        return this.unifiedDiffs.get(document.uri.toString());
+    }
+
+    /**
+     * Makes the UnifiedDiff in focus in the editor window
+     * @param document
+     */
+    public async focusOnDiff(diff: UnifiedDiff): Promise<void> {
+        if (!diff) {
+            return;
+        }
+        const hunk = diff.getHunks().find((hunk) => hunk.type !== DiffType.Unmodified);
+        if (hunk) {
+            const editor: vscode.TextEditor = await vscode.window.showTextDocument(diff.document);
+            const positionToFocus = new vscode.Position(hunk.unifiedLine, 0);
+            editor.selection = new vscode.Selection(positionToFocus, positionToFocus);
+            editor.revealRange(new vscode.Range(positionToFocus, positionToFocus), vscode.TextEditorRevealType.InCenter);
+        }
+    }
+
+    /**
      * Show the UnifiedDiff
      * @param diff UnifiedDiff
      */
@@ -568,7 +593,7 @@ export class CodeGenieUnifiedDiffService implements vscode.CodeLensProvider, vsc
             return;
         }
         await this.renderUnifiedDiff(diff);
-        vscode.window.showWarningMessage('Please accept/reject all changes before editing the file.');
+        vscode.window.showWarningMessage('You must accept or reject all changes before editing the file.');
     }
 
     protected async renderUnifiedDiff(diff: UnifiedDiff): Promise<void> {
@@ -580,17 +605,7 @@ export class CodeGenieUnifiedDiffService implements vscode.CodeLensProvider, vsc
         diff.renderDecorations();
         this.onDidChangeCodeLensesEmitter.fire();
 
-        const editor: vscode.TextEditor = getEditorForTextDocument(diff.document);
-        if (editor) {
-            if (diff.getHunks().length > 0) {
-                const hunk = diff.getHunks().find((hunk) => hunk.type !== DiffType.Unmodified);
-                if (hunk) {
-                    const range = new vscode.Range(hunk.unifiedLine, 0, hunk.unifiedLine, 0);
-                    editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-                }
-            }
-        }
-
+        await this.focusOnDiff(diff);
         await new Promise((resolve) => setTimeout(resolve, 10));
     }
 
