@@ -26,7 +26,7 @@ import {DfaRunner, verifyPluginInstallation} from "../../lib/dfa-runner";
 import {CodeAnalyzerRunAction} from "../../lib/code-analyzer-run-action";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "../../lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/progress";
-import {VSCodeDisplay} from "../../lib/display";
+import {Display, VSCodeDisplay} from "../../lib/display";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -223,8 +223,9 @@ suite('Extension Test Suite', () => {
             // TODO: I think we are finally at a place where we can stop using Sinon and instead use proper spies
             //       but leaving it to a later PR to transform this test to stop using VSCode* and Impl* classes
             //       and then we should be ready to move everything to be proper unit tests.
+            const display: Display = new VSCodeDisplay(new SpyLogger());
             const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new SettingsManagerImpl());
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new SettingsManagerImpl(), display);
             codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, new DiagnosticManagerImpl(diagnosticCollection),
                 stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()));
         });
