@@ -3,6 +3,7 @@ import {Violation} from '../diagnostics';
 import {exists} from '../file';
 import {messages} from '../messages';
 import * as cspawn from 'cross-spawn';
+import {SettingsManager} from "../settings";
 
 export type BaseV4Violation = {
     ruleName: string;
@@ -46,21 +47,13 @@ export type V4ExecutionResult = {
     message?: string;
 };
 
-
-export type CliScannerV4StrategyOptions = {
-    engines: string;
-    pmdCustomConfigFile?: string;
-    rulesCategory?: string;
-    normalizeSeverity: boolean;
-};
-
 export class CliScannerV4Strategy extends CliScannerStrategy {
-    private readonly options: CliScannerV4StrategyOptions;
+    private readonly settingsManager: SettingsManager;
     private readonly name: string = '@salesforce/sfdx-scanner@^4 via CLI';
 
-    public constructor(options: CliScannerV4StrategyOptions) {
+    public constructor(settingsManager: SettingsManager) {
         super();
-        this.options = options;
+        this.settingsManager = settingsManager;
     }
 
     public override getScannerName(): string {
@@ -85,31 +78,42 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
     }
 
     private async createArgArray(targets: string[]): Promise<string[]> {
-        if (this.options.engines.length === 0) {
+        const engines: string = this.settingsManager.getEnginesToRun();
+        const pmdCustomConfigFile: string | undefined = this.settingsManager.getPmdCustomConfigFile();
+        const rulesCategory: string | undefined = this.settingsManager.getRulesCategory();
+        const normalizeSeverity: boolean = this.settingsManager.getNormalizeSeverityEnabled();
+
+        if (engines.length === 0) {
             throw new Error('"Code Analyzer > Scanner: Engines" setting can\'t be empty. Go to your VS Code settings and specify at least one engine, and then try again.');
         }
 
         const args: string[] = [
             'scanner', 'run',
             '--target', `${targets.join(',')}`,
-            `--engine`, this.options.engines,
+            `--engine`, engines,
             `--json`
         ];
-        if (this.options.pmdCustomConfigFile?.length > 0) {
-            if (!(await exists(this.options.pmdCustomConfigFile))) {
-                throw new Error(messages.error.pmdConfigNotFoundGenerator(this.options.pmdCustomConfigFile));
+        if (pmdCustomConfigFile?.length > 0) {
+            if (!(await exists(pmdCustomConfigFile))) {
+                throw new Error(messages.error.pmdConfigNotFoundGenerator(pmdCustomConfigFile));
             }
-            args.push('--pmdconfig', this.options.pmdCustomConfigFile);
+            args.push('--pmdconfig', pmdCustomConfigFile);
         }
 
-        if (this.options.rulesCategory) {
-            args.push('--category', this.options.rulesCategory);
+        if (rulesCategory) {
+            args.push('--category', rulesCategory);
         }
 
-        if (this.options.normalizeSeverity) {
+        if (normalizeSeverity) {
             args.push('--normalize-severity');
         }
         return args;
+    }
+
+    public getRuleDescriptionFor(_engineName: string, _ruleName: string): Promise<string> {
+        // Currently the rule descriptions are nice-to-have to help provide additional context for A4D.
+        // So for users still using v4, we don't really need to fill this in. We want users to migrate to v5 anyway.
+        return Promise.resolve('');
     }
 
     private async invokeAnalyzer(args: string[]): Promise<V4ExecutionResult> {

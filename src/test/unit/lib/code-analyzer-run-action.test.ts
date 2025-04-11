@@ -1,32 +1,34 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 
-import {ScannerAction} from "../../../../lib/actions/scanner-action";
-import {SpyDisplay, SpyLogger, SpyTelemetryService, StubScannerStrategy} from "../../stubs";
-import {CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../../lib/diagnostics";
-import {FakeDiagnosticCollection} from "../../vscode-stubs";
+import {FakeTaskWithProgressRunner, SpyDisplay, SpyLogger, SpyTelemetryService, StubCodeAnalyzer} from "../stubs";
+import {CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
+import {FakeDiagnosticCollection} from "../vscode-stubs";
+import {CodeAnalyzerRunAction} from "../../../lib/code-analyzer-run-action";
 
-describe('Tests for ScannerAction', () => {
-    let scannerStrategy: StubScannerStrategy;
+describe('Tests for CodeAnalyzerRunAction', () => {
+    let taskWithProgressRunner: FakeTaskWithProgressRunner;
+    let codeAnalyzer: StubCodeAnalyzer;
     let diagnosticCollection: vscode.DiagnosticCollection;
     let diagnosticManager: DiagnosticManager;
     let telemetryService: SpyTelemetryService;
     let logger: SpyLogger;
     let display: SpyDisplay;
-    let scannerAction: ScannerAction;
+    let codeAnalyzerRunAction: CodeAnalyzerRunAction;
 
     beforeEach(() => {
-        scannerStrategy = new StubScannerStrategy();
+        taskWithProgressRunner = new FakeTaskWithProgressRunner();
+        codeAnalyzer = new StubCodeAnalyzer();
         diagnosticCollection = new FakeDiagnosticCollection();
         diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
         telemetryService = new SpyTelemetryService();
         logger = new SpyLogger();
         display = new SpyDisplay();
-        scannerAction = new ScannerAction('dummyCommandName', scannerStrategy, diagnosticManager, telemetryService,
-            logger, display);
+        codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager,
+            telemetryService, logger, display);
     });
 
     it('When scan results in violations that are not associated with a file location, then show violation as display messages', async () => {
-        scannerStrategy.scanReturnValue = [
+        codeAnalyzer.scanReturnValue = [
             createSampleViolation('A', 1, [{}]),
             createSampleViolation('B', 2, []),
             createSampleViolation('C', 2, [{file: 'someFile.cls'}]), // Is sufficient to make this into a diagnostic
@@ -35,7 +37,7 @@ describe('Tests for ScannerAction', () => {
             createSampleViolation('F', 5, [{}])
         ];
 
-        await scannerAction.runScanner(['someFile.cls']);
+        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.cls']);
 
         expect(display.displayErrorCallHistory).toEqual([
             {msg: '[engineA:ruleA] messageA'},

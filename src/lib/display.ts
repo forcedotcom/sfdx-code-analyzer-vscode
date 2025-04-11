@@ -1,18 +1,12 @@
 import vscode from "vscode";
 import {Logger} from "./logger";
 
-export type ProgressEvent = {
-    message?: string;
-    increment?: number;
-};
-
 export type DisplayButton = {
     text: string
     callback: ()=>void
 }
 
 export interface Display {
-    displayProgress(progressEvent: ProgressEvent): void;
     displayInfo(infoMsg: string): void;
     displayWarning(warnMsg: string, ...buttons: DisplayButton[]): void;
     displayError(errorMsg: string): void;
@@ -20,18 +14,9 @@ export interface Display {
 
 export class VSCodeDisplay implements Display {
     private readonly logger: Logger;
-    private readonly progressReporter: vscode.Progress<ProgressEvent> | undefined;
 
-    public constructor(logger: Logger, progressReporter?: vscode.Progress<ProgressEvent>) {
+    public constructor(logger: Logger) {
         this.logger = logger;
-        this.progressReporter = progressReporter;
-    }
-
-    public displayProgress(progressEvent: ProgressEvent): void {
-        if (this.progressReporter) {
-            this.progressReporter.report(progressEvent);
-        }
-        this.logger.trace(`[${progressEvent.increment}] ${progressEvent.message}`);
     }
 
     displayInfo(infoMsg: string): void {

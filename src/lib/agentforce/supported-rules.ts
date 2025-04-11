@@ -25,7 +25,8 @@ export type RuleInfo = {
  *
  * Note: Until we move to using the node api of Code Analyzer v5, we would either have to get the rule descriptions
  *       from the CLI, or from a hard coded map. For now, we just hard code them for the rules we support.
- *       // TODO: Replace with a more scalable solution
+ *       // TODO: Replace with a more scalable solution.
+ *       //       Specifically, we might be able to start using the CodeAnalyzer>getRuleDescriptionFor method instead.
  */
 export const A4D_SUPPORTED_RULES: Map<string, RuleInfo> = new Map([
 

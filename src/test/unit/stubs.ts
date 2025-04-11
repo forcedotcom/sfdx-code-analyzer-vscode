@@ -1,13 +1,14 @@
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Logger} from "../../lib/logger";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
-import {ScannerStrategy} from "../../lib/scanner-strategies/scanner-strategy";
 import {CodeAnalyzerDiagnostic, Violation} from "../../lib/diagnostics";
-import {Display, ProgressEvent} from "../../lib/display";
+import {Display} from "../../lib/display";
 import {UnifiedDiffService} from "../../lib/unified-diff-service";
 import {TextDocument} from "vscode";
 import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 import {SettingsManager} from "../../lib/settings";
+import {CodeAnalyzer} from "../../lib/code-analyzer";
+import {ProgressEvent, ProgressReporter, TaskWithProgress, TaskWithProgressRunner} from "../../lib/progress";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -63,12 +64,6 @@ export class SpyLogger implements Logger {
 }
 
 export class SpyDisplay implements Display {
-    displayProgressCallHistory: { progressEvent: ProgressEvent }[] = [];
-
-    displayProgress(progressEvent: ProgressEvent): void {
-        this.displayProgressCallHistory.push({progressEvent});
-    }
-
     displayInfoCallHistory: { msg: string }[] = [];
 
     displayInfo(msg: string): void {
@@ -133,7 +128,7 @@ export class ThrowingLLMServiceProvider implements LLMServiceProvider {
 
 }
 
-export class StubScannerStrategy implements ScannerStrategy {
+export class StubCodeAnalyzer implements CodeAnalyzer {
     validateEnvironment(): Promise<void> {
         return Promise.resolve(); // No-op
     }
@@ -149,6 +144,10 @@ export class StubScannerStrategy implements ScannerStrategy {
     getScannerName(): string {
         return this.getScannerNameReturnValue;
     }
+
+    getRuleDescriptionFor(_engineName: string, _ruleName: string): Promise<string> {
+        return Promise.resolve('');
+    }
 }
 
 export class SpyUnifiedDiffService implements UnifiedDiffService {
@@ -162,6 +161,7 @@ export class SpyUnifiedDiffService implements UnifiedDiffService {
 
     verifyCanShowDiffReturnValue: boolean = true;
     verifyCanShowDiffCallHistory: { document: TextDocument }[] = [];
+
     verifyCanShowDiff(document: TextDocument): boolean {
         this.verifyCanShowDiffCallHistory.push({document});
         return this.verifyCanShowDiffReturnValue;
@@ -173,6 +173,7 @@ export class SpyUnifiedDiffService implements UnifiedDiffService {
         acceptCallback: () => Promise<void>,
         rejectCallback: () => Promise<void>
     }[] = [];
+
     showDiff(document: TextDocument, newCode: string, acceptCallback: () => Promise<void>, rejectCallback: () => Promise<void>): Promise<void> {
         this.showDiffCallHistory.push({document, newCode, acceptCallback, rejectCallback});
         return Promise.resolve();
@@ -200,7 +201,8 @@ export class ThrowingUnifiedDiffService implements UnifiedDiffService {
 
 export class SpyFixSuggester implements FixSuggester {
     suggestFixReturnValue: FixSuggestion | null = null;
-    suggestFixCallHistory: {document: TextDocument, diagnostic: CodeAnalyzerDiagnostic}[] = [];
+    suggestFixCallHistory: { document: TextDocument, diagnostic: CodeAnalyzerDiagnostic }[] = [];
+
     suggestFix(document: TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
         this.suggestFixCallHistory.push({document, diagnostic});
         return Promise.resolve(this.suggestFixReturnValue);
@@ -220,21 +222,25 @@ export class StubSettingsManager implements SettingsManager {
     // ==== General Settings
     // =================================================================================================================
     getAnalyzeOnOpenReturnValue: boolean = false;
+
     getAnalyzeOnOpen(): boolean {
         return this.getAnalyzeOnOpenReturnValue;
     }
 
     getAnalyzeOnSaveReturnValue: boolean = false;
+
     getAnalyzeOnSave(): boolean {
         return this.getAnalyzeOnSaveReturnValue;
     }
 
     getApexGuruEnabledReturnValue: boolean = false;
+
     getApexGuruEnabled(): boolean {
         return this.getApexGuruEnabledReturnValue;
     }
 
     getCodeAnalyzerUseV4DeprecatedReturnValue: boolean = false;
+
     getCodeAnalyzerUseV4Deprecated(): boolean {
         return this.getCodeAnalyzerUseV4DeprecatedReturnValue;
     }
@@ -247,11 +253,13 @@ export class StubSettingsManager implements SettingsManager {
     // ==== v5 Settings
     // =================================================================================================================
     getCodeAnalyzerConfigFileReturnValue: string = '';
+
     getCodeAnalyzerConfigFile(): string {
         return this.getCodeAnalyzerConfigFileReturnValue;
     }
 
     getCodeAnalyzerRuleSelectorsReturnValue: string = 'Recommended';
+
     getCodeAnalyzerRuleSelectors(): string {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
@@ -262,27 +270,35 @@ export class StubSettingsManager implements SettingsManager {
     getPmdCustomConfigFile(): string {
         throw new Error("Method not implemented.");
     }
+
     getGraphEngineDisableWarningViolations(): boolean {
         throw new Error("Method not implemented.");
     }
+
     getGraphEngineThreadTimeout(): number {
         throw new Error("Method not implemented.");
     }
+
     getGraphEnginePathExpansionLimit(): number {
         throw new Error("Method not implemented.");
     }
+
     getGraphEngineJvmArgs(): string {
         throw new Error("Method not implemented.");
     }
+
     getEnginesToRun(): string {
         throw new Error("Method not implemented.");
     }
+
     getNormalizeSeverityEnabled(): boolean {
         throw new Error("Method not implemented.");
     }
+
     getRulesCategory(): string {
         throw new Error("Method not implemented.");
     }
+
     getSfgePartialSfgeRunsEnabled(): boolean {
         throw new Error("Method not implemented.");
     }
@@ -291,8 +307,24 @@ export class StubSettingsManager implements SettingsManager {
     // ==== Other Settings that we may depend on
     // =================================================================================================================
     getEditorCodeLensEnabledReturnValue: boolean = true;
+
     getEditorCodeLensEnabled(): boolean {
         return this.getEditorCodeLensEnabledReturnValue;
     }
+}
 
+
+export class SpyProgressReporter implements ProgressReporter {
+    reportProgressCallHistory: {progressEvent: ProgressEvent}[] = [];
+    reportProgress(progressEvent: ProgressEvent): void {
+        this.reportProgressCallHistory.push({progressEvent});
+    }
+}
+
+export class FakeTaskWithProgressRunner implements TaskWithProgressRunner {
+    progressReporter: SpyProgressReporter = new SpyProgressReporter();
+
+    runTask(task: TaskWithProgress): Promise<void> {
+        return task(this.progressReporter);
+    }
 }

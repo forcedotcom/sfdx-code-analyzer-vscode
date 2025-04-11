@@ -1,31 +1,41 @@
 import {CliScannerStrategy} from './scanner-strategy';
 import {Violation} from '../diagnostics';
 import {messages} from '../messages';
-import * as cspawn from 'cross-spawn';
 import {tmpFileWithCleanup} from '../file';
-import {stripAnsi} from '../string-utils';
-import {CODE_ANALYZER_V5_ALPHA_TEMPLATE, CODE_ANALYZER_V5_TEMPLATE} from '../constants';
+import {
+    ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
+    RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
+} from '../constants';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-
-export type CliScannerV5StrategyOptions = {
-    ruleSelector: string;
-    configFile: string;
-};
+import {CommandOutput, execCommand} from "../command-executor";
+import * as semver from 'semver';
+import {getErrorMessageWithStack} from "../utils";
+import {SettingsManager} from "../settings";
 
 type ResultsJson = {
     runDir: string;
     violations: Violation[];
 };
 
-export class CliScannerV5Strategy extends CliScannerStrategy {
-    private readonly options: CliScannerV5StrategyOptions;
-    private readonly name: string = '@salesforce/plugin-code-analyzer@^5 via CLI';
-    private codeAnalyzerIsInstalled?: boolean;
+type RuleDescription = {
+    name: string,
+    description: string,
+    engine: string,
+    severity: number,
+    tags: string[],
+    resources: string[]
+}
 
-    public constructor(options: CliScannerV5StrategyOptions) {
+export class CliScannerV5Strategy extends CliScannerStrategy {
+    private readonly name: string = '@salesforce/plugin-code-analyzer@^5 via CLI';
+    private readonly settingsManager: SettingsManager;
+    private installedCodeAnalyzerVersion?: semver.SemVer;
+    private ruleDescriptionMap?: Map<string, string>;
+
+    public constructor(settingsManager: SettingsManager) {
         super();
-        this.options = options;
+        this.settingsManager = settingsManager;
     }
 
     public override getScannerName(): string {
@@ -33,29 +43,32 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
     }
 
     protected override async validatePlugin(): Promise<void> {
-        // TODO: In the future, we might remove this validation step since code-analyzer is a JIT plugin. But we'll
-        //       leave it for a few releases while code-analyzer v5 stabilizes.
-        if (this.codeAnalyzerIsInstalled) {
-            return; // We do not continue to validate if we have passed validation at least once.
+        const absoluteMinVersion: semver.SemVer = new semver.SemVer(ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
+        const recommendedMinVersion: semver.SemVer = new semver.SemVer(RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
+
+        if (!this.installedCodeAnalyzerVersion) {
+            this.installedCodeAnalyzerVersion = await getCodeAnalyzerCliVersion();
         }
-        this.codeAnalyzerIsInstalled = await new Promise((res) => {
-            const cp = cspawn.spawn('sf', ['plugins']);
-            let stdout = '';
 
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', code => {
-                const output: string = stripAnsi(stdout);
-                // @salesforce/plugin-code-analyzer is a JIT plugin, but the output format was not stabilized in the
-                // alpha release, so we need to make sure that the isn't using an alpha release.
-                return res(code === 0 && output.includes(CODE_ANALYZER_V5_TEMPLATE) && !output.includes(CODE_ANALYZER_V5_ALPHA_TEMPLATE));
-            });
-        });
-        if (!this.codeAnalyzerIsInstalled) {
+        if (!this.installedCodeAnalyzerVersion) {
             throw new Error(messages.error.codeAnalyzerMissing);
+        } else if (semver.lt(this.installedCodeAnalyzerVersion, absoluteMinVersion)) {
+            throw new Error(
+                messages.error.codeAnalyzerDoesNotMeetMinVersion(
+                    this.installedCodeAnalyzerVersion.toString(),
+                    absoluteMinVersion.toString()
+                ) + '\n' + messages.error.codeAnalyzerMissing);
+        } else if (semver.lt(this.installedCodeAnalyzerVersion, recommendedMinVersion)) {
+            // TODO: Need to somehow throw warning
         }
+    }
+
+    public async getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string> {
+        if (this.ruleDescriptionMap === undefined) {
+            await this.validatePlugin();
+            await this.initRuleDescriptionMap();
+        }
+        return this.ruleDescriptionMap.get(`${engineName}:${ruleName}`) || '';
     }
 
     public override async scan(filesToScan: string[]): Promise<Violation[]> {
@@ -65,41 +78,30 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
     }
 
     private async invokeAnalyzer(targets: string[]): Promise<ResultsJson> {
+        const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
+        const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
+
         let args: string[] = [
             'code-analyzer', 'run',
             '-w', `"${targets.join('","')}"`,
         ];
-        if (this.options.ruleSelector) {
-            args = [...args, '-r', this.options.ruleSelector];
+        if (ruleSelector) {
+            args = [...args, '-r', ruleSelector];
         }
-        if (this.options.configFile) {
-            args = [...args, '-c', this.options.configFile];
+        if (configFile) {
+            args = [...args, '-c', configFile];
         }
 
         const outputFile: string = await tmpFileWithCleanup('.json');
-
         args.push('-f', outputFile);
 
-        await new Promise<void>((res, rej) => {
-            const cp = cspawn.spawn('sf', args);
-            let stderr = '';
+        const commandOutput: CommandOutput = await execCommand('sf', args);
+        if (commandOutput.exitCode !== 0) {
+            throw new Error(commandOutput.stderr);
+        }
 
-            cp.stderr.on('data', data => {
-                stderr += data;
-            });
-
-            cp.on('exit', status => {
-                if (status === 0) {
-                    res();
-                } else {
-                    rej(new Error(stderr));
-                }
-            });
-        });
-
-        const outputString: string = await fs.promises.readFile(outputFile, 'utf-8');
-
-        return JSON.parse(outputString) as ResultsJson;
+        const resultsJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+        return JSON.parse(resultsJsonStr) as ResultsJson;
     }
 
     private processResults(resultsJson: ResultsJson): Violation[] {
@@ -117,4 +119,39 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
         }
         return processedViolations;
     }
+
+    private async initRuleDescriptionMap(): Promise<void> {
+        const outputFile: string = await tmpFileWithCleanup('.json');
+
+        const commandOutput: CommandOutput = await execCommand('sf', ['code-analyzer', 'rules', '-r', 'all', '-f', outputFile]);
+        if (commandOutput.exitCode !== 0) {
+            throw new Error(commandOutput.stderr);
+        }
+        const rulesJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+        const ruleDescriptions: RuleDescription[] = JSON.parse(rulesJsonStr) as RuleDescription[];
+
+        this.ruleDescriptionMap = new Map();
+        for (const ruleDescription of ruleDescriptions) {
+            this.ruleDescriptionMap.set(`${ruleDescription.engine}:${ruleDescription.name}`, ruleDescription.description);
+        }
+    }
+}
+
+
+
+async function getCodeAnalyzerCliVersion(): Promise<semver.SemVer | undefined> {
+    const args: string[] = ['plugins', 'inspect', '@salesforce/plugin-code-analyzer', '--json'];
+    const commandOutput: CommandOutput = await execCommand('sf', args);
+    if (commandOutput.exitCode === 0) {
+        try {
+            const pluginMetadata: {version: string}[] = JSON.parse(commandOutput.stdout) as {version: string}[];
+            if (Array.isArray(pluginMetadata) && pluginMetadata.length === 1 && pluginMetadata[0].version) {
+                return new semver.SemVer(pluginMetadata[0].version);
+            }
+        } catch (err) {
+            throw new Error(`Error thrown when processing the output: sf ${args.join(' ')}\n\n` +
+                `==Error==\n${getErrorMessageWithStack(err)}\n\n==StdOut==\n${commandOutput.stdout}`);
+        }
+    }
+    return undefined;
 }

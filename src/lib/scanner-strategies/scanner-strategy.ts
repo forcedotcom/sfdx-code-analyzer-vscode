@@ -1,18 +1,13 @@
 import {Violation} from '../diagnostics';
 import {SfCli} from '../sf-cli';
 import {messages} from '../messages';
+import {CodeAnalyzer} from "../code-analyzer";
 
 
-export interface ScannerStrategy {
-    validateEnvironment(): Promise<void>;
+// TODO: Eventually (probably once we remove v4 officially) then we can rename and move the strategy classes to be
+// directly inside of code-analyzer.ts
 
-    scan(filesToScan: string[]): Promise<Violation[]>;
-
-    getScannerName(): string;
-}
-
-
-export abstract class CliScannerStrategy implements ScannerStrategy {
+export abstract class CliScannerStrategy implements CodeAnalyzer {
     private isValidEnvironment?: boolean;
 
     public async validateEnvironment(): Promise<void> {
@@ -31,4 +26,6 @@ export abstract class CliScannerStrategy implements ScannerStrategy {
     public abstract scan(filesToScan: string[]): Promise<Violation[]>;
 
     public abstract getScannerName(): string;
+
+    public abstract getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string>;
 }

@@ -9,18 +9,10 @@ export const messages = {
     staleDiagnosticPrefix: "(STALE: The code has changed. Re-run the scan.)",
     stoppingV4SupportSoon: "We no longer support Code Analyzer v4 and will soon remove it from this VS Code extension. We highly recommend that you start using v5 by unselecting the 'Code Analyzer: Use v4 (Deprecated)' setting. For information on v5, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
     scanProgressReport: {
-        identifyingTargets: {
-            message: "Code Analyzer is identifying targets.",
-            increment: 10
-        },
-        analyzingTargets: {
-            message: "Code Analyzer is analyzing targets.",
-            increment: 20
-        },
-        processingResults: {
-            message: "Code Analyzer is processing results.",
-            increment: 60
-        }
+        verifyingCodeAnalyzerIsInstalled: "Verifying Code Analyzer CLI plugin is installed.",
+        identifyingTargets: "Code Analyzer is identifying targets.",
+        analyzingTargets: "Code Analyzer is analyzing targets.",
+        processingResults: "Code Analyzer is processing results."
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
@@ -80,7 +72,8 @@ export const messages = {
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use this extension, first install Salesforce CLI.",
         sfdxScannerMissing: "To use the 'Code Analyzer: Use v4 (Deprecated)' setting, you must first install the `@salesforce/sfdx-scanner` Salesforce CLI plugin. But we no longer support v4, so we recommend that you use v5 instead and unselect the 'Code Analyzer: Use v4 (Deprecated)' setting.",
-        codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
+        codeAnalyzerDoesNotMeetMinVersion: (currentVer: string, minVer: string) => `The currently installed version '${currentVer}' of the \`code-analyzer\` Salesforce CLI plugin does not meet the minimum version of '${minVer}'.`,
+        codeAnalyzerMissing: "To use this extension, first install the latest `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     },
     buttons: {
