@@ -21,12 +21,14 @@ import {ExternalServiceProvider} from "./lib/external-services/external-service-
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {DfaRunner} from "./lib/dfa-runner";
-import {CodeAnalyzerRunner} from "./lib/code-analyzer-runner";
+import {CodeAnalyzerRunAction} from "./lib/code-analyzer-run-action";
 import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-action-provider";
 import {ScanManager} from './lib/scan-manager';
 import {A4DFixAction} from './lib/agentforce/a4d-fix-action';
 import {UnifiedDiffService, UnifiedDiffServiceImpl} from "./lib/unified-diff-service";
 import {VSCodeDisplay} from "./lib/display";
+import {CodeAnalyzer, CodeAnalyzerImpl} from "./lib/code-analyzer";
+import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -68,6 +70,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     outputChannel.clear();
     const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
     const logger: Logger = new LoggerImpl(outputChannel);
+    const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
@@ -76,10 +79,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
-    const codeAnalyzerRunner: CodeAnalyzerRunner = new CodeAnalyzerRunner(diagnosticManager, settingsManager, telemetryService, logger);
     const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
     context.subscriptions.push(scanManager);
-    const display: VSCodeDisplay = new VSCodeDisplay(logger);
+
+    const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
+
+    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(settingsManager);
+    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display);
 
     // We need to do this first in case any other services need access to those provided by the core extension.
     // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
@@ -107,7 +113,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             vscode.window.showWarningMessage(messages.noActiveEditor);
             return;
         }
-        return codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+        return codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
     });
 
     // "Analyze On Open" and "Analyze on Save" functionality:
@@ -120,7 +126,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
-            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [editor.document.fileName]);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [editor.document.fileName]);
         }
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
@@ -135,7 +141,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
         if (settingsManager.getAnalyzeOnSave()) {
             scanManager.addFileToAlreadyScannedFiles(document.fileName);
-            await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
         }
     });
 
@@ -150,7 +156,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             vscode.window.showWarningMessage(messages.targeting.error.noFileSelected);
             return;
         }
-        await codeAnalyzerRunner.runAndDisplay(Constants.COMMAND_RUN_ON_SELECTED, selectedFiles);
+        await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_SELECTED, selectedFiles);
     });
 
 

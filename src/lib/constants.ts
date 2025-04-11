@@ -39,8 +39,8 @@ export const TELEM_A4D_REJECT = 'sfdx__eGPT_clear';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
-export const CODE_ANALYZER_V5_TEMPLATE = 'code-analyzer 5.';
-export const CODE_ANALYZER_V5_ALPHA_TEMPLATE = 'code-analyzer 5.0.0-alpha';
+export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0';
+export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
 
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';

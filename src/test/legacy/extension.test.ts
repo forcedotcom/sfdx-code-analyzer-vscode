@@ -21,9 +21,12 @@ import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
 import * as vscode from 'vscode';
 import {DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
-import {SpyLogger, StubDiagnosticManager, StubTelemetryService} from "./test-utils";
+import {SpyLogger, StubTelemetryService} from "./test-utils";
 import {DfaRunner, verifyPluginInstallation} from "../../lib/dfa-runner";
-import {CodeAnalyzerRunner} from "../../lib/code-analyzer-runner";
+import {CodeAnalyzerRunAction} from "../../lib/code-analyzer-run-action";
+import {CodeAnalyzer, CodeAnalyzerImpl} from "../../lib/code-analyzer";
+import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/progress";
+import {VSCodeDisplay} from "../../lib/display";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -81,9 +84,7 @@ suite('Extension Test Suite', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that we added diagnostics.
-                const diagnosticArrays = vscode.languages.getDiagnostics();
-                const [uri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === fileUri.toString());
-                expect(uri, `Expected diagnostics for ${fileUri.toString()}`).to.exist;
+                const diagnostics: vscode.Diagnostic[] = vscode.languages.getDiagnostics(fileUri);
                 expect(diagnostics, 'Expected non-empty diagnostic array').to.not.be.empty;
 
                 // At present, we expect only violations for PMD's `ApexDoc` rule.
@@ -127,9 +128,7 @@ suite('Extension Test Suite', () => {
 
                     // ===== ASSERTIONS =====
                     // Verify that we added diagnostics.
-                    const diagnosticArrays = vscode.languages.getDiagnostics();
-                    const [resultsUri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri.toString());
-                    expect(resultsUri, `Expected diagnostics for ${targetUri.toString()}`).to.exist;
+                    const diagnostics: vscode.Diagnostic[] = vscode.languages.getDiagnostics(targetUri);
                     expect(diagnostics, `Expected non-empty diagnostics for ${targetUri.toString()}`).to.not.be.empty;
                     // At present, we expect only violations for PMD's `ApexDoc` rule.
                     for (const diagnostic of diagnostics) {
@@ -181,11 +180,8 @@ suite('Extension Test Suite', () => {
 
                     // ===== ASSERTIONS =====
                     // Verify that we added diagnostics.
-                    const diagnosticArrays = vscode.languages.getDiagnostics();
-                    const [resultsUri1, diagnostics1] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri1.toString());
-                    const [resultsUri2, diagnostics2] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri2.toString());
-                    expect(resultsUri1, `Expected diagnostics for ${targetUri1.toString()}`).to.exist;
-                    expect(resultsUri2, `Expected diagnostics for ${targetUri2.toString()}`).to.exist;
+                    const diagnostics1: vscode.Diagnostic[] = vscode.languages.getDiagnostics(targetUri1);
+                    const diagnostics2: vscode.Diagnostic[] = vscode.languages.getDiagnostics(targetUri2);
                     expect(diagnostics1, `Expected non-empty diagnostics for ${targetUri1.toString()}`).to.not.be.empty;
                     expect(diagnostics2, `Expected non-empty diagnostics for ${targetUri2.toString()}`).to.not.be.empty;
                     // At present, we expect only violations for PMD's `ApexDoc` rule.
@@ -215,15 +211,22 @@ suite('Extension Test Suite', () => {
     suite('#_runAndDisplay()', () => {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let stubTelemetryService: StubTelemetryService;
-        let codeAnalyzerRunner: CodeAnalyzerRunner;
+        let codeAnalyzerRunAction: CodeAnalyzerRunAction;
 
         suiteSetup(async function () {
             // Activate the extension.
             await ext.activate();
 
+            const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection();
+
             stubTelemetryService = new StubTelemetryService();
-            codeAnalyzerRunner = new CodeAnalyzerRunner(new StubDiagnosticManager(), new SettingsManagerImpl(),
-                stubTelemetryService, new SpyLogger());
+            // TODO: I think we are finally at a place where we can stop using Sinon and instead use proper spies
+            //       but leaving it to a later PR to transform this test to stop using VSCode* and Impl* classes
+            //       and then we should be ready to move everything to be proper unit tests.
+            const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new SettingsManagerImpl());
+            codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, new DiagnosticManagerImpl(diagnosticCollection),
+                stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()));
         });
 
         suite('Error handling', () => {
@@ -243,7 +246,7 @@ suite('Extension Test Suite', () => {
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
                 // The arguments do not matter.
-                await codeAnalyzerRunner.runAndDisplay(fakeTelemetryName, []);
+                await codeAnalyzerRunAction.run(fakeTelemetryName, []);
 
 
                 // ===== ASSERTIONS =====

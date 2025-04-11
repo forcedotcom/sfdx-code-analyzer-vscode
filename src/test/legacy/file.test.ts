@@ -19,7 +19,7 @@ suite('file.ts', () => {
          expect(await exists(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.equal(true);
         });
 
-        test('Returns true when file exists.', async () => {
+        test('Returns false when file does not exists.', async () => {
             expect(await exists(path.join(codeFixturesPath, 'folder-a', 'UnknownFile.cls'))).to.equal(false);
         });
     });
