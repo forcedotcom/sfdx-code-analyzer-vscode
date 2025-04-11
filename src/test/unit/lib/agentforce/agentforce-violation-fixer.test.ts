@@ -2,7 +2,8 @@ import * as vscode from "vscode"; // The vscode module is mocked out. See: scrip
 import {
     SpyLLMService,
     SpyLogger,
-    StubLLMServiceProvider,
+    StubCodeAnalyzer,
+    StubLLMServiceProvider, ThrowingCodeAnalyzer,
     ThrowingLLMService,
     ThrowingLLMServiceProvider
 } from "../../stubs";
@@ -15,14 +16,16 @@ import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
 describe('AgentforceViolationFixer Tests', () => {
     let spyLLMService: SpyLLMService;
     let llmServiceProvider: StubLLMServiceProvider;
+    let codeAnalyzer: StubCodeAnalyzer;
     let spyLogger: SpyLogger;
     let violationFixer: AgentforceViolationFixer;
 
     beforeEach(() => {
         spyLLMService = new SpyLLMService();
         llmServiceProvider = new StubLLMServiceProvider(spyLLMService);
+        codeAnalyzer = new StubCodeAnalyzer();
         spyLogger = new SpyLogger();
-        violationFixer = new AgentforceViolationFixer(llmServiceProvider, spyLogger);
+        violationFixer = new AgentforceViolationFixer(llmServiceProvider, codeAnalyzer, spyLogger);
     });
 
     describe('suggestFix Tests', () => {
@@ -93,14 +96,14 @@ describe('AgentforceViolationFixer Tests', () => {
         });
 
         it('When LLMServiceProvider throws an exception, then throw exception', async () => {
-            violationFixer = new AgentforceViolationFixer(new ThrowingLLMServiceProvider(), spyLogger);
+            violationFixer = new AgentforceViolationFixer(new ThrowingLLMServiceProvider(), codeAnalyzer, spyLogger);
             await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
                 'Error from getLLMService');
         });
 
         it('When LLMService throws an exception, then throw exception', async () => {
             llmServiceProvider = new StubLLMServiceProvider(new ThrowingLLMService());
-            violationFixer = new AgentforceViolationFixer(llmServiceProvider, spyLogger);
+            violationFixer = new AgentforceViolationFixer(llmServiceProvider, codeAnalyzer, spyLogger);
             await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
                 'Error from callLLM');
         });
@@ -111,5 +114,18 @@ describe('AgentforceViolationFixer Tests', () => {
             await expect(violationFixer.suggestFix(sampleDocument, diagWithUnsupportedRule)).rejects.toThrow(
                 'Unsupported rule: SomeRandomRule');
         });
+
+        it('When codeAnalyzer returns description, then it is forwarded to the LLMService', async () => {
+            codeAnalyzer.getRuleDescriptionForReturnValue = 'some rule description';
+            await violationFixer.suggestFix(sampleDocument, sampleDiagnostic);
+            expect(spyLLMService.callLLMCallHistory).toHaveLength(1);
+            expect(spyLLMService.callLLMCallHistory[0].prompt).toContain('"ruleDescription": "some rule description"');
+        });
+
+        it('When codeAnalyzer throws error during call to getRuleDescription, then throw exception', async () => {
+            violationFixer = new AgentforceViolationFixer(llmServiceProvider, new ThrowingCodeAnalyzer(), spyLogger);
+            await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
+                'Error from getRuleDescriptionFor.');
+        })
     });
 });

@@ -49,7 +49,6 @@ export type V4ExecutionResult = {
 
 export class CliScannerV4Strategy extends CliScannerStrategy {
     private readonly settingsManager: SettingsManager;
-    private readonly name: string = '@salesforce/sfdx-scanner@^4 via CLI';
 
     public constructor(settingsManager: SettingsManager) {
         super();
@@ -57,7 +56,7 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
     }
 
     public override getScannerName(): string {
-        return this.name;
+        return '@salesforce/sfdx-scanner@^4 via CLI';
     }
 
     protected override validatePlugin(): Promise<void> {

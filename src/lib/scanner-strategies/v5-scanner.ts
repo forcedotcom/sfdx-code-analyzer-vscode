@@ -12,11 +12,16 @@ import {CommandOutput, execCommand} from "../command-executor";
 import * as semver from 'semver';
 import {getErrorMessageWithStack} from "../utils";
 import {SettingsManager} from "../settings";
+import {Display} from "../display";
 
 type ResultsJson = {
     runDir: string;
     violations: Violation[];
 };
+
+type RulesJson = {
+    rules: RuleDescription[];
+}
 
 type RuleDescription = {
     name: string,
@@ -28,52 +33,57 @@ type RuleDescription = {
 }
 
 export class CliScannerV5Strategy extends CliScannerStrategy {
-    private readonly name: string = '@salesforce/plugin-code-analyzer@^5 via CLI';
     private readonly settingsManager: SettingsManager;
-    private installedCodeAnalyzerVersion?: semver.SemVer;
+    private readonly display: Display;
+
+    private installedCliVersion?: semver.SemVer;
     private ruleDescriptionMap?: Map<string, string>;
 
-    public constructor(settingsManager: SettingsManager) {
+    public constructor(settingsManager: SettingsManager, display: Display) {
         super();
         this.settingsManager = settingsManager;
+        this.display = display;
     }
 
     public override getScannerName(): string {
-        return this.name;
+        return '@salesforce/plugin-code-analyzer@^5 via CLI';
     }
 
     protected override async validatePlugin(): Promise<void> {
-        const absoluteMinVersion: semver.SemVer = new semver.SemVer(ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
+        const absMinVersion: semver.SemVer = new semver.SemVer(ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
         const recommendedMinVersion: semver.SemVer = new semver.SemVer(RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
 
-        if (!this.installedCodeAnalyzerVersion) {
-            this.installedCodeAnalyzerVersion = await getCodeAnalyzerCliVersion();
-        }
-
-        if (!this.installedCodeAnalyzerVersion) {
-            throw new Error(messages.error.codeAnalyzerMissing);
-        } else if (semver.lt(this.installedCodeAnalyzerVersion, absoluteMinVersion)) {
-            throw new Error(
-                messages.error.codeAnalyzerDoesNotMeetMinVersion(
-                    this.installedCodeAnalyzerVersion.toString(),
-                    absoluteMinVersion.toString()
-                ) + '\n' + messages.error.codeAnalyzerMissing);
-        } else if (semver.lt(this.installedCodeAnalyzerVersion, recommendedMinVersion)) {
-            // TODO: Need to somehow throw warning
+        const installedCliVersion: semver.SemVer | undefined = await this.getInstalledCliVersion();
+        if (!installedCliVersion) {
+            throw new Error(messages.codeAnalyzer.codeAnalyzerMissing + '\n'
+                + messages.codeAnalyzer.installLatestVersion);
+        } else if (semver.lt(installedCliVersion, absMinVersion)) {
+            throw new Error(messages.codeAnalyzer.doesNotMeetMinVersion(installedCliVersion.toString(), recommendedMinVersion.toString()) + '\n'
+                + messages.codeAnalyzer.installLatestVersion);
+        } else if (semver.lt(installedCliVersion, recommendedMinVersion)) {
+            this.display.displayWarning(messages.codeAnalyzer.usingOlderVersion(installedCliVersion.toString(), recommendedMinVersion.toString()) + '\n'
+                + messages.codeAnalyzer.installLatestVersion);
         }
     }
 
     public async getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string> {
+        return (await this.getRuleDescriptionMap()).get(`${engineName}:${ruleName}`) || '';
+    }
+
+    private async getRuleDescriptionMap(): Promise<Map<string, string>> {
         if (this.ruleDescriptionMap === undefined) {
-            await this.validatePlugin();
-            await this.initRuleDescriptionMap();
+            const installedCliVersion: semver.SemVer | undefined = await this.getInstalledCliVersion();
+            if (installedCliVersion && semver.gte(installedCliVersion, '5.0.0-beta.3')) {
+                this.ruleDescriptionMap = await createRuleDescriptionMap();
+            } else {
+                this.ruleDescriptionMap = new Map();
+            }
         }
-        return this.ruleDescriptionMap.get(`${engineName}:${ruleName}`) || '';
+        return this.ruleDescriptionMap;
     }
 
     public override async scan(filesToScan: string[]): Promise<Violation[]> {
         const resultsJson: ResultsJson = await this.invokeAnalyzer(filesToScan);
-
         return this.processResults(resultsJson);
     }
 
@@ -120,26 +130,31 @@ export class CliScannerV5Strategy extends CliScannerStrategy {
         return processedViolations;
     }
 
-    private async initRuleDescriptionMap(): Promise<void> {
-        const outputFile: string = await tmpFileWithCleanup('.json');
-
-        const commandOutput: CommandOutput = await execCommand('sf', ['code-analyzer', 'rules', '-r', 'all', '-f', outputFile]);
-        if (commandOutput.exitCode !== 0) {
-            throw new Error(commandOutput.stderr);
+    private async getInstalledCliVersion(): Promise<semver.SemVer | undefined> {
+        if (!this.installedCliVersion) {
+            this.installedCliVersion = await fetchInstalledCliVersion();
         }
-        const rulesJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
-        const ruleDescriptions: RuleDescription[] = JSON.parse(rulesJsonStr) as RuleDescription[];
-
-        this.ruleDescriptionMap = new Map();
-        for (const ruleDescription of ruleDescriptions) {
-            this.ruleDescriptionMap.set(`${ruleDescription.engine}:${ruleDescription.name}`, ruleDescription.description);
-        }
+        return this.installedCliVersion;
     }
 }
 
+async function createRuleDescriptionMap(): Promise<Map<string, string>> {
+    const outputFile: string = await tmpFileWithCleanup('.json');
+    const commandOutput: CommandOutput = await execCommand('sf', ['code-analyzer', 'rules', '-r', 'all', '-f', outputFile]);
+    if (commandOutput.exitCode !== 0) {
+        throw new Error(commandOutput.stderr);
+    }
+    const rulesJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+    const rulesOutput: RulesJson = JSON.parse(rulesJsonStr) as RulesJson;
 
+    const ruleDescriptionMap: Map<string, string> = new Map();
+    for (const ruleDescription of rulesOutput.rules) {
+        ruleDescriptionMap.set(`${ruleDescription.engine}:${ruleDescription.name}`, ruleDescription.description);
+    }
+    return ruleDescriptionMap;
+}
 
-async function getCodeAnalyzerCliVersion(): Promise<semver.SemVer | undefined> {
+async function fetchInstalledCliVersion(): Promise<semver.SemVer | undefined> {
     const args: string[] = ['plugins', 'inspect', '@salesforce/plugin-code-analyzer', '--json'];
     const commandOutput: CommandOutput = await execCommand('sf', args);
     if (commandOutput.exitCode === 0) {

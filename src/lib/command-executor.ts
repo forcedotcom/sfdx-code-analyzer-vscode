@@ -1,6 +1,4 @@
 import cp from "node:child_process";
-import * as cspawn from 'cross-spawn';
-
 
 export type CommandOutput = {
     stdout: string
@@ -16,9 +14,11 @@ export async function execCommand(command: string, args: string[]): Promise<Comm
             exitCode: 0
         };
 
-        // TODO: see why we can't just use cp.swap instead of cross-spawn
-        const childProcess: cp.ChildProcessWithoutNullStreams  = cspawn.spawn(command, args);
-        
+        const childProcess: cp.ChildProcessWithoutNullStreams  = cp.spawn(command, args,
+            {
+                shell: process.platform.startsWith('win'), // Use shell on Windows machines
+            });
+
         childProcess.stdout.on('data', data => {
             output.stdout += data;
         });

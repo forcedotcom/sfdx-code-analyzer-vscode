@@ -84,7 +84,7 @@ export class SpyDisplay implements Display {
 }
 
 export class SpyLLMService implements LLMService {
-    callLLMReturnValue: string = 'dummyReturnValue';
+    callLLMReturnValue: string = '{"fixedCode": "some code fix"}';
     callLLMCallHistory: { prompt: string, guidedJsonSchema?: string }[] = []
 
     callLLM(prompt: string, guidedJsonSchema?: string): Promise<string> {
@@ -134,19 +134,36 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
     }
 
     scanReturnValue: Violation[] = [];
-
     scan(_filesToScan: string[]): Promise<Violation[]> {
         return Promise.resolve(this.scanReturnValue);
     }
 
     getScannerNameReturnValue: string = 'dummyScannerName';
-
     getScannerName(): string {
         return this.getScannerNameReturnValue;
     }
 
+    getRuleDescriptionForReturnValue: string = 'someRuleDescription';
     getRuleDescriptionFor(_engineName: string, _ruleName: string): Promise<string> {
-        return Promise.resolve('');
+        return Promise.resolve(this.getRuleDescriptionForReturnValue);
+    }
+}
+
+export class ThrowingCodeAnalyzer implements CodeAnalyzer {
+    validateEnvironment(): Promise<void> {
+        throw new Error("Error from validateEnvironment");
+    }
+
+    scan(_filesToScan: string[]): Promise<Violation[]> {
+        throw new Error("Error from scan");
+    }
+
+    getScannerName(): string {
+        return 'someScannerName';
+    }
+
+    getRuleDescriptionFor(_engineName: string, _ruleName: string): Promise<string> {
+        throw new Error("Error from getRuleDescriptionFor.");
     }
 }
 
