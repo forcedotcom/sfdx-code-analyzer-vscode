@@ -1,7 +1,7 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 import {
     SpyLLMService,
-    SpyLogger,
+    SpyLogger, StubCodeAnalyzer,
     StubLLMServiceProvider,
     ThrowingLLMService,
     ThrowingLLMServiceProvider
@@ -11,18 +11,21 @@ import {createTextDocument} from 'jest-mock-vscode'
 import {FixSuggestion} from "../../../../lib/fix-suggestion";
 import {CodeAnalyzerDiagnostic} from "../../../../lib/diagnostics";
 import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
+import {CodeAnalyzer} from "../../../../lib/code-analyzer";
 
 describe('AgentforceViolationFixer Tests', () => {
     let spyLLMService: SpyLLMService;
     let llmServiceProvider: StubLLMServiceProvider;
+    let codeAnalyzer: CodeAnalyzer;
     let spyLogger: SpyLogger;
     let violationFixer: AgentforceViolationFixer;
 
     beforeEach(() => {
         spyLLMService = new SpyLLMService();
         llmServiceProvider = new StubLLMServiceProvider(spyLLMService);
+        codeAnalyzer = new StubCodeAnalyzer();
         spyLogger = new SpyLogger();
-        violationFixer = new AgentforceViolationFixer(llmServiceProvider, spyLogger);
+        violationFixer = new AgentforceViolationFixer(llmServiceProvider, codeAnalyzer, spyLogger);
     });
 
     describe('suggestFix Tests', () => {
@@ -93,14 +96,14 @@ describe('AgentforceViolationFixer Tests', () => {
         });
 
         it('When LLMServiceProvider throws an exception, then throw exception', async () => {
-            violationFixer = new AgentforceViolationFixer(new ThrowingLLMServiceProvider(), spyLogger);
+            violationFixer = new AgentforceViolationFixer(new ThrowingLLMServiceProvider(), codeAnalyzer, spyLogger);
             await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
                 'Error from getLLMService');
         });
 
         it('When LLMService throws an exception, then throw exception', async () => {
             llmServiceProvider = new StubLLMServiceProvider(new ThrowingLLMService());
-            violationFixer = new AgentforceViolationFixer(llmServiceProvider, spyLogger);
+            violationFixer = new AgentforceViolationFixer(llmServiceProvider, codeAnalyzer, spyLogger);
             await expect(violationFixer.suggestFix(sampleDocument, sampleDiagnostic)).rejects.toThrow(
                 'Error from callLLM');
         });
