@@ -87,10 +87,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(settingsManager, display);
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display);
 
-    // For performance reasons, it's best to kick this off in the background instead of waiting for a scan to get the
-    // validation out of the way.
-    void codeAnalyzer.validateEnvironment();
-
     // We need to do this first in case any other services need access to those provided by the core extension.
     // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
     await CoreExtensionService.loadDependencies(outputChannel);
