@@ -84,7 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
 
-    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(settingsManager);
+    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(settingsManager, display);
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display);
 
     // We need to do this first in case any other services need access to those provided by the core extension.
@@ -276,7 +276,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // ==  Agentforce for Developers Integration
     // =================================================================================================================
     const agentforceCodeActionProvider: AgentforceCodeActionProvider = new AgentforceCodeActionProvider(externalServiceProvider, logger);
-    const agentforceViolationFixer: AgentforceViolationFixer = new AgentforceViolationFixer(externalServiceProvider, logger);
+    const agentforceViolationFixer: AgentforceViolationFixer = new AgentforceViolationFixer( externalServiceProvider, codeAnalyzer, logger);
     const a4dFixAction: A4DFixAction = new A4DFixAction(agentforceViolationFixer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
 
     registerCodeActionsProvider({language: 'apex'}, agentforceCodeActionProvider,
