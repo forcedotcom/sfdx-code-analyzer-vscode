@@ -139,8 +139,8 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
     }
 
     getScannerNameReturnValue: string = 'dummyScannerName';
-    getScannerName(): string {
-        return this.getScannerNameReturnValue;
+    getScannerName(): Promise<string> {
+        return Promise.resolve(this.getScannerNameReturnValue);
     }
 
     getRuleDescriptionForReturnValue: string = 'someRuleDescription';
@@ -158,8 +158,8 @@ export class ThrowingCodeAnalyzer implements CodeAnalyzer {
         throw new Error("Error from scan");
     }
 
-    getScannerName(): string {
-        return 'someScannerName';
+    getScannerName(): Promise<string> {
+        return Promise.resolve('someScannerName');
     }
 
     getRuleDescriptionFor(_engineName: string, _ruleName: string): Promise<string> {

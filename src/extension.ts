@@ -29,6 +29,7 @@ import {UnifiedDiffService, UnifiedDiffServiceImpl} from "./lib/unified-diff-ser
 import {VSCodeDisplay} from "./lib/display";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "./lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress";
+import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -74,8 +75,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const settingsManager = new SettingsManagerImpl();
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
-    const dfaRunner: DfaRunner = new DfaRunner(context, telemetryService, logger);
-    context.subscriptions.push(dfaRunner);
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
@@ -84,7 +83,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
 
-    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(settingsManager, display);
+    const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl();
+    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display);
+    const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, telemetryService, logger); // This thing is really old and clunky. It'll go away when we remove v4 stuff. But if we don't want to wait we could move all this into the v4-scanner.ts file
+    context.subscriptions.push(dfaRunner);
+
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display);
 
     // For performance reasons, it's best to kick this off in the background instead of waiting for a scan to get the

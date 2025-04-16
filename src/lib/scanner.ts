@@ -8,16 +8,18 @@ import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './settings';
 import {V4ExecutionResult} from './scanner-strategies/v4-scanner';
 import * as Constants from './constants';
-import * as cspawn from 'cross-spawn';
+import {CliCommandExecutor, CliCommandExecutorImpl, CommandOutput} from "./cli-commands";
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
  */
-export class ScanRunner {
+export class ScanRunner { // TODO: I look forward to removing this once V4 goes away... but if it takes a long time for that to happen then we should consider moving all this DFA stuff inside of the v4-scanner.ts class instead.
     private readonly settingsManager: SettingsManager;
+    private readonly cliCommandExecutor: CliCommandExecutor;
 
-    public constructor(settingsManager?: SettingsManager) {
-        this.settingsManager = settingsManager ?? new SettingsManagerImpl();
+    public constructor(settingsManager: SettingsManager = new SettingsManagerImpl(), cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl()) {
+        this.settingsManager = settingsManager;
+        this.cliCommandExecutor = cliCommandExecutor;
     }
 
     /**
@@ -96,25 +98,15 @@ export class ScanRunner {
     /**
      * Uses the provided arguments to run a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
+     * @param context
      */
     private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<V4ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
-            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, cp.pid);
-
-            let stdout = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', () => {
-                // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as V4ExecutionResult);
-                void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            });
-
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, (pid: number | undefined) => {
+            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, pid);
         });
+        void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+        // No matter what, stdout will be an execution result.
+        return JSON.parse(commandOutput.stdout) as V4ExecutionResult;
     }
 
     /**

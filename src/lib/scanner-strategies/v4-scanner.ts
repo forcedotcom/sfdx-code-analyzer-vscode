@@ -2,8 +2,9 @@ import {CliScannerStrategy} from './scanner-strategy';
 import {Violation} from '../diagnostics';
 import {exists} from '../file';
 import {messages} from '../messages';
-import * as cspawn from 'cross-spawn';
 import {SettingsManager} from "../settings";
+import * as semver from 'semver';
+import {CliCommandExecutor, CommandOutput} from "../cli-commands";
 
 export type BaseV4Violation = {
     ruleName: string;
@@ -47,25 +48,22 @@ export type V4ExecutionResult = {
     message?: string;
 };
 
-export class CliScannerV4Strategy extends CliScannerStrategy {
+export class CliScannerV4Strategy implements CliScannerStrategy {
+    private readonly version: semver.SemVer;
+    private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
 
-    public constructor(settingsManager: SettingsManager) {
-        super();
+    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager) {
+        this.version = version;
+        this.cliCommandExecutor = cliCommandExecutor;
         this.settingsManager = settingsManager;
     }
 
-    public override getScannerName(): string {
-        return '@salesforce/sfdx-scanner@^4 via CLI';
+    public getScannerName(): Promise<string> {
+        return Promise.resolve(`@salesforce/sfdx-scanner@${this.version.toString()} via CLI`);
     }
 
-    protected override validatePlugin(): Promise<void> {
-        // @salesforce/sfdx-scanner is a JIT Plugin, so it will be installed automatically
-        // if it's not already. So no action is needed.
-        return Promise.resolve();
-    }
-
-    public override async scan(filesToScan: string[]): Promise<Violation[]> {
+    public async scan(filesToScan: string[]): Promise<Violation[]> {
         // Create the arg array.
         const args: string[] = await this.createArgArray(filesToScan);
 
@@ -116,20 +114,9 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
     }
 
     private async invokeAnalyzer(args: string[]): Promise<V4ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
-
-            let stdout = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', () => {
-                // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as V4ExecutionResult);
-            });
-        });
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args);
+        // No matter what, stdout will be an execution result.
+        return JSON.parse(commandOutput.stdout) as V4ExecutionResult;
     }
 
     private processResults(executionResult: V4ExecutionResult): Violation[] {
@@ -168,4 +155,3 @@ export class CliScannerV4Strategy extends CliScannerStrategy {
         }
     }
 }
-
