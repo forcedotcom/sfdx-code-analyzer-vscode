@@ -8,20 +8,22 @@ import fs from "fs";
 import path from "path";
 import * as targeting from "./targeting";
 import os from "os";
-import {SfCli} from "./sf-cli";
 import {ScanRunner} from "./scanner";
 import {SIGKILL} from "constants";
+import {CodeAnalyzer} from "./code-analyzer";
 
 export class DfaRunner implements vscode.Disposable {
     private readonly sfgeCachePath: string = path.join(createTempDirectory(), 'sfca-graph-engine-cache.json');
     private readonly savedFilesCache: Set<string> = new Set();
 
     private readonly context: vscode.ExtensionContext;
+    private readonly codeAnalyzer: CodeAnalyzer;
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
 
-    constructor(context: vscode.ExtensionContext, telemetryService: TelemetryService, logger: Logger) {
+    constructor(context: vscode.ExtensionContext, codeAnalyzer: CodeAnalyzer, telemetryService: TelemetryService, logger: Logger) {
         this.context = context;
+        this.codeAnalyzer = codeAnalyzer;
         this.telemetryService = telemetryService;
         this.logger = logger;
     }
@@ -144,7 +146,7 @@ export class DfaRunner implements vscode.Disposable {
                            projectDir: string): Promise<void> {
         const startTime = Date.now();
         try {
-            await verifyPluginInstallation();
+            await this.codeAnalyzer.validateEnvironment(); // Since the ScanRunner currently doesn't take in the codeAnalyzer to run dfa commands, we just validate here
             const results = await new ScanRunner().runDfa(methodLevelTarget, projectDir, this.context, this.sfgeCachePath);
             if (results.length > 0) {
                 const panel = vscode.window.createWebviewPanel(
@@ -208,16 +210,5 @@ function createTempDirectory(): string {
     } catch (err) {
         const errMsg: string = err instanceof Error ? err.message : String(err);
         throw new Error(`Failed to create temporary directory:\n${errMsg}`);
-    }
-}
-
-/**
- * @throws If {@code sf}/{@code sfdx} or {@code @salesforce/sfdx-scanner} is not installed.
- */
-export async function verifyPluginInstallation(): Promise<void> {
-    if (!await SfCli.isSfCliInstalled()) {
-        throw new Error(messages.error.sfMissing);
-    } else if (!await SfCli.isCodeAnalyzerInstalled()) {
-        throw new Error(messages.error.sfdxScannerMissing);
     }
 }

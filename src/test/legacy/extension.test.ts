@@ -9,24 +9,25 @@
  */
 import {expect} from 'chai';
 import * as path from 'path';
-import {SfCli} from '../../lib/sf-cli';
 import * as Sinon from 'sinon';
 import {
     _isValidFileForAnalysis,
     SFCAExtensionData
 } from '../../extension';
 import {messages} from '../../lib/messages';
-import {SettingsManagerImpl} from '../../lib/settings';
+import {SettingsManager, SettingsManagerImpl} from '../../lib/settings';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
 import * as vscode from 'vscode';
 import {DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
 import {SpyLogger, StubTelemetryService} from "./test-utils";
-import {DfaRunner, verifyPluginInstallation} from "../../lib/dfa-runner";
+import {DfaRunner} from "../../lib/dfa-runner";
 import {CodeAnalyzerRunAction} from "../../lib/code-analyzer-run-action";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "../../lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/progress";
 import {Display, VSCodeDisplay} from "../../lib/display";
+import {CliCommandExecutor, CliCommandExecutorImpl, CommandOutput} from "../../lib/cli-commands";
+import {Logger} from "../../lib/logger";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -217,17 +218,7 @@ suite('Extension Test Suite', () => {
             // Activate the extension.
             await ext.activate();
 
-            const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection();
-
             stubTelemetryService = new StubTelemetryService();
-            // TODO: I think we are finally at a place where we can stop using Sinon and instead use proper spies
-            //       but leaving it to a later PR to transform this test to stop using VSCode* and Impl* classes
-            //       and then we should be ready to move everything to be proper unit tests.
-            const display: Display = new VSCodeDisplay(new SpyLogger());
-            const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new SettingsManagerImpl(), display);
-            codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, new DiagnosticManagerImpl(diagnosticCollection),
-                stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()));
         });
 
         suite('Error handling', () => {
@@ -235,13 +226,33 @@ suite('Extension Test Suite', () => {
                 Sinon.restore();
             });
 
-            test('Throws error if `sf`/`sfdx` is missing', async function () {
+            test('Throws error if `sf` is missing', async function () {
                 this.timeout(90000);
 
                 // ===== SETUP =====
-                // Simulate SFDX being unavailable.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+
+                // Simulate SFDX being unavailable.
+                const cliCommandExecutor: CliCommandExecutor = {
+                    exec(command: string, args: string[], pidHandler?: (pid: (number | undefined)) => void): Promise<CommandOutput> {
+                        if (command === 'sf' && args.length > 0 && args[0] === '--version') {
+                            return Promise.resolve({
+                                stdout: '',
+                                stderr: 'Not Found',
+                                exitCode: 127
+                            });
+                        }
+                        return (new CliCommandExecutorImpl()).exec(command, args, pidHandler);
+                    }
+                }
+
+                const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection();
+                const display: Display = new VSCodeDisplay(new SpyLogger());
+                const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
+                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, new SettingsManagerImpl(), display);
+                codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, new DiagnosticManagerImpl(diagnosticCollection),
+                    stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()));
+
                 const fakeTelemetryName = 'FakeName';
 
                 // ===== TEST =====
@@ -263,23 +274,47 @@ suite('Extension Test Suite', () => {
     });
 
     suite('#_runAndDisplayDfa()', () => {
+        let settingsManager: SettingsManager;
+        
+        setup(() => {
+            settingsManager = new SettingsManagerImpl();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+        });
+
+        teardown(() => {
+            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
+        });
+
         suite('Error handling', () => {
             teardown(() => {
                 Sinon.restore();
             });
 
-            test('Throws error if `sf`/`sfdx` is missing', async function () {
+            test('Throws error if `sf` is missing', async function () {
                 this.timeout(90000);
 
                 // ===== SETUP =====
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being unavailable.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+                const cliCommandExecutor: CliCommandExecutor = {
+                    exec(command: string, args: string[], pidHandler?: (pid: (number | undefined)) => void): Promise<CommandOutput> {
+                        if (command === 'sf' && args.length > 0 && args[0] === '--version') {
+                            return Promise.resolve({
+                                stdout: '',
+                                stderr: 'Not Found',
+                                exitCode: 127
+                            });
+                        }
+                        return (new CliCommandExecutorImpl()).exec(command, args, pidHandler);
+                    }
+                }
                 const fakeTelemetryName = 'FakeName';
 
                 const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
-                const dfaRunner: DfaRunner = new DfaRunner(context, stubTelemetryService, new SpyLogger())
+                const logger: Logger = new SpyLogger();
+                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, new VSCodeDisplay(logger));
+                const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, stubTelemetryService, logger)
 
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
@@ -302,12 +337,24 @@ suite('Extension Test Suite', () => {
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being available but SFDX Scanner being absent.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
-                Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
+                const cliCommandExecutor: CliCommandExecutor = {
+                    exec(command: string, args: string[], pidHandler?: (pid: (number | undefined)) => void): Promise<CommandOutput> {
+                        if (command === 'sf' && args.length > 0 && args[0] === 'plugins') {
+                            return Promise.resolve({
+                                stdout: '',
+                                stderr: 'Not Found',
+                                exitCode: 1
+                            });
+                        }
+                        return (new CliCommandExecutorImpl()).exec(command, args, pidHandler);
+                    }
+                }
                 const fakeTelemetryName = 'FakeName';
 
                 const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
-                const dfaRunner: DfaRunner = new DfaRunner(context, stubTelemetryService, new SpyLogger())
+                const logger: Logger = new SpyLogger();
+                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, new VSCodeDisplay(logger));
+                const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, stubTelemetryService, logger)
 
                 // ===== TEST =====
                 try {
@@ -328,55 +375,14 @@ suite('Extension Test Suite', () => {
         });
     });
 
-    suite('#verifyPluginInstallation()', () => {
-        teardown(() => {
-            Sinon.restore();
-        });
-
-        test('Errors if `sfdx-scanner` is missing', async function () {
-            this.timeout(90000);
-
-            // ===== SETUP =====
-            // Simulate SF being available but SFDX Scanner being absent.
-            Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
-            Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
-
-            // ===== TEST =====
-            // Attempt to run the appropriate extension command, expecting an error.
-            let err: Error = null;
-            try {
-                await verifyPluginInstallation();
-            } catch (e) {
-                err = e as Error;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err.message).to.include(messages.error.sfdxScannerMissing);
-        });
-
-        test('Errors if `cli` is missing', async function () {
-            this.timeout(90000);
-
-            // ===== SETUP =====
-            // Simulate SF being available but SFDX Scanner being absent.
-            Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
-            Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(true);
-
-            // ===== TEST =====
-            // Attempt to run the appropriate extension command, expecting an error.
-            let err: Error = null;
-            try {
-                await verifyPluginInstallation();
-            } catch (e) {
-                err = e as Error;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err.message).to.include(messages.error.sfMissing);
-        });
-    });
-
     suite('#_shouldProceedWithDfaRun()', () => {
+        let settingsManager: SettingsManager;
+        
+        setup(() => {
+            settingsManager = new SettingsManagerImpl();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+        });
+
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
@@ -389,6 +395,7 @@ suite('Extension Test Suite', () => {
         teardown(async () => {
             Sinon.restore();
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
         });
 
         test('Returns true and confirmation message not called when no existing DFA process detected', async function () {
@@ -398,7 +405,9 @@ suite('Extension Test Suite', () => {
 
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             expect(await dfaRunner.shouldProceedWithDfaRun()).to.equal(true);
             Sinon.assert.callCount(infoMessageSpy, 0);
@@ -410,7 +419,9 @@ suite('Extension Test Suite', () => {
             const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             dfaRunner.shouldProceedWithDfaRun();
@@ -421,6 +432,14 @@ suite('Extension Test Suite', () => {
     });
 
     suite('#_stopExistingDfaRun()', function () {
+
+        let settingsManager: SettingsManager;
+        
+        setup(() => {
+            settingsManager = new SettingsManagerImpl();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+        });
+
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
@@ -433,6 +452,7 @@ suite('Extension Test Suite', () => {
         teardown(() => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             Sinon.restore();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
         });
 
         test('Cache cleared as part of stopping the existing DFA run', async function () {
@@ -440,7 +460,9 @@ suite('Extension Test Suite', () => {
 
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             await dfaRunner.stopExistingDfaRun();
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
@@ -450,7 +472,9 @@ suite('Extension Test Suite', () => {
             this.timeout(90000);
 
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             dfaRunner.stopExistingDfaRun();

@@ -52,7 +52,7 @@ export class CodeAnalyzerRunAction {
                     message: messages.scanProgressReport.analyzingTargets,
                     increment: 20
                 });
-                this.logger.log(messages.info.scanningWith(this.codeAnalyzer.getScannerName()));
+                this.logger.log(messages.info.scanningWith(await this.codeAnalyzer.getScannerName()));
                 const violations: Violation[] = await this.codeAnalyzer.scan(filesToScan);
 
                 progressReporter.reportProgress({
