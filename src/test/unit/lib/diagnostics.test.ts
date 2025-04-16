@@ -19,6 +19,7 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                 severity: 3,
                 locations: [], // Case 1 - no locations
                 primaryLocationIndex: 0,
+                tags: [],
                 resources: []
             }
             expect(() => CodeAnalyzerDiagnostic.fromViolation(violation)).toThrow();
@@ -40,6 +41,7 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                     endColumn: 6
                 }],
                 primaryLocationIndex: 0,
+                tags: [],
                 resources: ['https://hello.com', 'https://world.com']
             };
 
@@ -84,6 +86,7 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                     }
                 ],
                 primaryLocationIndex: 2,
+                tags: [],
                 resources: [] // Also test when there are no resources
             };
 
@@ -128,6 +131,7 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                     endColumn: 6
                 }],
                 primaryLocationIndex: 0,
+                tags: [],
                 resources: []
             };
 
@@ -146,6 +150,7 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                     startLine: nonPositiveNumber, // <-- This should never happen, but we should protect against it
                 }],
                 primaryLocationIndex: 0,
+                tags: [],
                 resources: []
             };
 

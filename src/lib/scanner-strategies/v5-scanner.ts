@@ -1,11 +1,13 @@
+import * as vscode from "vscode";
 import {CliScannerStrategy} from './scanner-strategy';
 import {Violation} from '../diagnostics';
-import {tmpFileWithCleanup} from '../file';
+import {FileHandler} from '../fs-utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as semver from 'semver';
 import {SettingsManager} from "../settings";
 import {CliCommandExecutor, CommandOutput} from "../cli-commands";
+import {VscodeWorkspace} from "../vscode-api";
 
 type ResultsJson = {
     runDir: string;
@@ -29,13 +31,17 @@ export class CliScannerV5Strategy implements CliScannerStrategy {
     private readonly version: semver.SemVer;
     private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
+    private readonly vscodeWorkspace: VscodeWorkspace;
+    private readonly fileHandler: FileHandler;
 
     private ruleDescriptionMap?: Map<string, string>;
 
-    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager) {
+    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, vscodeWorkspace: VscodeWorkspace, fileHandler: FileHandler) {
         this.version = version;
         this.cliCommandExecutor = cliCommandExecutor;
         this.settingsManager = settingsManager;
+        this.vscodeWorkspace = vscodeWorkspace;
+        this.fileHandler = fileHandler;
     }
 
     public getScannerName(): Promise<string> {
@@ -61,21 +67,34 @@ export class CliScannerV5Strategy implements CliScannerStrategy {
         const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
         const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
 
-        let args: string[] = [
-            'code-analyzer', 'run',
-            '-w', `"${filesToScan.join('","')}"`,
-        ];
+        const args: string[] = ['code-analyzer', 'run'];
+
+        if (semver.gte(this.version, '5.0.0')) {
+            // Just in case a file is open in the editor that does not live in the current workspace, or if there
+            // is no workspace open at all, we still want to be able to run code analyzer without error, so we
+            // include the files to scan always along with any workspace folders.
+            const workspacePaths: string[] = [
+                ...this.vscodeWorkspace.getWorkspaceFolders(),
+                ...filesToScan
+            ]
+            workspacePaths.forEach(p => args.push('-w', p));
+            filesToScan.forEach(p => args.push('-t', p));
+        } else {
+            // Before 5.0.0 the --target flag did not exist, so we just make the workspace equal to the files to scan
+            filesToScan.forEach(p => args.push('-w', p));
+        }
+
         if (ruleSelector) {
-            args = [...args, '-r', ruleSelector];
+            args.push('-r', ruleSelector);
         }
         if (configFile) {
-            args = [...args, '-c', configFile];
+            args.push('-c', configFile);
         }
 
-        const outputFile: string = await tmpFileWithCleanup('.json');
+        const outputFile: string = await this.fileHandler.createTempFile('.json');
         args.push('-f', outputFile);
 
-        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args);
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, {logLevel: vscode.LogLevel.Debug});
         if (commandOutput.exitCode !== 0) {
             throw new Error(commandOutput.stderr);
         }
@@ -101,7 +120,7 @@ export class CliScannerV5Strategy implements CliScannerStrategy {
     }
 
     private async createRuleDescriptionMap(): Promise<Map<string, string>> {
-        const outputFile: string = await tmpFileWithCleanup('.json');
+        const outputFile: string = await this.fileHandler.createTempFile('.json');
         const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', ['code-analyzer', 'rules', '-r', 'all', '-f', outputFile]);
         if (commandOutput.exitCode !== 0) {
             throw new Error(commandOutput.stderr);

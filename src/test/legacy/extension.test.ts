@@ -26,8 +26,9 @@ import {CodeAnalyzerRunAction} from "../../lib/code-analyzer-run-action";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "../../lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/progress";
 import {Display, VSCodeDisplay} from "../../lib/display";
-import {CliCommandExecutor, CliCommandExecutorImpl, CommandOutput} from "../../lib/cli-commands";
+import {CliCommandExecutorImpl} from "../../lib/cli-commands";
 import {Logger} from "../../lib/logger";
+import {StubSettingsManager, StubSpyCliCommandExecutor} from "../unit/stubs";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -233,18 +234,8 @@ suite('Extension Test Suite', () => {
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
 
                 // Simulate SFDX being unavailable.
-                const cliCommandExecutor: CliCommandExecutor = {
-                    exec(command: string, args: string[], pidHandler?: (pid: (number | undefined)) => void): Promise<CommandOutput> {
-                        if (command === 'sf' && args.length > 0 && args[0] === '--version') {
-                            return Promise.resolve({
-                                stdout: '',
-                                stderr: 'Not Found',
-                                exitCode: 127
-                            });
-                        }
-                        return (new CliCommandExecutorImpl()).exec(command, args, pidHandler);
-                    }
-                }
+                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
+                cliCommandExecutor.isSfInstalledReturnValue = false;
 
                 const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection();
                 const display: Display = new VSCodeDisplay(new SpyLogger());
@@ -275,9 +266,9 @@ suite('Extension Test Suite', () => {
 
     suite('#_runAndDisplayDfa()', () => {
         let settingsManager: SettingsManager;
-        
+
         setup(() => {
-            settingsManager = new SettingsManagerImpl();
+            settingsManager = new StubSettingsManager();
             settingsManager.setCodeAnalyzerUseV4Deprecated(true);
         });
 
@@ -297,18 +288,8 @@ suite('Extension Test Suite', () => {
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being unavailable.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                const cliCommandExecutor: CliCommandExecutor = {
-                    exec(command: string, args: string[], pidHandler?: (pid: (number | undefined)) => void): Promise<CommandOutput> {
-                        if (command === 'sf' && args.length > 0 && args[0] === '--version') {
-                            return Promise.resolve({
-                                stdout: '',
-                                stderr: 'Not Found',
-                                exitCode: 127
-                            });
-                        }
-                        return (new CliCommandExecutorImpl()).exec(command, args, pidHandler);
-                    }
-                }
+                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
+                cliCommandExecutor.isSfInstalledReturnValue = false;
                 const fakeTelemetryName = 'FakeName';
 
                 const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
@@ -337,18 +318,9 @@ suite('Extension Test Suite', () => {
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being available but SFDX Scanner being absent.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                const cliCommandExecutor: CliCommandExecutor = {
-                    exec(command: string, args: string[], pidHandler?: (pid: (number | undefined)) => void): Promise<CommandOutput> {
-                        if (command === 'sf' && args.length > 0 && args[0] === 'plugins') {
-                            return Promise.resolve({
-                                stdout: '',
-                                stderr: 'Not Found',
-                                exitCode: 1
-                            });
-                        }
-                        return (new CliCommandExecutorImpl()).exec(command, args, pidHandler);
-                    }
-                }
+                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
+                cliCommandExecutor.isSfInstalledReturnValue = true;
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = null;
                 const fakeTelemetryName = 'FakeName';
 
                 const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
@@ -377,7 +349,7 @@ suite('Extension Test Suite', () => {
 
     suite('#_shouldProceedWithDfaRun()', () => {
         let settingsManager: SettingsManager;
-        
+
         setup(() => {
             settingsManager = new SettingsManagerImpl();
             settingsManager.setCodeAnalyzerUseV4Deprecated(true);
@@ -406,7 +378,7 @@ suite('Extension Test Suite', () => {
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
             const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(new SpyLogger()), settingsManager, new VSCodeDisplay(logger));
             const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             expect(await dfaRunner.shouldProceedWithDfaRun()).to.equal(true);
@@ -420,7 +392,8 @@ suite('Extension Test Suite', () => {
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
             const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(new SpyLogger()),
+                settingsManager, new VSCodeDisplay(logger));
             const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -434,7 +407,7 @@ suite('Extension Test Suite', () => {
     suite('#_stopExistingDfaRun()', function () {
 
         let settingsManager: SettingsManager;
-        
+
         setup(() => {
             settingsManager = new SettingsManagerImpl();
             settingsManager.setCodeAnalyzerUseV4Deprecated(true);
@@ -461,7 +434,7 @@ suite('Extension Test Suite', () => {
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
             const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(logger), settingsManager, new VSCodeDisplay(logger));
             const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             await dfaRunner.stopExistingDfaRun();
@@ -473,7 +446,7 @@ suite('Extension Test Suite', () => {
 
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(), settingsManager, new VSCodeDisplay(logger));
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(logger), settingsManager, new VSCodeDisplay(logger));
             const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises

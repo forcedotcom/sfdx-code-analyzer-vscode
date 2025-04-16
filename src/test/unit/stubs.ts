@@ -1,3 +1,5 @@
+import * as vscode from "vscode";// The vscode module is mocked out. See: scripts/setup.jest.ts
+
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Logger} from "../../lib/logger";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
@@ -9,6 +11,10 @@ import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 import {SettingsManager} from "../../lib/settings";
 import {CodeAnalyzer} from "../../lib/code-analyzer";
 import {ProgressEvent, ProgressReporter, TaskWithProgress, TaskWithProgressRunner} from "../../lib/progress";
+import {VscodeWorkspace} from "../../lib/vscode-api";
+import {CliCommandExecutor, CommandOutput, ExecOptions} from "../../lib/cli-commands";
+import * as semver from "semver";
+import {FileHandler} from "../../lib/fs-utils";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -32,6 +38,12 @@ export class SpyTelemetryService implements TelemetryService {
 }
 
 export class SpyLogger implements Logger {
+    logAtLevelCallHistory: { logLevel: vscode.LogLevel, msg: string }[] = [];
+
+    logAtLevel(logLevel: vscode.LogLevel, msg: string): void {
+        this.logAtLevelCallHistory.push({logLevel, msg});
+    }
+
     logCallHistory: { msg: string }[] = [];
 
     log(msg: string): void {
@@ -134,16 +146,19 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
     }
 
     scanReturnValue: Violation[] = [];
+
     scan(_filesToScan: string[]): Promise<Violation[]> {
         return Promise.resolve(this.scanReturnValue);
     }
 
     getScannerNameReturnValue: string = 'dummyScannerName';
+
     getScannerName(): Promise<string> {
         return Promise.resolve(this.getScannerNameReturnValue);
     }
 
     getRuleDescriptionForReturnValue: string = 'someRuleDescription';
+
     getRuleDescriptionFor(_engineName: string, _ruleName: string): Promise<string> {
         return Promise.resolve(this.getRuleDescriptionForReturnValue);
     }
@@ -332,7 +347,8 @@ export class StubSettingsManager implements SettingsManager {
 
 
 export class SpyProgressReporter implements ProgressReporter {
-    reportProgressCallHistory: {progressEvent: ProgressEvent}[] = [];
+    reportProgressCallHistory: { progressEvent: ProgressEvent }[] = [];
+
     reportProgress(progressEvent: ProgressEvent): void {
         this.reportProgressCallHistory.push({progressEvent});
     }
@@ -343,5 +359,54 @@ export class FakeTaskWithProgressRunner implements TaskWithProgressRunner {
 
     runTask(task: TaskWithProgress): Promise<void> {
         return Promise.resolve(task(this.progressReporter));
+    }
+}
+
+
+export class StubVscodeWorkspace implements VscodeWorkspace {
+    getWorkspaceFoldersReturnValue: string[] = [];
+
+    getWorkspaceFolders(): string[] {
+        return this.getWorkspaceFoldersReturnValue;
+    }
+}
+
+
+export class StubSpyCliCommandExecutor implements CliCommandExecutor {
+    isSfInstalledReturnValue: boolean = true;
+    isSfInstalled(): Promise<boolean> {
+        return Promise.resolve(this.isSfInstalledReturnValue);
+    }
+
+    getSfCliPluginVersionReturnValue: semver.SemVer | undefined = new semver.SemVer('5.0.0-beta.3');
+    getSfCliPluginVersionCallHistory: {pluginName: string}[] = [];
+    getSfCliPluginVersion(pluginName: string): Promise<semver.SemVer | undefined> {
+        this.getSfCliPluginVersionCallHistory.push({pluginName});
+        return Promise.resolve(this.getSfCliPluginVersionReturnValue);
+    }
+
+    execReturnValue: CommandOutput = {stdout: '', stderr: '', exitCode: 0};
+    execCallHistory: {command: string, args: string[], options?: ExecOptions}[] = [];
+    exec(command: string, args: string[], options?: ExecOptions): Promise<CommandOutput> {
+        this.execCallHistory.push({command, args, options});
+        return Promise.resolve(this.execReturnValue);
+    }
+}
+
+
+export class StubFileHandler implements FileHandler {
+    existsReturnValue: boolean = true;
+    exists(_path: string): Promise<boolean> {
+        return Promise.resolve(this.existsReturnValue);
+    }
+
+    isDirReturnValue: boolean = false;
+    isDir(_path: string): Promise<boolean> {
+        return Promise.resolve(this.isDirReturnValue);
+    }
+
+    createTempFileReturnValue: string = '';
+    createTempFile(_ext?: string): Promise<string> {
+        return Promise.resolve(this.createTempFileReturnValue);
     }
 }

@@ -14,11 +14,13 @@ import * as Constants from '../../lib/constants';
 
 import {V4ExecutionResult} from '../../lib/scanner-strategies/v4-scanner';
 import {SFCAExtensionData} from "../../extension";
+import {CliCommandExecutorImpl} from "../../lib/cli-commands";
+import {SpyLogger} from "./test-utils";
 
 suite('ScanRunner', () => {
 
     suite('#createDfaArgArray()', () => {
-        // Create a list of fake t argets to use in our tests.
+        // Create a list of fake targets to use in our tests.
         const targets: string[] = [
             'these',
             'are',
@@ -31,7 +33,7 @@ suite('ScanRunner', () => {
         function invokeTestedMethod(settingsManager: StubSettingsManager): string[] {
             // ===== SETUP =====
             // Create a scan runner.
-            const scanner: ScanRunner = new ScanRunner(settingsManager);
+            const scanner: ScanRunner = new ScanRunner(settingsManager, new CliCommandExecutorImpl(new SpyLogger()));
 
             // ===== TEST =====
             // Use the scan runner on our target list to create and return our arg array.
@@ -91,7 +93,7 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const scanner: ScanRunner = new ScanRunner(settingsManager);
+                const scanner: ScanRunner = new ScanRunner(settingsManager, new CliCommandExecutorImpl(new SpyLogger()));
                 /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
 
@@ -111,7 +113,7 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const scanner: ScanRunner = new ScanRunner(settingsManager);
+                const scanner: ScanRunner = new ScanRunner(settingsManager, new CliCommandExecutorImpl(new SpyLogger()));
                 /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir);
 
@@ -217,7 +219,7 @@ suite('ScanRunner', () => {
 
                 // ===== TEST =====
                 // Call the test method helper.
-                const scanner: ScanRunner = new ScanRunner(settingsManager);
+                const scanner: ScanRunner = new ScanRunner(settingsManager, new CliCommandExecutorImpl(new SpyLogger()));
                 /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?c
                 const args: string[] = (scanner as any).createDfaArgArray(emptyTargets, projectDir, 'some/path/file.json');
 
@@ -247,7 +249,7 @@ suite('ScanRunner', () => {
 
             // ===== TEST =====
             // Feed the results into the processor.
-            const scanner = new ScanRunner();
+            const scanner = new ScanRunner(new StubSettingsManager(), new CliCommandExecutorImpl(new SpyLogger()));
             /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
 
@@ -267,7 +269,7 @@ suite('ScanRunner', () => {
 
             // ===== TEST =====
             // Feed the results into the processor.
-            const scanner = new ScanRunner();
+            const scanner = new ScanRunner(new StubSettingsManager(), new CliCommandExecutorImpl(new SpyLogger()));
             /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
             const processedResults: string = (scanner as any).processDfaResults(spoofedOutput);
 
@@ -292,7 +294,7 @@ suite('ScanRunner', () => {
             // ===== TEST =====
             // Feed the output into the processor, expecting the warning
             // to be escalated to an error.
-            const scanner = new ScanRunner();
+            const scanner = new ScanRunner(new StubSettingsManager(), new CliCommandExecutorImpl(new SpyLogger()));
             let err: Error = null;
             try {
                 /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
@@ -316,7 +318,7 @@ suite('ScanRunner', () => {
 
             // ===== TEST =====
             // Feed the output into the processor, expecting an error.
-            const scanner = new ScanRunner();
+            const scanner = new ScanRunner(new StubSettingsManager(), new CliCommandExecutorImpl(new SpyLogger()));
             let err: Error = null;
             try {
                 /* eslint-disable-next-line */ // TODO: Wow - using "any" here to somehow get access to a private method. Why is this test written this way?
@@ -345,7 +347,7 @@ suite('ScanRunner', () => {
         test('Adds process Id to the cache', () => {
             // ===== SETUP =====
             const args:string[] = ['scanner', 'run', 'dfa', '--target', 'doesNotMatter', '--json'];
-            const scanner = new ScanRunner();
+            const scanner = new ScanRunner(new StubSettingsManager(), new CliCommandExecutorImpl(new SpyLogger()));
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
             // ===== TEST =====

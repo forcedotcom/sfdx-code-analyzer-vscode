@@ -11,6 +11,8 @@ import os from "os";
 import {ScanRunner} from "./scanner";
 import {SIGKILL} from "constants";
 import {CodeAnalyzer} from "./code-analyzer";
+import {CliCommandExecutorImpl} from "./cli-commands";
+import {SettingsManagerImpl} from "./settings";
 
 export class DfaRunner implements vscode.Disposable {
     private readonly sfgeCachePath: string = path.join(createTempDirectory(), 'sfca-graph-engine-cache.json');
@@ -147,7 +149,8 @@ export class DfaRunner implements vscode.Disposable {
         const startTime = Date.now();
         try {
             await this.codeAnalyzer.validateEnvironment(); // Since the ScanRunner currently doesn't take in the codeAnalyzer to run dfa commands, we just validate here
-            const results = await new ScanRunner().runDfa(methodLevelTarget, projectDir, this.context, this.sfgeCachePath);
+            const scanRunner: ScanRunner = new ScanRunner(new SettingsManagerImpl(), new CliCommandExecutorImpl(this.logger));
+            const results = await scanRunner.runDfa(methodLevelTarget, projectDir, this.context, this.sfgeCachePath);
             if (results.length > 0) {
                 const panel = vscode.window.createWebviewPanel(
                     'dfaResults',

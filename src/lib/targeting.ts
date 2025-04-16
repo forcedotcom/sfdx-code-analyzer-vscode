@@ -6,7 +6,7 @@
  */
 import * as vscode from 'vscode';
 import {glob} from 'glob';
-import {exists, isDir} from './file';
+import {FileHandlerImpl} from './fs-utils';
 import {ApexLsp, GenericSymbol} from './apex-lsp';
 import {messages} from './messages';
 
@@ -20,11 +20,12 @@ import {messages} from './messages';
 export async function getFilesFromSelection(selections: vscode.Uri[]): Promise<string[]> {
     // Use a Set to preserve uniqueness.
     const targets: Set<string> = new Set();
+    const fileHandler: FileHandlerImpl = new FileHandlerImpl();
     for (const selection of selections) {
-        if (!(await exists(selection.fsPath))) {
+        if (!(await fileHandler.exists(selection.fsPath))) {
             // This should never happen, but we should handle it gracefully regardless.
             throw new Error(messages.targeting.error.nonexistentSelectedFileGenerator(selection.fsPath));
-        } else if (await isDir(selection.fsPath)) {
+        } else if (await fileHandler.isDir(selection.fsPath)) {
             // Globby wants forward-slashes, but Windows uses back-slashes, so we need to convert the
             // latter into the former.
             const globbablePath = selection.fsPath.replace(/\\/g, '/');

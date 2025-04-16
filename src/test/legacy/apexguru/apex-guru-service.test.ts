@@ -169,6 +169,7 @@ suite('Apex Guru Test Suite', () => {
               engine: 'apexguru',
               message: 'Avoid using System.debug',
               severity: 1,
+              tags: [],
               locations: [{
                   file: fileName,
                   startLine: 10,
@@ -203,6 +204,7 @@ suite('Apex Guru Test Suite', () => {
               engine: 'apexguru',
               message: 'Avoid using System.debug',
               severity: 1,
+              tags: [],
               locations: [{
                   file: fileName,
                   startLine: 10,
@@ -234,6 +236,7 @@ suite('Apex Guru Test Suite', () => {
             engine: 'apexguru',
             message: 'Avoid using System.debug',
             severity: 1,
+            tags: [],
             locations: [{
                 file: fileName,
                 startLine: 10,

@@ -50,7 +50,21 @@ describe('Tests for the SettingsManagerImpl class ', () => {
             expect(getMock).toHaveBeenCalledWith('Use v4 (Deprecated)');
         });
 
-        it('should set useV4Deprecated and remove it at other levels', () => {
+        it('should set useV4Deprecated and remove it at global level', () => {
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+            expect(updateMock).toHaveBeenNthCalledWith(1, 'Use v4 (Deprecated)', true, vscode.ConfigurationTarget.Global);
+            expect(updateMock).not.toHaveBeenNthCalledWith(2, 'Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.Workspace);
+            expect(updateMock).not.toHaveBeenNthCalledWith(3, 'Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+        });
+
+        it('should set useV4Deprecated and remove it at workspace levels when workspace folder exists', () => {
+            const someFolder: vscode.WorkspaceFolder = {
+                uri: vscode.Uri.file('/some/file'),
+                name: 'someName',
+                index: 0
+            };
+            jest.spyOn(vscode.workspace, 'workspaceFolders', 'get').mockReturnValue([someFolder]); // Simulate that workspace is open
+        
             settingsManager.setCodeAnalyzerUseV4Deprecated(true);
             expect(updateMock).toHaveBeenNthCalledWith(1, 'Use v4 (Deprecated)', true, vscode.ConfigurationTarget.Global);
             expect(updateMock).toHaveBeenNthCalledWith(2, 'Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.Workspace);

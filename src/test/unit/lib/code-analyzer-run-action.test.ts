@@ -69,6 +69,7 @@ function createSampleViolation(suffix: string, severityLevel: number, locations:
         severity: severityLevel,
         locations: locations,
         primaryLocationIndex: 0,
+        tags: [],
         resources: []
     };
 }
