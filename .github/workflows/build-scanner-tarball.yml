@@ -28,8 +28,8 @@ jobs:
           git clone -b ${{ inputs.target-branch }} https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
           cd sfdx-scanner
           # Install and build dependencies.
-          yarn
-          yarn build
+          npm install
+          npm run build
           # Create the tarball.
           npm pack
       # Upload the tarball as an artifact so it's usable elsewhere.
