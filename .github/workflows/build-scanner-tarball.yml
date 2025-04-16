@@ -28,8 +28,13 @@ jobs:
           git clone -b ${{ inputs.target-branch }} https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
           cd sfdx-scanner
           # Install and build dependencies.
-          npm install
-          npm run build
+          if [["${{ inputs.target-branch}}" == "dev-4"]]; then
+            yarn
+            yarn build
+          else
+            npm install
+            npm run build
+          fi
           # Create the tarball.
           npm pack
       # Upload the tarball as an artifact so it's usable elsewhere.
