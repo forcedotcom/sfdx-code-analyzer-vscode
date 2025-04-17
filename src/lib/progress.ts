@@ -10,7 +10,10 @@ export interface ProgressReporter {
     reportProgress(progressEvent: ProgressEvent): void;
 }
 
-export type TaskWithProgress = (progressReporter: ProgressReporter) => Promise<void>;
+// Note that VS Code uses Thenables (which are just PromiseLike objects) which are basically Promises without catch
+// statements... so any task provided must not throw an exception and must resolve in order for the task progress
+// window to close.
+export type TaskWithProgress = (progressReporter: ProgressReporter) => PromiseLike<void>;
 
 export interface TaskWithProgressRunner {
     runTask(task: TaskWithProgress): Promise<void>;
@@ -33,7 +36,7 @@ export class TaskWithProgressRunnerImpl {
         const progressOptions: ProgressOptions = {
             location: vscode.ProgressLocation.Notification
         }
-        const promiseLike: PromiseLike<void> = vscode.window.withProgress(progressOptions, (progressFcn: vscode.Progress<ProgressEvent>): Promise<void> => {
+        const promiseLike: PromiseLike<void> = vscode.window.withProgress(progressOptions, (progressFcn: vscode.Progress<ProgressEvent>): PromiseLike<void> => {
             const progressReporter: ProgressReporter = new ProgressReporterImpl(progressFcn);
             return task(progressReporter);
         });

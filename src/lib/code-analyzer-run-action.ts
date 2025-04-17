@@ -32,10 +32,11 @@ export class CodeAnalyzerRunAction {
      * @param commandName The command being run
      * @param filesToScan The files to run against
      */
-    async run(commandName: string, filesToScan: string[]): Promise<void> {
-        const startTime: number = Date.now();
-        try {
-            return await this.taskWithProgressRunner.runTask(async (progressReporter: ProgressReporter) => {
+    run(commandName: string, filesToScan: string[]): Promise<void> {
+        return this.taskWithProgressRunner.runTask(async (progressReporter: ProgressReporter) => {
+            const startTime: number = Date.now();
+
+            try {
                 progressReporter.reportProgress({
                     message: messages.scanProgressReport.verifyingCodeAnalyzerIsInstalled,
                     increment: 5
@@ -80,17 +81,17 @@ export class CodeAnalyzerRunAction {
                     commandName: commandName,
                     duration: (Date.now() - startTime).toString()
                 });
-            });
-        } catch (err) {
-            this.display.displayError(messages.error.analysisFailedGenerator(getErrorMessage(err)));
-            this.telemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS,
-                getErrorMessageWithStack(err),
-                {
-                    executedCommand: commandName,
-                    duration: (Date.now() - startTime).toString()
-                }
-            );
-        }
+            } catch (err) {
+                this.display.displayError(messages.error.analysisFailedGenerator(getErrorMessage(err)));
+                this.telemetryService.sendException(Constants.TELEM_FAILED_STATIC_ANALYSIS,
+                    getErrorMessageWithStack(err),
+                    {
+                        executedCommand: commandName,
+                        duration: (Date.now() - startTime).toString()
+                    }
+                );
+            }
+        });
     }
 
     private displayViolationThatHasNoFileLocation(violation: Violation) {

@@ -26,10 +26,11 @@ import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-act
 import {ScanManager} from './lib/scan-manager';
 import {A4DFixAction} from './lib/agentforce/a4d-fix-action';
 import {UnifiedDiffService, UnifiedDiffServiceImpl} from "./lib/unified-diff-service";
-import {VSCodeDisplay} from "./lib/display";
+import {Display, VSCodeDisplay} from "./lib/display";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "./lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress";
 import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
+import {getErrorMessage} from "./lib/utils";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -90,9 +91,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display);
 
-    // For performance reasons, it's best to kick this off in the background instead of waiting for a scan to get the
-    // validation out of the way.
-    void codeAnalyzer.validateEnvironment();
+    // For performance reasons, it's best to kick this off in the background instead of await the promise.
+    void performValidationAndCaching(codeAnalyzer, display);
 
     // We need to do this first in case any other services need access to those provided by the core extension.
     // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
@@ -354,4 +354,17 @@ async function getActiveDocument(): Promise<vscode.TextDocument | null> {
         return null;
     }
     return vscode.window.activeTextEditor.document;
+}
+
+
+/**
+ * Perform some validation and caching ahead of time instead of waiting for a scan to take place.
+ */
+async function performValidationAndCaching(codeAnalyzer: CodeAnalyzer, display: Display): Promise<void> {
+    try {
+        await codeAnalyzer.validateEnvironment();
+        // Note: We might consider adding in additional things here like for v5 getting the rule descriptions, etc.
+    } catch (err) {
+        display.displayError(getErrorMessage(err));
+    }
 }
