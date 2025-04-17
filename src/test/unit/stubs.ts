@@ -342,6 +342,6 @@ export class FakeTaskWithProgressRunner implements TaskWithProgressRunner {
     progressReporter: SpyProgressReporter = new SpyProgressReporter();
 
     runTask(task: TaskWithProgress): Promise<void> {
-        return task(this.progressReporter);
+        return Promise.resolve(task(this.progressReporter));
     }
 }
