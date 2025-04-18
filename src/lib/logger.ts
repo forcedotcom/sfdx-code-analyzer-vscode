@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 export interface Logger {
+    logAtLevel(logLevel: vscode.LogLevel, msg: string): void;
     log(msg: string): void;
     warn(msg: string): void;
     error(msg: string): void;
@@ -17,6 +18,20 @@ export class LoggerImpl implements Logger {
 
     constructor(outputChannel: vscode.LogOutputChannel) {
         this.outputChannel = outputChannel;
+    }
+
+    logAtLevel(logLevel: vscode.LogLevel, msg: string): void {
+        if (logLevel === vscode.LogLevel.Error) {
+            this.error(msg);
+        } else if (logLevel === vscode.LogLevel.Warning) {
+            this.warn(msg);
+        } else if (logLevel === vscode.LogLevel.Info) {
+            this.log(msg);
+        } else if (logLevel === vscode.LogLevel.Debug) {
+            this.debug(msg);
+        } else if (logLevel === vscode.LogLevel.Trace) {
+            this.trace(msg);
+        }
     }
 
     // Displays error message when log level is set to Error, Warning, Info, Debug, or Trace

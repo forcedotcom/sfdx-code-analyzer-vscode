@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "name": "someRule1",
+      "description": "some description for someRule1",
+      "engine": "someEngine",
+      "severity": 3,
+      "tags": ["Recommended", "Apex"],
+      "resources": []
+    },
+    {
+      "name": "someRule2",
+      "description": "some description for someRule2",
+      "engine": "someEngine",
+      "severity": 3,
+      "tags": ["Recommended", "Apex"],
+      "resources": []
+    }
+  ]
+}

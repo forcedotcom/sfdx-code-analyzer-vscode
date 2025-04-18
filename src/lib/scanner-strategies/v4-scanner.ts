@@ -1,10 +1,11 @@
+import * as vscode from 'vscode';
 import {CliScannerStrategy} from './scanner-strategy';
 import {Violation} from '../diagnostics';
-import {exists} from '../file';
 import {messages} from '../messages';
 import {SettingsManager} from "../settings";
 import * as semver from 'semver';
 import {CliCommandExecutor, CommandOutput} from "../cli-commands";
+import {FileHandler} from "../fs-utils";
 
 export type BaseV4Violation = {
     ruleName: string;
@@ -52,11 +53,13 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
     private readonly version: semver.SemVer;
     private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
+    private readonly fileHandler: FileHandler;
 
-    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager) {
+    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, fileHandler: FileHandler) {
         this.version = version;
         this.cliCommandExecutor = cliCommandExecutor;
         this.settingsManager = settingsManager;
+        this.fileHandler = fileHandler;
     }
 
     public getScannerName(): Promise<string> {
@@ -91,7 +94,7 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
             `--json`
         ];
         if (pmdCustomConfigFile?.length > 0) {
-            if (!(await exists(pmdCustomConfigFile))) {
+            if (!(await this.fileHandler.exists(pmdCustomConfigFile))) {
                 throw new Error(messages.error.pmdConfigNotFoundGenerator(pmdCustomConfigFile));
             }
             args.push('--pmdconfig', pmdCustomConfigFile);
@@ -114,7 +117,7 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
     }
 
     private async invokeAnalyzer(args: string[]): Promise<V4ExecutionResult> {
-        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args);
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, {logLevel: vscode.LogLevel.Debug});
         // No matter what, stdout will be an execution result.
         return JSON.parse(commandOutput.stdout) as V4ExecutionResult;
     }
@@ -143,6 +146,7 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
                                 endColumn: pathlessViolation.endColumn,
                             }],
                             primaryLocationIndex: 0,
+                            tags: [],
                             resources: pathlessViolation.url ? [pathlessViolation.url] : []
                         });
                     }

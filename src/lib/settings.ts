@@ -58,8 +58,12 @@ export class SettingsManagerImpl implements SettingsManager {
      */
     public setCodeAnalyzerUseV4Deprecated(value: boolean): void {
         void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', value, vscode.ConfigurationTarget.Global);
-        void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.Workspace);
-        void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+
+        // If there is a workspace open (which is true if workspaceFolders is nonempty), then we should update the workspace settings
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.Workspace);
+            void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+        }
     }
 
 

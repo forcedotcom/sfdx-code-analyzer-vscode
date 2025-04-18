@@ -17,6 +17,7 @@ export function createSampleCodeAnalyzerDiagnostic(uri: vscode.Uri, range: vscod
             }
         ],
         primaryLocationIndex: 0,
+        tags: [],
         resources: []
     }
     const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(sampleViolation);

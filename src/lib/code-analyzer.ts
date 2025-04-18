@@ -4,14 +4,15 @@ import {CliScannerV5Strategy} from "./scanner-strategies/v5-scanner";
 import {SettingsManager} from "./settings";
 import {Display} from "./display";
 import {messages} from './messages';
-import {CliCommandExecutor, CommandOutput} from "./cli-commands";
+import {CliCommandExecutor} from "./cli-commands";
 import * as semver from 'semver';
-import {getErrorMessageWithStack} from "./utils";
 import {
     ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
     RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
 } from "./constants";
 import {CliScannerStrategy} from "./scanner-strategies/scanner-strategy";
+import {VscodeWorkspace, VscodeWorkspaceImpl} from "./vscode-api";
+import {FileHandler, FileHandlerImpl} from "./fs-utils";
 
 export interface CodeAnalyzer extends CliScannerStrategy {
     validateEnvironment(): Promise<void>;
@@ -21,22 +22,26 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
     private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
     private readonly display: Display;
+    private readonly vscodeWorkspace: VscodeWorkspace;
+    private readonly fileHandler: FileHandler
 
     private cliIsInstalled: boolean = false;
 
     private codeAnalyzerV4?: CliScannerV4Strategy;
     private codeAnalyzerV5?: CliScannerV5Strategy;
 
-    constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display) {
+    constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
+                vscodeWorkspace: VscodeWorkspace = new VscodeWorkspaceImpl(), fileHandler: FileHandler = new FileHandlerImpl()) {
         this.cliCommandExecutor = cliCommandExecutor;
         this.settingsManager = settingsManager;
         this.display = display;
+        this.vscodeWorkspace = vscodeWorkspace;
+        this.fileHandler = fileHandler;
     }
 
     async validateEnvironment(): Promise<void> {
         if (!this.cliIsInstalled) {
-            const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', ['--version']);
-            if (commandOutput.exitCode !== 0) {
+            if (!(await this.cliCommandExecutor.isSfInstalled())) {
                 throw new Error(messages.error.sfMissing);
             }
             this.cliIsInstalled = true;
@@ -58,11 +63,11 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             return; // Already validated
         }
         // Even though v4 is a JIT plugin... in the future it might not be. So we validate for future proofing.
-        const installedVersion: semver.SemVer | undefined = await this.fetchPluginVersion('@salesforce/sfdx-scanner');
+        const installedVersion: semver.SemVer | undefined = await this.cliCommandExecutor.getSfCliPluginVersion('@salesforce/sfdx-scanner');
         if (!installedVersion) {
             throw new Error(messages.error.sfdxScannerMissing);
         }
-        this.codeAnalyzerV4 = new CliScannerV4Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager);
+        this.codeAnalyzerV4 = new CliScannerV4Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.fileHandler);
     }
 
     private async validateV5Plugin(): Promise<void> {
@@ -71,7 +76,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
         }
         const absMinVersion: semver.SemVer = new semver.SemVer(ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
         const recommendedMinVersion: semver.SemVer = new semver.SemVer(RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
-        const installedVersion: semver.SemVer | undefined = await this.fetchPluginVersion('code-analyzer');
+        const installedVersion: semver.SemVer | undefined = await this.cliCommandExecutor.getSfCliPluginVersion('code-analyzer');
         if (!installedVersion) {
             throw new Error(messages.codeAnalyzer.codeAnalyzerMissing + '\n'
                 + messages.codeAnalyzer.installLatestVersion);
@@ -82,7 +87,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             this.display.displayWarning(messages.codeAnalyzer.usingOlderVersion(installedVersion.toString(), recommendedMinVersion.toString()) + '\n'
                 + messages.codeAnalyzer.installLatestVersion);
         }
-        this.codeAnalyzerV5 = new CliScannerV5Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager);
+        this.codeAnalyzerV5 = new CliScannerV5Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.vscodeWorkspace, this.fileHandler);
     }
 
     async scan(filesToScan: string[]): Promise<Violation[]> {
@@ -95,22 +100,5 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
     async getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string> {
         return (await this.getDelegate()).getRuleDescriptionFor(engineName, ruleName);
-    }
-
-    private async fetchPluginVersion(pluginName: string): Promise<semver.SemVer | undefined> {
-        const args: string[] = ['plugins', 'inspect', pluginName, '--json'];
-        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args);
-        if (commandOutput.exitCode === 0) {
-            try {
-                const pluginMetadata: {version: string}[] = JSON.parse(commandOutput.stdout) as {version: string}[];
-                if (Array.isArray(pluginMetadata) && pluginMetadata.length === 1 && pluginMetadata[0].version) {
-                    return new semver.SemVer(pluginMetadata[0].version);
-                }
-            } catch (err) { // Sanity check. Ideally this should never happen:
-                throw new Error(`Error thrown when processing the output: sf ${args.join(' ')}\n\n` +
-                    `==Error==\n${getErrorMessageWithStack(err)}\n\n==StdOut==\n${commandOutput.stdout}`);
-            }
-        }
-        return undefined;
     }
 }

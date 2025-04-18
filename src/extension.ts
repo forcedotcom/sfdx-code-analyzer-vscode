@@ -31,6 +31,8 @@ import {CodeAnalyzer, CodeAnalyzerImpl} from "./lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress";
 import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
 import {getErrorMessage} from "./lib/utils";
+import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
+import {VscodeWorkspace, VscodeWorkspaceImpl} from "./lib/vscode-api";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -84,8 +86,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
 
-    const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl();
-    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display);
+    const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl(logger);
+    const vscodeWorkspace: VscodeWorkspace = new VscodeWorkspaceImpl();
+    const fileHandler: FileHandler = new FileHandlerImpl();
+    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, vscodeWorkspace, fileHandler);
     const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, telemetryService, logger); // This thing is really old and clunky. It'll go away when we remove v4 stuff. But if we don't want to wait we could move all this into the v4-scanner.ts file
     context.subscriptions.push(dfaRunner);
 

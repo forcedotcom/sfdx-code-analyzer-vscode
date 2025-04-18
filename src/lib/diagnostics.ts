@@ -26,6 +26,7 @@ export type Violation = {
     severity: number;
     locations: CodeLocation[];
     primaryLocationIndex: number;
+    tags: string[];
     resources: string[];
 }
 

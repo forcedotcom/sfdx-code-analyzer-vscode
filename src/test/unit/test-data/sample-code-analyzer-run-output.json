@@ -1,0 +1,52 @@
+{
+  "runDir": "/my/project/",
+  "violationCounts": {"total": 2, "sev1": 0, "sev2": 1, "sev3": 1, "sev4": 0, "sev5": 0},
+  "versions": {"code-analyzer": "0.26.0", "eslint": "0.21.0", "sfge": "0.2.0"},
+  "violations": [
+    {
+      "rule": "no-var",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": [
+        "Recommended", "BestPractices", "JavaScript", "TypeScript"
+      ],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "dummyFile1.js",
+          "startLine": 3,
+          "startColumn": 9,
+          "endLine": 3,
+          "endColumn": 49
+        }
+      ],
+      "message": "Unexpected var, use let or const instead.",
+      "resources": [
+        "https://eslint.org/docs/latest/rules/no-var"
+      ]
+    },
+    {
+      "rule": "ApexFlsViolationRule",
+      "engine": "sfge",
+      "severity": 2,
+      "tags": [
+        "DevPreview", "Security", "Apex"
+      ],
+      "primaryLocationIndex": 1,
+      "locations": [
+        {
+          "file": "dummyFile2.cls",
+          "startLine": 37,
+          "startColumn": 31
+        },
+        {
+          "file": "dummyFile2.cls",
+          "startLine": 19,
+          "startColumn": 41
+        }
+      ],
+      "message": "FLS validation is missing for [READ] operation on [Bot_Command__c] with field(s) [Active__c,apex_class__c,Name,pattern__c].",
+      "resources": []
+    }
+  ]
+}

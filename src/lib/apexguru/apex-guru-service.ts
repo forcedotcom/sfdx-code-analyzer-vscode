@@ -151,6 +151,7 @@ function reportToDiagnostic(file: string, parsed: ApexGuruReport): CodeAnalyzerD
             startColumn: 1
         }],
         primaryLocationIndex: 0,
+        tags: [],
         resources: [
             'https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'
         ]

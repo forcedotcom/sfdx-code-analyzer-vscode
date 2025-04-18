@@ -5,6 +5,12 @@ import {DiagnosticManager, CodeAnalyzerDiagnostic} from "../../lib/diagnostics";
 import * as vscode from "vscode";
 
 export class SpyLogger implements Logger {
+    logAtLevelCallHistory: {logLevel: vscode.LogLevel, msg: string}[] = [];
+
+    logAtLevel(logLevel: vscode.LogLevel, msg: string): void {
+        this.logAtLevelCallHistory.push({logLevel, msg});
+    }
+
     logCallHistory: { msg: string }[] = [];
 
     log(msg: string): void {

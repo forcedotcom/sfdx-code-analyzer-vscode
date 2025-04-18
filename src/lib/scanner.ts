@@ -5,10 +5,10 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import {SettingsManager, SettingsManagerImpl} from './settings';
+import {SettingsManager} from './settings';
 import {V4ExecutionResult} from './scanner-strategies/v4-scanner';
 import * as Constants from './constants';
-import {CliCommandExecutor, CliCommandExecutorImpl, CommandOutput} from "./cli-commands";
+import {CliCommandExecutor, CommandOutput} from "./cli-commands";
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
@@ -17,7 +17,7 @@ export class ScanRunner { // TODO: I look forward to removing this once V4 goes 
     private readonly settingsManager: SettingsManager;
     private readonly cliCommandExecutor: CliCommandExecutor;
 
-    public constructor(settingsManager: SettingsManager = new SettingsManagerImpl(), cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl()) {
+    public constructor(settingsManager: SettingsManager, cliCommandExecutor: CliCommandExecutor) {
         this.settingsManager = settingsManager;
         this.cliCommandExecutor = cliCommandExecutor;
     }
@@ -101,8 +101,11 @@ export class ScanRunner { // TODO: I look forward to removing this once V4 goes 
      * @param context
      */
     private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<V4ExecutionResult> {
-        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, (pid: number | undefined) => {
-            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, pid);
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, {
+            pidHandler: (pid: number | undefined) => {
+                void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, pid);
+            },
+            logLevel: vscode.LogLevel.Debug
         });
         void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
         // No matter what, stdout will be an execution result.

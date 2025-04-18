@@ -19,3 +19,7 @@ export function getErrorMessageWithStack(error: unknown): string {
     // eslint-disable-next-line @typescript-eslint/no-base-to-string
     return error instanceof Error ? error.stack : /* istanbul ignore next */ String(error);
 }
+
+export function indent(value: string, indentation = '    '): string {
+    return indentation + value.replaceAll('\n', `\n${indentation}`);
+}
