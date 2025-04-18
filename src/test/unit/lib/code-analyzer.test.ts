@@ -2,10 +2,10 @@ import {CodeAnalyzer, CodeAnalyzerImpl} from "../../../lib/code-analyzer";
 import * as semver from "semver";
 import * as stubs from "../stubs";
 import {messages} from "../../../lib/messages";
-import {FileHandlerImpl} from "../../../lib/fs-utils";
-import * as fs from 'fs';
 import {Violation} from "../../../lib/diagnostics";
 import * as path from "path";
+
+const TEST_DATA_DIR: string = path.resolve(__dirname, '..', 'test-data');
 
 describe('Tests for the CodeAnalyzerImpl class', () => {
     let cliCommandExecutor: stubs.StubSpyCliCommandExecutor;
@@ -75,59 +75,6 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         });
 
         describe('v5 tests for the scan method', () => {
-            const sampleResultsJsonText: string = '{\n' +
-                '  "runDir": "/my/project/",\n' +
-                '  "violationCounts": {"total": 2, "sev1": 0, "sev2": 1, "sev3": 1, "sev4": 0, "sev5": 0},\n' +
-                '  "versions": {"code-analyzer": "0.26.0", "eslint": "0.21.0", "sfge": "0.2.0"},\n' +
-                '  "violations": [\n' +
-                '    {\n' +
-                '      "rule": "no-var",\n' +
-                '      "engine": "eslint",\n' +
-                '      "severity": 3,\n' +
-                '      "tags": [\n' +
-                '        "Recommended", "BestPractices", "JavaScript", "TypeScript"\n' +
-                '      ],\n' +
-                '      "primaryLocationIndex": 0,\n' +
-                '      "locations": [\n' +
-                '        {\n' +
-                '          "file": "dummyFile1.js",\n' +
-                '          "startLine": 3,\n' +
-                '          "startColumn": 9,\n' +
-                '          "endLine": 3,\n' +
-                '          "endColumn": 49\n' +
-                '        }\n' +
-                '      ],\n' +
-                '      "message": "Unexpected var, use let or const instead.",\n' +
-                '      "resources": [\n' +
-                '        "https://eslint.org/docs/latest/rules/no-var"\n' +
-                '      ]\n' +
-                '    },\n' +
-                '    {\n' +
-                '      "rule": "ApexFlsViolationRule",\n' +
-                '      "engine": "sfge",\n' +
-                '      "severity": 2,\n' +
-                '      "tags": [\n' +
-                '        "DevPreview", "Security", "Apex"\n' +
-                '      ],\n' +
-                '      "primaryLocationIndex": 1,\n' +
-                '      "locations": [\n' +
-                '        {\n' +
-                '          "file": "dummyFile2.cls",\n' +
-                '          "startLine": 37,\n' +
-                '          "startColumn": 31\n' +
-                '        },\n' +
-                '        {\n' +
-                '          "file": "dummyFile2.cls",\n' +
-                '          "startLine": 19,\n' +
-                '          "startColumn": 41\n' +
-                '        }\n' +
-                '      ],\n' +
-                '      "message": "FLS validation is missing for [READ] operation on [Bot_Command__c] with field(s) [Active__c,apex_class__c,Name,pattern__c].",\n' +
-                '      "resources": []\n' +
-                '    }\n' +
-                '  ]\n' +
-                '}';
-
             const expectedViolation1: Violation = {
                 engine: "eslint",
                 locations: [
@@ -168,12 +115,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 tags: ["DevPreview", "Security", "Apex"]
             };
 
-            let prePopulatedResultsJsonFile: string;
-
-            beforeAll(async () => {
-                prePopulatedResultsJsonFile = await (new FileHandlerImpl()).createTempFile('.json');
-                fs.writeFileSync(prePopulatedResultsJsonFile, sampleResultsJsonText, 'utf-8');
-            });
+            const prePopulatedResultsJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output.json');
 
             it('Sanity check that scan first calls validateEnvironment', async () => {
                 cliCommandExecutor.isSfInstalledReturnValue = false;
@@ -266,24 +208,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         });
 
         describe('v5 tests for the getRuleDescriptionFor method', () => {
-            const sampleRuleDescriptionJsonText: string = '{ "rules": [\n' +
-                '    {\n' +
-                '      "name": "someRule1",\n' +
-                '      "description": "some description for someRule1",\n' +
-                '      "engine": "someEngine",\n' +
-                '      "severity": 3,\n' +
-                '      "tags": ["Recommended", "Apex"],\n' +
-                '      "resources": []\n' +
-                '    },\n' +
-                '    {\n' +
-                '      "name": "someRule2",\n' +
-                '      "description": "some description for someRule2",\n' +
-                '      "engine": "someEngine",\n' +
-                '      "severity": 3,\n' +
-                '      "tags": ["Recommended", "Apex"],\n' +
-                '      "resources": []\n' +
-                '    }\n' +
-                ']\n }';
+            const prePopulatedRuleDescriptionJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-rules-output.json');
 
             it('Sanity check that getRuleDescriptionFor first calls validateEnvironment', async () => {
                 cliCommandExecutor.isSfInstalledReturnValue = false;
@@ -292,8 +217,6 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
 
             it('When asking for a description from an known engine and rule, then its description is returned', async () => {
                 // Set up the file handler to point to a prepopulated rules json file instead of actually calling the cli:
-                const prePopulatedRuleDescriptionJsonFile: string = await (new FileHandlerImpl()).createTempFile('.json');
-                fs.writeFileSync(prePopulatedRuleDescriptionJsonFile, sampleRuleDescriptionJsonText, 'utf-8');
                 fileHandler.createTempFileReturnValue = prePopulatedRuleDescriptionJsonFile;
 
                 const ruleDescription1: string = await codeAnalyzer.getRuleDescriptionFor('someEngine', 'someRule1');
@@ -319,8 +242,6 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
 
             it('When asking for a description from an unknown engine or rule, then empty string is returned', async () => {
                 // Set up the file handler to point to a prepopulated rules json file instead of actually calling the cli:
-                const prePopulatedRuleDescriptionJsonFile: string = await (new FileHandlerImpl()).createTempFile('.json');
-                fs.writeFileSync(prePopulatedRuleDescriptionJsonFile, sampleRuleDescriptionJsonText, 'utf-8');
                 fileHandler.createTempFileReturnValue = prePopulatedRuleDescriptionJsonFile;
 
                 const ruleDescription: string = await codeAnalyzer.getRuleDescriptionFor('unknown', 'unknown');
