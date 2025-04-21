@@ -1,4 +1,3 @@
-
 import {Logger} from "./logger";
 import {CodeAnalyzerDiagnostic, DiagnosticManager, Violation} from "./diagnostics";
 import * as vscode from "vscode";
@@ -7,8 +6,11 @@ import {TelemetryService} from "./external-services/telemetry-service";
 import * as Constants from './constants';
 import {CodeAnalyzer} from "./code-analyzer";
 import {Display} from "./display";
-import {getErrorMessage, getErrorMessageWithStack} from "./utils";
+import {getCurrentDate, getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
+import { WorkspaceState } from "./vscode/workspace-state";
+
+export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
 
 export class CodeAnalyzerRunAction {
     private readonly taskWithProgressRunner: TaskWithProgressRunner;
@@ -96,7 +98,9 @@ export class CodeAnalyzerRunAction {
 
     private displayViolationThatHasNoFileLocation(violation: Violation) {
         const fullMsg: string = `[${violation.engine}:${violation.rule}] ${violation.message}`;
-        if (violation.severity <= 2) {
+        if (violation.rule === UNINSTANTIABLE_ENGINE_RULE) {
+            this.handleEngineError(violation.engine);
+        } else if (violation.severity <= 2) {
             this.display.displayError(fullMsg);
         } else if (violation.severity <= 4) {
             this.display.displayWarning(fullMsg);
@@ -111,5 +115,29 @@ export class CodeAnalyzerRunAction {
             filesWithViolations.add(violation.locations[violation.primaryLocationIndex].file);
         }
         this.display.displayInfo(messages.info.finishedScan(numFilesScanned, filesWithViolations.size, violations.length));
+    }
+
+    /**
+     * An engine won't start, and we want to limit how many times a user has to encounter this error.
+     * If the user has seen the error for this engine in this session - don't show it again.
+     * If it's the first time seeing it, then set the workspace state key and notify the user.
+     */
+    private handleEngineError(engine: string) {
+        // Use a key with date component to reset warnings daily
+        const today = getCurrentDate();
+        const engineWorkspaceKey = `${Constants.ENGINE_WARNING_PREFIX}${engine}_${today}`;
+        const seenThisEngineError = WorkspaceState.getValue<boolean>(engineWorkspaceKey) ?? false;
+
+        if (!seenThisEngineError) {
+            WorkspaceState.setValue(engineWorkspaceKey, true);
+            this.display.displayError(messages.error.engineUninstantiable(engine),
+            {
+                text: messages.buttons.learnMore,
+                callback: (): void => {
+                    const settingUri: vscode.Uri = vscode.Uri.parse(Constants.DOCS_PREREQUISITES_LINK);
+                    void vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
+                }
+            });
+        }
     }
 }

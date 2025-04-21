@@ -10,6 +10,13 @@ export class RandomUUIDGenerator implements UUIDGenerator {
     }
 }
 
+/**
+ * Gets the current date with format: YYYY-MM-DD
+ */
+export function getCurrentDate(): string {
+    return new Date().toISOString().split('T')[0];
+}
+
 export function getErrorMessage(error: unknown): string {
     // eslint-disable-next-line @typescript-eslint/no-base-to-string
     return error instanceof Error ? error.message : /* istanbul ignore next */ String(error);

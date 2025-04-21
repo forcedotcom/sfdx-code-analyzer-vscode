@@ -7,7 +7,7 @@ import * as path from 'node:path';
 import * as semver from 'semver';
 import {SettingsManager} from "../settings";
 import {CliCommandExecutor, CommandOutput} from "../cli-commands";
-import {VscodeWorkspace} from "../vscode-api";
+import {VscodeWorkspace} from "../vscode/vscode-api";
 
 type ResultsJson = {
     runDir: string;
