@@ -33,7 +33,6 @@ import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
 import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl} from "./lib/vscode/vscode-api";
-import {WorkspaceState} from './lib/vscode/workspace-state';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -84,8 +83,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     context.subscriptions.push(diagnosticManager);
     const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
     context.subscriptions.push(scanManager);
-
-    WorkspaceState.initialize(context);
 
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
 

@@ -6,9 +6,8 @@ import {TelemetryService} from "./external-services/telemetry-service";
 import * as Constants from './constants';
 import {CodeAnalyzer} from "./code-analyzer";
 import {Display} from "./display";
-import {getCurrentDate, getErrorMessage, getErrorMessageWithStack} from "./utils";
+import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
-import { WorkspaceState } from "./vscode/workspace-state";
 
 export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
 
@@ -19,6 +18,7 @@ export class CodeAnalyzerRunAction {
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
     private readonly display: Display;
+    private seenErrors: Map<string, boolean> = new Map();
 
     constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger, display: Display) {
         this.taskWithProgressRunner = taskWithProgressRunner;
@@ -120,21 +120,19 @@ export class CodeAnalyzerRunAction {
     /**
      * An engine won't start, and we want to limit how many times a user has to encounter this error.
      * If the user has seen the error for this engine in this session - don't show it again.
-     * If it's the first time seeing it, then set the workspace state key and notify the user.
+     * If it's the first time seeing it, then store that and notify the user.
      */
     private handleEngineError(engine: string) {
-        // Use a key with date component to reset warnings daily
-        const today = getCurrentDate();
-        const engineWorkspaceKey = `${Constants.ENGINE_WARNING_PREFIX}${engine}_${today}`;
-        const seenThisEngineError = WorkspaceState.getValue<boolean>(engineWorkspaceKey) ?? false;
+        const engineWorkspaceKey = `${Constants.ENGINE_WARNING_PREFIX}${engine}`;
+        const seenThisEngineError = this.seenErrors.get(engineWorkspaceKey) ?? false;
 
         if (!seenThisEngineError) {
-            WorkspaceState.setValue(engineWorkspaceKey, true);
+            this.seenErrors.set(engineWorkspaceKey, true);
             this.display.displayError(messages.error.engineUninstantiable(engine),
             {
                 text: messages.buttons.learnMore,
                 callback: (): void => {
-                    const settingUri: vscode.Uri = vscode.Uri.parse(Constants.DOCS_PREREQUISITES_LINK);
+                    const settingUri: vscode.Uri = vscode.Uri.parse(Constants.DOCS_SETUP_LINK);
                     void vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
                 }
             });

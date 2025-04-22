@@ -5,9 +5,6 @@ import {CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from 
 import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {CodeAnalyzerRunAction, UNINSTANTIABLE_ENGINE_RULE} from "../../../lib/code-analyzer-run-action";
 import {messages} from "../../../lib/messages";
-import * as Constants from '../../../lib/constants';
-import {WorkspaceState} from "../../../lib/vscode/workspace-state";
-import * as utils from "../../../lib/utils";
 
 describe('Tests for CodeAnalyzerRunAction', () => {
     let taskWithProgressRunner: FakeTaskWithProgressRunner;
@@ -18,8 +15,6 @@ describe('Tests for CodeAnalyzerRunAction', () => {
     let logger: SpyLogger;
     let display: SpyDisplay;
     let codeAnalyzerRunAction: CodeAnalyzerRunAction;
-    let workspaceGetStub: WorkspaceState;
-    let workspaceSetStub: WorkspaceState;
 
     beforeEach(() => {
         taskWithProgressRunner = new FakeTaskWithProgressRunner();
@@ -31,9 +26,6 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         display = new SpyDisplay();
         codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager,
             telemetryService, logger, display);
-        workspaceGetStub = jest.spyOn(WorkspaceState, 'getValue').mockReturnValue(false);
-        workspaceSetStub = jest.spyOn(WorkspaceState, 'setValue').mockReturnValue(undefined);
-        jest.spyOn(utils, 'getCurrentDate').mockReturnValue('YYYY-MM-DD');
     });
 
     it('When scan results in violations that are not associated with a file location, then show violation as display messages', async () => {
@@ -80,27 +72,25 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(display.displayInfoCallHistory).toEqual([
             {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'}
         ]);
-
-        expect(workspaceGetStub).toHaveBeenCalled();
-        // Confirm we won't see the message during the same day
-        expect(workspaceSetStub).toHaveBeenCalledWith(`${Constants.ENGINE_WARNING_PREFIX}${engine}_YYYY-MM-DD`, true);
     });
 
-    it('When engines cannot be initialized and user has already seen the error message, then do not show another error message', async () => {
-        workspaceGetStub = jest.spyOn(WorkspaceState, 'getValue').mockReturnValue(true);
+    it('When an engine cannot be initialized and user has already seen the error message, then do not show another error message', async () => {
+        const engine = 'flow';
         codeAnalyzer.scanReturnValue = [
-            createUninstantiableViolation('flow', 1, [{}]),
+            createUninstantiableViolation(engine, 1, [{}]),
         ];
 
         await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
 
-        expect(display.displayErrorCallHistory).toEqual([]);
+        expect(display.displayErrorCallHistory).toEqual([
+            {msg: messages.error.engineUninstantiable(engine)}
+        ]);
         expect(display.displayWarningCallHistory).toEqual([]);
         expect(display.displayInfoCallHistory).toEqual([
+            {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'},
             {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'}
         ]);
-        expect(workspaceGetStub).toHaveBeenCalled();
-        expect(workspaceSetStub).not.toHaveBeenCalled();
     });
 
     // TODO: Eventually, we want to add in the rest of the tests for all the other cases.

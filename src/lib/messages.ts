@@ -75,7 +75,7 @@ export const messages = {
     },
     error: {
         analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,
-        engineUninstantiable: (engine: string) => `Heads up! We could not initialize the engine: "${engine}". Click "Learn More" for instructions on how to set up this engine to analyze your code.`,
+        engineUninstantiable: (engine: string) => `Warning: We couldn't initialize the engine: "${engine}". Click "Learn More" for system requirements for this engine, and general instructions on how to set up Code Analyzer.`,
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use the Salesforce Code Analyzer extension, first install Salesforce CLI.",
         sfdxScannerMissing: "To use the 'Code Analyzer: Use v4 (Deprecated)' setting, you must first install the `@salesforce/sfdx-scanner` Salesforce CLI plugin. But we no longer support v4, so we recommend that you use v5 instead and unselect the 'Code Analyzer: Use v4 (Deprecated)' setting.",

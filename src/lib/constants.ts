@@ -64,4 +64,4 @@ export const CONTEXT_VAR_PARTIAL_RUNS_ENABLED = 'sfca.partialRunsEnabled';
 export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';
 
 // Documentation URLs
-export const DOCS_PREREQUISITES_LINK = 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/setup-cli.html#prerequisites';
+export const DOCS_SETUP_LINK = 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze-vscode.html#install-and-configure-code-analyzer-vs-code-extension';
