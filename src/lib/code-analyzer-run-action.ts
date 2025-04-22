@@ -1,6 +1,6 @@
+import * as vscode from "vscode";
 import {Logger} from "./logger";
 import {CodeAnalyzerDiagnostic, DiagnosticManager, Violation} from "./diagnostics";
-import * as vscode from "vscode";
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
 import * as Constants from './constants';
@@ -8,6 +8,7 @@ import {CodeAnalyzer} from "./code-analyzer";
 import {Display} from "./display";
 import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
+import {WindowManager} from "./vscode-api";
 
 export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
 
@@ -18,15 +19,17 @@ export class CodeAnalyzerRunAction {
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
     private readonly display: Display;
-    private seenErrors: Map<string, boolean> = new Map();
+    private readonly windowManager: WindowManager;
+    private suppressedErrors: Set<string> = new Set();
 
-    constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger, display: Display) {
+    constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger, display: Display, windowManager: WindowManager) {
         this.taskWithProgressRunner = taskWithProgressRunner;
         this.codeAnalyzer = codeAnalyzer;
         this.diagnosticManager = diagnosticManager;
         this.telemetryService = telemetryService;
         this.logger = logger;
         this.display = display;
+        this.windowManager = windowManager;
     }
 
     /**
@@ -99,7 +102,7 @@ export class CodeAnalyzerRunAction {
     private displayViolationThatHasNoFileLocation(violation: Violation) {
         const fullMsg: string = `[${violation.engine}:${violation.rule}] ${violation.message}`;
         if (violation.rule === UNINSTANTIABLE_ENGINE_RULE) {
-            this.handleEngineError(violation.engine);
+            this.handleEngineSetupError(violation.engine, violation.message);
         } else if (violation.severity <= 2) {
             this.display.displayError(fullMsg);
         } else if (violation.severity <= 4) {
@@ -118,24 +121,37 @@ export class CodeAnalyzerRunAction {
     }
 
     /**
-     * An engine won't start, and we want to limit how many times a user has to encounter this error.
-     * If the user has seen the error for this engine in this session - don't show it again.
-     * If it's the first time seeing it, then store that and notify the user.
+     * An engine won't start, and we want to limit help the user with next steps.
+     * If the user has seen the error for this engine in this session and have suppressed this error, then ignore it.
+     * Otherwise, provide options for the user.
      */
-    private handleEngineError(engine: string) {
-        const engineWorkspaceKey = `${UNINSTANTIABLE_ENGINE_RULE}${engine}`;
-        const seenThisEngineError = this.seenErrors.get(engineWorkspaceKey) ?? false;
+    private handleEngineSetupError(engineName: string, setupErrorMsg: string) {
+        if (this.suppressedErrors.has(setupErrorMsg)) {
+            return;
+        }
 
-        if (!seenThisEngineError) {
-            this.seenErrors.set(engineWorkspaceKey, true);
-            this.display.displayError(messages.error.engineUninstantiable(engine),
+        this.display.displayError(messages.error.engineUninstantiable(engineName),
+            {
+                text: messages.buttons.showError,
+                callback: (): void => {
+                    // We always log the error, so this callback is just to open the output window to show that error
+                    this.windowManager.showLogOutputWindow();
+                }
+            },
+            {
+                text: messages.buttons.ignoreError,
+                callback: (): void => {
+                    this.suppressedErrors.add(setupErrorMsg);
+                }
+            },
             {
                 text: messages.buttons.learnMore,
                 callback: (): void => {
-                    const settingUri: vscode.Uri = vscode.Uri.parse(Constants.DOCS_SETUP_LINK);
-                    void vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
+                    this.windowManager.showExternalUrl(Constants.DOCS_SETUP_LINK);
                 }
-            });
-        }
+            }
+        );
+
+        this.logger.error(setupErrorMsg + '\n\n' + messages.buttons.learnMore + ': ' + Constants.DOCS_SETUP_LINK);
     }
 }

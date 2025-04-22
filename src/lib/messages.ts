@@ -75,14 +75,16 @@ export const messages = {
     },
     error: {
         analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,
-        engineUninstantiable: (engine: string) => `Warning: We couldn't initialize the engine: "${engine}". Click "Learn More" for system requirements for this engine, and general instructions on how to set up Code Analyzer.`,
+        engineUninstantiable: (engine: string) => `Error: Couldn't initialize engine "${engine}" due to a setup error. Analysis continued without this engine. Click "Show error" to see the error message. Click "Ignore error" to ignore the error for this session. Click "Learn more" to view the system requirements for this engine, and general instructions on how to set up Code Analyzer.`,
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use the Salesforce Code Analyzer extension, first install Salesforce CLI.",
         sfdxScannerMissing: "To use the 'Code Analyzer: Use v4 (Deprecated)' setting, you must first install the `@salesforce/sfdx-scanner` Salesforce CLI plugin. But we no longer support v4, so we recommend that you use v5 instead and unselect the 'Code Analyzer: Use v4 (Deprecated)' setting.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     },
     buttons: {
-        learnMore: 'Learn More',
+        learnMore: 'Learn more',
+        showError: 'Show error',
+        ignoreError: 'Ignore error',
         showSettings: 'Show settings',
         startUsingV5: 'Start using v5'
     }

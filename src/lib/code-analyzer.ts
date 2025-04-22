@@ -11,7 +11,7 @@ import {
     RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
 } from "./constants";
 import {CliScannerStrategy} from "./scanner-strategies/scanner-strategy";
-import {VscodeWorkspace, VscodeWorkspaceImpl} from "./vscode/vscode-api";
+import {VscodeWorkspace, VscodeWorkspaceImpl} from "./vscode-api";
 import {FileHandler, FileHandlerImpl} from "./fs-utils";
 
 export interface CodeAnalyzer extends CliScannerStrategy {

@@ -32,7 +32,7 @@ import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress
 import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
 import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
-import {VscodeWorkspace, VscodeWorkspaceImpl} from "./lib/vscode/vscode-api";
+import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -84,6 +84,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
     context.subscriptions.push(scanManager);
 
+    const windowManager: WindowManager = new WindowManagerImpl(outputChannel);
+
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
 
     const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl(logger);
@@ -93,7 +95,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, telemetryService, logger); // This thing is really old and clunky. It'll go away when we remove v4 stuff. But if we don't want to wait we could move all this into the v4-scanner.ts file
     context.subscriptions.push(dfaRunner);
 
-    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display);
+    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display, windowManager);
 
     // For performance reasons, it's best to kick this off in the background instead of await the promise.
     void performValidationAndCaching(codeAnalyzer, display);

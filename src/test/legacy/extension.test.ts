@@ -28,7 +28,7 @@ import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/prog
 import {Display, VSCodeDisplay} from "../../lib/display";
 import {CliCommandExecutorImpl} from "../../lib/cli-commands";
 import {Logger} from "../../lib/logger";
-import {StubSettingsManager, StubSpyCliCommandExecutor} from "../unit/stubs";
+import {SpyWindowManager, StubSettingsManager, StubSpyCliCommandExecutor} from "../unit/stubs";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -242,7 +242,7 @@ suite('Extension Test Suite', () => {
                 const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
                 const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, new SettingsManagerImpl(), display);
                 codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, new DiagnosticManagerImpl(diagnosticCollection),
-                    stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()));
+                    stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()), new SpyWindowManager());
 
                 const fakeTelemetryName = 'FakeName';
 
