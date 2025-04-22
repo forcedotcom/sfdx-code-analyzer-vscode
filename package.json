@@ -91,7 +91,9 @@
     },
     "activationEvents": [
         "workspaceContains:sfdx-project.json",
-        "onLanguage:apex"
+        "onLanguage:apex",
+        "onLanguage:soql",
+        "onLanguage:visualforce"
     ],
     "main": "./out/extension.js",
     "contributes": {

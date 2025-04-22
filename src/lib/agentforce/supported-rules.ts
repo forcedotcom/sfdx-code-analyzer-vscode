@@ -17,33 +17,41 @@ export enum ViolationContextScope {
  */
 export const A4D_SUPPORTED_RULES: Map<string, ViolationContextScope> = new Map([
     // =======================================================================
+    // ==== Rules from rule selector: 'pmd:Recommended:Documentation:Apex'
+    // =======================================================================
+    ['ApexDoc', ViolationContextScope.MethodScope],
+
+
+    // =======================================================================
     // ==== Rules from rule selector: 'pmd:Recommended:ErrorProne:Apex'
     // =======================================================================
-    ['AvoidDirectAccessTriggerMap', ViolationContextScope.ViolationScope],
-    ['AvoidHardcodingId', ViolationContextScope.ViolationScope],
-    ['AvoidNonExistentAnnotations', ViolationContextScope.ViolationScope],
-    ['EmptyCatchBlock', ViolationContextScope.MethodScope],
-    ['EmptyIfStmt', ViolationContextScope.MethodScope],
-    ['EmptyStatementBlock', ViolationContextScope.MethodScope],
-    ['EmptyTryOrFinallyBlock', ViolationContextScope.ViolationScope],
-    ['EmptyWhileStmt', ViolationContextScope.ViolationScope],
+    ['AvoidDirectAccessTriggerMap', ViolationContextScope.MethodScope],
     ['InaccessibleAuraEnabledGetter', ViolationContextScope.MethodScope],
-    ['MethodWithSameNameAsEnclosingClass', ViolationContextScope.ClassScope],
     ['OverrideBothEqualsAndHashcode', ViolationContextScope.ViolationScope],
     ['TestMethodsMustBeInTestClasses', ViolationContextScope.ClassScope],
+    // NOTE: We have decided that the following `ErrorProne` rules either do not get any value from A4D Quick Fix
+    // suggestions or that the model currently gives back poor suggestions:
+    //   AvoidHardcodingId, AvoidNonExistentAnnotations, EmptyCatchBlock, EmptyIfStmt, EmptyStatementBlock,
+    //   EmptyTryOrFinallyBlock, EmptyWhileStmt, MethodWithSameNameAsEnclosingClass
+
 
     // =======================================================================
     // ==== Rules from rule selector: 'pmd:Recommended:Security:Apex'
     // =======================================================================
     ['ApexBadCrypto', ViolationContextScope.MethodScope],
-    ['ApexCRUDViolation', ViolationContextScope.ViolationScope],
-    ['ApexCSRF', ViolationContextScope.ViolationScope],
+    ['ApexCRUDViolation', ViolationContextScope.MethodScope],
+    ['ApexCSRF', ViolationContextScope.MethodScope],
     ['ApexDangerousMethods', ViolationContextScope.ViolationScope],
     ['ApexInsecureEndpoint', ViolationContextScope.MethodScope],
-    ['ApexOpenRedirect', ViolationContextScope.MethodScope],
     ['ApexSharingViolations', ViolationContextScope.ViolationScope],
     ['ApexSOQLInjection', ViolationContextScope.MethodScope],
     ['ApexSuggestUsingNamedCred', ViolationContextScope.MethodScope],
-    ['ApexXSSFromEscapeFalse', ViolationContextScope.ViolationScope],
-    ['ApexXSSFromURLParam', ViolationContextScope.ViolationScope],
+    ['ApexXSSFromEscapeFalse', ViolationContextScope.MethodScope],
+    ['ApexXSSFromURLParam', ViolationContextScope.ViolationScope]
+    // NOTE: We have decided that the following `Security` rule(s) either do not get any value from A4D Quick Fix
+    // suggestions or that the model currently gives back poor suggestions:
+    //   ApexOpenRedirect
+
+
+    // NOTE: We still need to evaluate other rule categories, so more will come in future releases.
 ]);

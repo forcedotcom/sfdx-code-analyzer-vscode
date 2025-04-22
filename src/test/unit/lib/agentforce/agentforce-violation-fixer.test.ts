@@ -36,7 +36,7 @@ describe('AgentforceViolationFixer Tests', () => {
             '  within the content.';
         const sampleDocument: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), sampleContent, 'apex');
         const sampleDiagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
-            new vscode.Range(0, 8, 1, 7), 'ApexCRUDViolation');
+            new vscode.Range(0, 8, 1, 7), 'ApexDangerousMethods'); // Using a rule that just uses the ViolationScope
 
         it('When response is valid JSON with fixedCode and an explanation, then return the fix suggestion correctly', async () => {
             spyLLMService.callLLMReturnValue = '{"fixedCode": "some code fix", "explanation": "some explanation"}';
@@ -62,7 +62,7 @@ describe('AgentforceViolationFixer Tests', () => {
                 '}';
             const document: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), fileContent, 'apex');
             const diagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
-                new vscode.Range(5, 50, 5, 62), 'ApexBadCrypto');
+                new vscode.Range(5, 50, 5, 62), 'ApexBadCrypto'); // Uses MethodScope
 
             spyLLMService.callLLMReturnValue = '{"fixedCode": "some fixed code"}';
 

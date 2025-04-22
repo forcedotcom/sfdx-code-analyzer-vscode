@@ -16,7 +16,7 @@ export const messages = {
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
-        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce for Developers. (Beta)`,
+        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce for Developers.`,
         failedA4DResponse: "Unable to receive code fix suggestion from Agentforce for Developers.",
         explanationOfFix: (explanation: string) => `Fix Explanation: ${explanation}`,
         noFixSuggested: "No fix was suggested."
