@@ -4,17 +4,17 @@ import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Logger} from "../../lib/logger";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
 import {CodeAnalyzerDiagnostic, Violation} from "../../lib/diagnostics";
-import {Display} from "../../lib/display";
+import {Display, DisplayButton} from "../../lib/display";
 import {UnifiedDiffService} from "../../lib/unified-diff-service";
 import {TextDocument} from "vscode";
 import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 import {SettingsManager} from "../../lib/settings";
 import {CodeAnalyzer} from "../../lib/code-analyzer";
 import {ProgressEvent, ProgressReporter, TaskWithProgress, TaskWithProgressRunner} from "../../lib/progress";
-import {VscodeWorkspace} from "../../lib/vscode/vscode-api";
 import {CliCommandExecutor, CommandOutput, ExecOptions} from "../../lib/cli-commands";
 import * as semver from "semver";
 import {FileHandler} from "../../lib/fs-utils";
+import {VscodeWorkspace, WindowManager} from "../../lib/vscode-api";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -82,16 +82,16 @@ export class SpyDisplay implements Display {
         this.displayInfoCallHistory.push({msg});
     }
 
-    displayWarningCallHistory: { msg: string }[] = [];
+    displayWarningCallHistory: { msg: string, buttons: DisplayButton[] }[] = [];
 
-    displayWarning(msg: string): void {
-        this.displayWarningCallHistory.push({msg});
+    displayWarning(msg: string, ...buttons: DisplayButton[]): void {
+        this.displayWarningCallHistory.push({msg, buttons});
     }
 
-    displayErrorCallHistory: { msg: string }[] = [];
+    displayErrorCallHistory: { msg: string, buttons: DisplayButton[]  }[] = [];
 
-    displayError(msg: string): void {
-        this.displayErrorCallHistory.push({msg});
+    displayError(msg: string, ...buttons: DisplayButton[]): void {
+        this.displayErrorCallHistory.push({msg, buttons});
     }
 }
 
@@ -409,4 +409,17 @@ export class StubFileHandler implements FileHandler {
     createTempFile(_ext?: string): Promise<string> {
         return Promise.resolve(this.createTempFileReturnValue);
     }
+}
+
+export class SpyWindowManager implements WindowManager {
+    showLogOutputWindowCallCount: number = 0;
+    showLogOutputWindow(): void {
+        this.showLogOutputWindowCallCount++;
+    }
+
+    showExternalUrlCallHistory: {url:string}[] = [];
+    showExternalUrl(url: string): void {
+        this.showExternalUrlCallHistory.push({url});
+    }
+
 }
