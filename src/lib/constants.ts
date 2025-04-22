@@ -45,9 +45,6 @@ export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
 export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0';
 export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
 
-// workspace state
-export const ENGINE_WARNING_PREFIX = 'engineOff-'
-
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
 

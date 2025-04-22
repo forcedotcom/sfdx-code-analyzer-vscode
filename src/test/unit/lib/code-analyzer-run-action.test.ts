@@ -60,7 +60,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
     it('When scan determines that engines that cannot be initialized, then show violation as an error message', async () => {
         const engine = 'flow';
         codeAnalyzer.scanReturnValue = [
-            createUninstantiableViolation(engine, 1, [{}]),
+            createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE)
         ];
 
         await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
@@ -77,7 +77,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
     it('When an engine cannot be initialized and user has already seen the error message, then do not show another error message', async () => {
         const engine = 'flow';
         codeAnalyzer.scanReturnValue = [
-            createUninstantiableViolation(engine, 1, [{}]),
+            createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE)
         ];
 
         await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
@@ -110,13 +110,13 @@ function createSampleViolation(suffix: string, severityLevel: number, locations:
     };
 }
 
-function createUninstantiableViolation(suffix: string, severityLevel: number, locations: CodeLocation[]): Violation {
+function createViolationWithoutLocation(engineName: string, rule: string): Violation {
     return {
-        rule: UNINSTANTIABLE_ENGINE_RULE,
-        engine: `${suffix}`,
-        message: `message${suffix}`,
-        severity: severityLevel,
-        locations: locations,
+        rule,
+        engine: `${engineName}`,
+        message: `message${engineName}`,
+        severity: 1,
+        locations: [{}],
         primaryLocationIndex: 0,
         tags: [],
         resources: []

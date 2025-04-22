@@ -123,7 +123,7 @@ export class CodeAnalyzerRunAction {
      * If it's the first time seeing it, then store that and notify the user.
      */
     private handleEngineError(engine: string) {
-        const engineWorkspaceKey = `${Constants.ENGINE_WARNING_PREFIX}${engine}`;
+        const engineWorkspaceKey = `${UNINSTANTIABLE_ENGINE_RULE}${engine}`;
         const seenThisEngineError = this.seenErrors.get(engineWorkspaceKey) ?? false;
 
         if (!seenThisEngineError) {
