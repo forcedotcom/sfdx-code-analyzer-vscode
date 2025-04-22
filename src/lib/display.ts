@@ -9,7 +9,7 @@ export type DisplayButton = {
 export interface Display {
     displayInfo(infoMsg: string): void;
     displayWarning(warnMsg: string, ...buttons: DisplayButton[]): void;
-    displayError(errorMsg: string): void;
+    displayError(errorMsg: string, ...buttons: DisplayButton[]): void;
 }
 
 export class VSCodeDisplay implements Display {
@@ -28,16 +28,20 @@ export class VSCodeDisplay implements Display {
     displayWarning(warnMsg: string, ...buttons: DisplayButton[]): void {
         void vscode.window.showWarningMessage(warnMsg, ...buttons.map(b => b.text)).then(selectedText => {
             const selectedButton: DisplayButton = buttons.find(b => b.text === selectedText);
-            if(selectedButton) {
+            if (selectedButton) {
                 selectedButton.callback();
             }
         });
         this.logger.warn(warnMsg);
     }
 
-    displayError(errorMsg: string): void {
-        // Not waiting for promise because we didn't add buttons and don't care if user ignores the message.
-        void vscode.window.showErrorMessage(errorMsg);
+    displayError(errorMsg: string, ...buttons: DisplayButton[]): void {
+        void vscode.window.showErrorMessage(errorMsg, ...buttons.map(b => b.text)).then(selectedText => {
+            const selectedButton: DisplayButton = buttons.find(b => b.text === selectedText);
+            if (selectedButton) {
+                selectedButton.callback();
+            }
+        });
         this.logger.error(errorMsg);
     }
 }

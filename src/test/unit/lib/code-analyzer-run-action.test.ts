@@ -3,7 +3,8 @@ import * as vscode from "vscode"; // The vscode module is mocked out. See: scrip
 import {FakeTaskWithProgressRunner, SpyDisplay, SpyLogger, SpyTelemetryService, StubCodeAnalyzer} from "../stubs";
 import {CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
-import {CodeAnalyzerRunAction} from "../../../lib/code-analyzer-run-action";
+import {CodeAnalyzerRunAction, UNINSTANTIABLE_ENGINE_RULE} from "../../../lib/code-analyzer-run-action";
+import {messages} from "../../../lib/messages";
 
 describe('Tests for CodeAnalyzerRunAction', () => {
     let taskWithProgressRunner: FakeTaskWithProgressRunner;
@@ -56,6 +57,41 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(diagnosticCollection.get(vscode.Uri.file('someFile.cls'))).toHaveLength(1);
     });
 
+    it('When scan determines that engines that cannot be initialized, then show violation as an error message', async () => {
+        const engine = 'flow';
+        codeAnalyzer.scanReturnValue = [
+            createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE)
+        ];
+
+        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+
+        expect(display.displayErrorCallHistory).toEqual([
+            {msg: messages.error.engineUninstantiable(engine)}
+        ]);
+        expect(display.displayWarningCallHistory).toEqual([]);
+        expect(display.displayInfoCallHistory).toEqual([
+            {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'}
+        ]);
+    });
+
+    it('When an engine cannot be initialized and user has already seen the error message, then do not show another error message', async () => {
+        const engine = 'flow';
+        codeAnalyzer.scanReturnValue = [
+            createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE)
+        ];
+
+        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+
+        expect(display.displayErrorCallHistory).toEqual([
+            {msg: messages.error.engineUninstantiable(engine)}
+        ]);
+        expect(display.displayWarningCallHistory).toEqual([]);
+        expect(display.displayInfoCallHistory).toEqual([
+            {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'},
+            {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'}
+        ]);
+    });
 
     // TODO: Eventually, we want to add in the rest of the tests for all the other cases.
 });
@@ -68,6 +104,19 @@ function createSampleViolation(suffix: string, severityLevel: number, locations:
         message: `message${suffix}`,
         severity: severityLevel,
         locations: locations,
+        primaryLocationIndex: 0,
+        tags: [],
+        resources: []
+    };
+}
+
+function createViolationWithoutLocation(engineName: string, rule: string): Violation {
+    return {
+        rule,
+        engine: `${engineName}`,
+        message: `message${engineName}`,
+        severity: 1,
+        locations: [{}],
         primaryLocationIndex: 0,
         tags: [],
         resources: []
