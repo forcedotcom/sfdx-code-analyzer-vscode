@@ -25,6 +25,9 @@ export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
 export const QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
 export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
 
+// other commands that we use
+export const VSCODE_COMMAND_OPEN_URL = 'vscode.open';
+
 // telemetry event keys
 export const TELEM_SETTING_USEV4 = 'sfdx__codeanalyzer_setting_useV4';
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
@@ -56,3 +59,6 @@ export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
 export const CONTEXT_VAR_V4_ENABLED = 'sfca.codeAnalyzerV4Enabled';
 export const CONTEXT_VAR_PARTIAL_RUNS_ENABLED = 'sfca.partialRunsEnabled';
 export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';
+
+// Documentation URLs
+export const DOCS_SETUP_LINK = 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze-vscode.html#install-and-configure-code-analyzer-vs-code-extension';

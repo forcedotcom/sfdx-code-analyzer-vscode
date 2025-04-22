@@ -32,7 +32,7 @@ import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress
 import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
 import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
-import {VscodeWorkspace, VscodeWorkspaceImpl} from "./lib/vscode-api";
+import {VscodeWorkspace, VscodeWorkspaceImpl} from "./lib/vscode/vscode-api";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -309,7 +309,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
                 settingsManager.setCodeAnalyzerUseV4Deprecated(false);
             } else if (selection === messages.buttons.showSettings) {
                 const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.Use v4 (Deprecated)');
-                vscode.commands.executeCommand('vscode.open', settingUri);
+                vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
             }
         });
     }

@@ -1,4 +1,3 @@
-
 import {Logger} from "./logger";
 import {CodeAnalyzerDiagnostic, DiagnosticManager, Violation} from "./diagnostics";
 import * as vscode from "vscode";
@@ -10,6 +9,8 @@ import {Display} from "./display";
 import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
 
+export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
+
 export class CodeAnalyzerRunAction {
     private readonly taskWithProgressRunner: TaskWithProgressRunner;
     private readonly codeAnalyzer: CodeAnalyzer;
@@ -17,6 +18,7 @@ export class CodeAnalyzerRunAction {
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
     private readonly display: Display;
+    private seenErrors: Map<string, boolean> = new Map();
 
     constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger, display: Display) {
         this.taskWithProgressRunner = taskWithProgressRunner;
@@ -96,7 +98,9 @@ export class CodeAnalyzerRunAction {
 
     private displayViolationThatHasNoFileLocation(violation: Violation) {
         const fullMsg: string = `[${violation.engine}:${violation.rule}] ${violation.message}`;
-        if (violation.severity <= 2) {
+        if (violation.rule === UNINSTANTIABLE_ENGINE_RULE) {
+            this.handleEngineError(violation.engine);
+        } else if (violation.severity <= 2) {
             this.display.displayError(fullMsg);
         } else if (violation.severity <= 4) {
             this.display.displayWarning(fullMsg);
@@ -111,5 +115,27 @@ export class CodeAnalyzerRunAction {
             filesWithViolations.add(violation.locations[violation.primaryLocationIndex].file);
         }
         this.display.displayInfo(messages.info.finishedScan(numFilesScanned, filesWithViolations.size, violations.length));
+    }
+
+    /**
+     * An engine won't start, and we want to limit how many times a user has to encounter this error.
+     * If the user has seen the error for this engine in this session - don't show it again.
+     * If it's the first time seeing it, then store that and notify the user.
+     */
+    private handleEngineError(engine: string) {
+        const engineWorkspaceKey = `${UNINSTANTIABLE_ENGINE_RULE}${engine}`;
+        const seenThisEngineError = this.seenErrors.get(engineWorkspaceKey) ?? false;
+
+        if (!seenThisEngineError) {
+            this.seenErrors.set(engineWorkspaceKey, true);
+            this.display.displayError(messages.error.engineUninstantiable(engine),
+            {
+                text: messages.buttons.learnMore,
+                callback: (): void => {
+                    const settingUri: vscode.Uri = vscode.Uri.parse(Constants.DOCS_SETUP_LINK);
+                    void vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
+                }
+            });
+        }
     }
 }

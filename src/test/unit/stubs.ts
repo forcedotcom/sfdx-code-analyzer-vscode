@@ -11,7 +11,7 @@ import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 import {SettingsManager} from "../../lib/settings";
 import {CodeAnalyzer} from "../../lib/code-analyzer";
 import {ProgressEvent, ProgressReporter, TaskWithProgress, TaskWithProgressRunner} from "../../lib/progress";
-import {VscodeWorkspace} from "../../lib/vscode-api";
+import {VscodeWorkspace} from "../../lib/vscode/vscode-api";
 import {CliCommandExecutor, CommandOutput, ExecOptions} from "../../lib/cli-commands";
 import * as semver from "semver";
 import {FileHandler} from "../../lib/fs-utils";
