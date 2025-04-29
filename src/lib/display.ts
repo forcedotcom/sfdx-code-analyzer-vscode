@@ -1,44 +1,47 @@
-import { DiagnosticConvertible } from "./diagnostics";
+import vscode from "vscode";
+import {Logger} from "./logger";
 
-export type ProgressNotification = {
-    message?: string;
-    increment?: number;
-};
+export type DisplayButton = {
+    text: string
+    callback: ()=>void
+}
 
 export interface Display {
-    displayProgress(notification: ProgressNotification): void;
-
-    displayResults(allTargets: string[], results: DiagnosticConvertible[]): Promise<void>;
-
-    displayLog(msg: string): void;
+    displayInfo(infoMsg: string): void;
+    displayWarning(warnMsg: string, ...buttons: DisplayButton[]): void;
+    displayError(errorMsg: string, ...buttons: DisplayButton[]): void;
 }
 
-export class UxDisplay implements Display {
-    private readonly displayable: Displayable;
+export class VSCodeDisplay implements Display {
+    private readonly logger: Logger;
 
-    public constructor(displayable: Displayable) {
-        this.displayable = displayable;
+    public constructor(logger: Logger) {
+        this.logger = logger;
     }
 
-    public displayProgress(notification: ProgressNotification): void {
-        this.displayable.progress(notification);
+    displayInfo(infoMsg: string): void {
+        // Not waiting for promise because we didn't add buttons and don't care if user ignores the message.
+        void vscode.window.showInformationMessage(infoMsg);
+        this.logger.log(infoMsg);
     }
 
-    public async displayResults(allTargets: string[], results: DiagnosticConvertible[]): Promise<void> {
-        await this.displayable.results(allTargets, results);
+    displayWarning(warnMsg: string, ...buttons: DisplayButton[]): void {
+        void vscode.window.showWarningMessage(warnMsg, ...buttons.map(b => b.text)).then(selectedText => {
+            const selectedButton: DisplayButton = buttons.find(b => b.text === selectedText);
+            if (selectedButton) {
+                selectedButton.callback();
+            }
+        });
+        this.logger.warn(warnMsg);
     }
 
-    public displayLog(msg: string): void {
-        this.displayable.log(msg);
+    displayError(errorMsg: string, ...buttons: DisplayButton[]): void {
+        void vscode.window.showErrorMessage(errorMsg, ...buttons.map(b => b.text)).then(selectedText => {
+            const selectedButton: DisplayButton = buttons.find(b => b.text === selectedText);
+            if (selectedButton) {
+                selectedButton.callback();
+            }
+        });
+        this.logger.error(errorMsg);
     }
 }
-
-export interface Displayable {
-    progress(notification: ProgressNotification): void;
-
-    results(allTargets: string[], results: DiagnosticConvertible[]): Promise<void>;
-
-    log(msg: string): void;
-}
-
-

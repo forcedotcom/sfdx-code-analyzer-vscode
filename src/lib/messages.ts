@@ -5,26 +5,25 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 export const messages = {
-    stoppingV4SupportSoon: "We plan to stop supporting v4.x of Code Analyzer in the coming months. We highly recommend that you start using v5.x, which is currently in Beta, by setting 'Code Analyzer: Enable V5' to true. For information on v5.x, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
+    noActiveEditor: "Unable to perform action: No active editor.",
+    staleDiagnosticPrefix: "(STALE: The code has changed. Re-run the scan.)",
+    stoppingV4SupportSoon: "We no longer support Code Analyzer v4 and will soon remove it from this VS Code extension. We highly recommend that you start using v5 by unselecting the 'Code Analyzer: Use v4 (Deprecated)' setting. For information on v5, see https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html.",
     scanProgressReport: {
-        identifyingTargets: {
-            message: "Code Analyzer is identifying targets.",
-            increment: 10
-        },
-        analyzingTargets: {
-            message: "Code Analyzer is analyzing targets.",
-            increment: 20
-        },
-        processingResults: {
-            message: "Code Analyzer is processing results.",
-            increment: 60
-        }
+        verifyingCodeAnalyzerIsInstalled: "Verifying Code Analyzer CLI plugin is installed.",
+        identifyingTargets: "Code Analyzer is identifying targets.",
+        analyzingTargets: "Code Analyzer is analyzing targets.",
+        processingResults: "Code Analyzer is processing results."
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
-        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce for Developers. (Beta)`,
+        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce for Developers.`,
         failedA4DResponse: "Unable to receive code fix suggestion from Agentforce for Developers.",
-        explanationOfFix: (explanation: string) => `Fix Explanation: ${explanation}`
+        explanationOfFix: (explanation: string) => `Fix Explanation: ${explanation}`,
+        noFixSuggested: "No fix was suggested."
+    },
+    unifiedDiff: {
+        mustAcceptOrRejectDiffFirst: "You must accept or reject all changes before performing this action.",
+        editorCodeLensMustBeEnabled: "This action requires the 'Editor: Code Lens' setting to be enabled."
     },
     apexGuru: {
         progress: {
@@ -68,12 +67,25 @@ export const messages = {
             noMethodIdentified: "Select a single method to run Graph Engine path-based analysis."
         }
     },
+    codeAnalyzer: {
+        codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin.",
+        doesNotMeetMinVersion: (currentVer: string, recommendedVer: string) => `The currently installed version '${currentVer}' of the \`code-analyzer\` Salesforce CLI plugin is unsupported by this extension. Please use version '${recommendedVer}' or greater.`,
+        usingOlderVersion: (currentVer: string, recommendedVer: string) => `The currently installed version '${currentVer}' of the \`code-analyzer\` Salesforce CLI plugin is only partially supported by this extension. To take advantage of the latest features of this extension, we recommended using version '${recommendedVer}' or greater.`,
+        installLatestVersion: 'Install the latest `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.',
+    },
     error: {
         analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,
+        engineUninstantiable: (engine: string) => `Error: Couldn't initialize engine "${engine}" due to a setup error. Analysis continued without this engine. Click "Show error" to see the error message. Click "Ignore error" to ignore the error for this session. Click "Learn more" to view the system requirements for this engine, and general instructions on how to set up Code Analyzer.`,
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
-        sfMissing: "To use this extension, first install Salesforce CLI `sf` or `sfdx` commands.",
-        sfdxScannerMissing: "To use this extension, first install `@salesforce/sfdx-scanner`.",
-        codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.",
+        sfMissing: "To use the Salesforce Code Analyzer extension, first install Salesforce CLI.",
+        sfdxScannerMissing: "To use the 'Code Analyzer: Use v4 (Deprecated)' setting, you must first install the `@salesforce/sfdx-scanner` Salesforce CLI plugin. But we no longer support v4, so we recommend that you use v5 instead and unselect the 'Code Analyzer: Use v4 (Deprecated)' setting.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
+    },
+    buttons: {
+        learnMore: 'Learn more',
+        showError: 'Show error',
+        ignoreError: 'Ignore error',
+        showSettings: 'Show settings',
+        startUsingV5: 'Start using v5'
     }
 };

@@ -30,24 +30,24 @@ export class LiveTelemetryService implements TelemetryService {
     }
 
     sendExtensionActivationEvent(hrStart: [number, number]): void {
-        this.debugLogTelemetryEvent({hrStart});
+        this.traceLogTelemetryEvent({hrStart});
         this.coreTelemetryService.sendExtensionActivationEvent(hrStart);
     }
 
     sendCommandEvent(commandName: string, properties: Record<string, string>): void {
-        this.debugLogTelemetryEvent({commandName, properties});
+        this.traceLogTelemetryEvent({commandName, properties});
         this.coreTelemetryService.sendCommandEvent(commandName, undefined, properties);
     }
 
     sendException(name: string, errorMessage: string, properties?: Record<string, string>): void {
         const fullMessage: string = properties ?
             `${errorMessage}\nEvent Properties: ${JSON.stringify(properties)}` : errorMessage;
-        this.debugLogTelemetryEvent({name, errorMessage, properties});
+        this.traceLogTelemetryEvent({name, errorMessage, properties});
         this.coreTelemetryService.sendException(name, fullMessage);
     }
 
-    private debugLogTelemetryEvent(eventData: object): void {
-        this.logger.debug('Sending the following telemetry data to live telemetry service:\n' +
+    private traceLogTelemetryEvent(eventData: object): void {
+        this.logger.trace('Sending the following telemetry data to live telemetry service:\n' +
             JSON.stringify(eventData, null, 2));
     }
 }
@@ -60,19 +60,19 @@ export class LogOnlyTelemetryService implements TelemetryService {
     }
 
     sendExtensionActivationEvent(hrStart: [number, number]): void {
-        this.debugLogTelemetryEvent({hrStart});
+        this.traceLogTelemetryEvent({hrStart});
     }
 
     sendCommandEvent(commandName: string, properties: Record<string, string>): void {
-        this.debugLogTelemetryEvent({commandName, properties});
+        this.traceLogTelemetryEvent({commandName, properties});
     }
 
     sendException(name: string, errorMessage: string, properties?: Record<string, string>): void {
-        this.debugLogTelemetryEvent({name, errorMessage, properties});
+        this.traceLogTelemetryEvent({name, errorMessage, properties});
     }
 
-    private debugLogTelemetryEvent(eventData: object): void {
-        this.logger.debug('Unable to send the following telemetry data since live telemetry service is unavailable:\n' +
+    private traceLogTelemetryEvent(eventData: object): void {
+        this.logger.trace('Unable to send the following telemetry data since live telemetry service is unavailable:\n' +
             JSON.stringify(eventData, null, 2));
     }
 }

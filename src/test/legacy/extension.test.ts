@@ -9,40 +9,40 @@
  */
 import {expect} from 'chai';
 import * as path from 'path';
-import {SfCli} from '../../lib/sf-cli';
 import * as Sinon from 'sinon';
 import {
     _isValidFileForAnalysis,
     SFCAExtensionData
 } from '../../extension';
 import {messages} from '../../lib/messages';
-import {SettingsManagerImpl} from '../../lib/settings';
+import {SettingsManager, SettingsManagerImpl} from '../../lib/settings';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
-
-// You can import and use all API from the 'vscode' module
-// as well as import your extension to test it
 import * as vscode from 'vscode';
 import {DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
-import {SpyLogger, StubDiagnosticManager, StubTelemetryService} from "./test-utils";
-import {DfaRunner, verifyPluginInstallation} from "../../lib/dfa-runner";
-import {CodeAnalyzerRunner} from "../../lib/code-analyzer-runner";
+import {SpyLogger, StubTelemetryService} from "./test-utils";
+import {DfaRunner} from "../../lib/dfa-runner";
+import {CodeAnalyzerRunAction} from "../../lib/code-analyzer-run-action";
+import {CodeAnalyzer, CodeAnalyzerImpl} from "../../lib/code-analyzer";
+import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/progress";
+import {Display, VSCodeDisplay} from "../../lib/display";
+import {CliCommandExecutorImpl} from "../../lib/cli-commands";
+import {Logger} from "../../lib/logger";
+import {SpyWindowManager, StubSettingsManager, StubSpyCliCommandExecutor} from "../unit/stubs";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
 
-    suite('E2E', () => {
+    suite('E2E', function () {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         suiteSetup(async function () {
-            this.timeout(10000);
             // Activate the extension.
             await ext.activate();
         });
 
         setup(function () {
-            this.timeout(10000);
             // Verify that there are no existing diagnostics floating around.
             const diagnosticsArrays = vscode.languages.getDiagnostics();
             for (const [uri, diagnostics] of diagnosticsArrays) {
@@ -78,7 +78,7 @@ suite('Extension Test Suite', () => {
             async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
                 // ===== SETUP =====
                 // Set V5's enablement to the desired state.
-                Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+                Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
 
                 // ===== TEST =====
                 // Run the "scan active file" command.
@@ -86,9 +86,7 @@ suite('Extension Test Suite', () => {
 
                 // ===== ASSERTIONS =====
                 // Verify that we added diagnostics.
-                const diagnosticArrays = vscode.languages.getDiagnostics();
-                const [uri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === fileUri.toString());
-                expect(uri, `Expected diagnostics for ${fileUri.toString()}`).to.exist;
+                const diagnostics: vscode.Diagnostic[] = vscode.languages.getDiagnostics(fileUri);
                 expect(diagnostics, 'Expected non-empty diagnostic array').to.not.be.empty;
 
                 // At present, we expect only violations for PMD's `ApexDoc` rule.
@@ -100,20 +98,12 @@ suite('Extension Test Suite', () => {
                 }
             }
 
-            // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-            // (Arrow functions bind lexical `this` and we don't want that.)
             test('Adds proper diagnostics when running with v4', async function() {
-                // Set the timeout to a frankly absurd value, just to make sure Github Actions
-                // can finish it in time.
                 this.timeout(90000);
                 await runTest(false);
             });
 
-            // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-            // (Arrow functions bind lexical `this` and we don't want that.)
             test('Adds proper diagnostics when running with v5', async function() {
-                // Set the timeout to a frankly absurd value, just to make sure Github Actions
-                // can finish it in time.
                 this.timeout(90000);
                 await runTest(true);
             });
@@ -131,7 +121,7 @@ suite('Extension Test Suite', () => {
                 async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
                     // ===== SETUP =====
                     // Set V5's enablement to the desired state.
-                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
 
                     // ===== TEST =====
                     // Run the "scan selected files" command.
@@ -140,9 +130,7 @@ suite('Extension Test Suite', () => {
 
                     // ===== ASSERTIONS =====
                     // Verify that we added diagnostics.
-                    const diagnosticArrays = vscode.languages.getDiagnostics();
-                    const [resultsUri, diagnostics] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri.toString());
-                    expect(resultsUri, `Expected diagnostics for ${targetUri.toString()}`).to.exist;
+                    const diagnostics: vscode.Diagnostic[] = vscode.languages.getDiagnostics(targetUri);
                     expect(diagnostics, `Expected non-empty diagnostics for ${targetUri.toString()}`).to.not.be.empty;
                     // At present, we expect only violations for PMD's `ApexDoc` rule.
                     for (const diagnostic of diagnostics) {
@@ -151,34 +139,22 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-                // (Arrow functions bind lexical `this` and we don't want that.)
                 test('Adds proper diagnostics when running with v4', async function() {
-                    // Set the timeout to a frankly absurd value, just to make sure Github Actions
-                    // can finish it in time.
                     this.timeout(90000);
                     await runTest(false);
                 });
 
-                // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-                // (Arrow functions bind lexical `this` and we don't want that.)
                 test('Adds proper diagnostics when running with v5', async function() {
-                    // Set the timeout to a frankly absurd value, just to make sure Github Actions
-                    // can finish it in time.
                     this.timeout(90000);
                     await runTest(true);
                 });
             });
 
             suite('One folder selected', () => {
-                // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-                // (Arrow functions bind lexical `this` and we don't want that.)
                 test('Adds proper diagnostics when running with v4', async function() {
                     // TODO: WRITE THIS TEST
                 });
 
-                // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-                // (Arrow functions bind lexical `this` and we don't want that.)
                 test('Adds proper diagnostics when running with v5', async function() {
                     // TODO: WRITE THIS TEST
                 });
@@ -196,7 +172,7 @@ suite('Extension Test Suite', () => {
                 async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
                     // ===== SETUP =====
                     // Set V5's enablement to the desired state.
-                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerV5Enabled').returns(desiredV5EnablementStatus);
+                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
 
                     // ===== TEST =====
                     // Run the "scan selected files" command.
@@ -206,11 +182,8 @@ suite('Extension Test Suite', () => {
 
                     // ===== ASSERTIONS =====
                     // Verify that we added diagnostics.
-                    const diagnosticArrays = vscode.languages.getDiagnostics();
-                    const [resultsUri1, diagnostics1] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri1.toString());
-                    const [resultsUri2, diagnostics2] = diagnosticArrays.find(uriDiagPair => uriDiagPair[0].toString() === targetUri2.toString());
-                    expect(resultsUri1, `Expected diagnostics for ${targetUri1.toString()}`).to.exist;
-                    expect(resultsUri2, `Expected diagnostics for ${targetUri2.toString()}`).to.exist;
+                    const diagnostics1: vscode.Diagnostic[] = vscode.languages.getDiagnostics(targetUri1);
+                    const diagnostics2: vscode.Diagnostic[] = vscode.languages.getDiagnostics(targetUri2);
                     expect(diagnostics1, `Expected non-empty diagnostics for ${targetUri1.toString()}`).to.not.be.empty;
                     expect(diagnostics2, `Expected non-empty diagnostics for ${targetUri2.toString()}`).to.not.be.empty;
                     // At present, we expect only violations for PMD's `ApexDoc` rule.
@@ -220,20 +193,12 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-                // (Arrow functions bind lexical `this` and we don't want that.)
                 test('Adds proper diagnostics when running with v4', async function() {
-                    // Set the timeout to a frankly absurd value, just to make sure Github Actions
-                    // can finish it in time.
                     this.timeout(90000);
                     await runTest(false);
                 });
 
-                // The use of `this.timeout` requires us to use `function() {}` syntax instead of arrow functions.
-                // (Arrow functions bind lexical `this` and we don't want that.)
                 test('Adds proper diagnostics when running with v5', async function() {
-                    // Set the timeout to a frankly absurd value, just to make sure Github Actions
-                    // can finish it in time.
                     this.timeout(90000);
                     await runTest(true);
                 });
@@ -248,16 +213,13 @@ suite('Extension Test Suite', () => {
     suite('#_runAndDisplay()', () => {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let stubTelemetryService: StubTelemetryService;
-        let codeAnalyzerRunner: CodeAnalyzerRunner;
+        let codeAnalyzerRunAction: CodeAnalyzerRunAction;
 
         suiteSetup(async function () {
-            this.timeout(10000);
             // Activate the extension.
             await ext.activate();
 
             stubTelemetryService = new StubTelemetryService();
-            codeAnalyzerRunner = new CodeAnalyzerRunner(new StubDiagnosticManager(), new SettingsManagerImpl(),
-                stubTelemetryService, new SpyLogger());
         });
 
         suite('Error handling', () => {
@@ -265,17 +227,29 @@ suite('Extension Test Suite', () => {
                 Sinon.restore();
             });
 
-            test('Throws error if `sf`/`sfdx` is missing', async () => {
+            test('Throws error if `sf` is missing', async function () {
+                this.timeout(90000);
+
                 // ===== SETUP =====
-                // Simulate SFDX being unavailable.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+
+                // Simulate SFDX being unavailable.
+                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
+                cliCommandExecutor.isSfInstalledReturnValue = false;
+
+                const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection();
+                const display: Display = new VSCodeDisplay(new SpyLogger());
+                const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
+                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, new SettingsManagerImpl(), display);
+                codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, new DiagnosticManagerImpl(diagnosticCollection),
+                    stubTelemetryService, new SpyLogger(), new VSCodeDisplay(new SpyLogger()), new SpyWindowManager());
+
                 const fakeTelemetryName = 'FakeName';
 
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
                 // The arguments do not matter.
-                await codeAnalyzerRunner.runAndDisplay(fakeTelemetryName, []);
+                await codeAnalyzerRunAction.run(fakeTelemetryName, []);
 
 
                 // ===== ASSERTIONS =====
@@ -291,21 +265,37 @@ suite('Extension Test Suite', () => {
     });
 
     suite('#_runAndDisplayDfa()', () => {
+        let settingsManager: SettingsManager;
+
+        setup(() => {
+            settingsManager = new StubSettingsManager();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+        });
+
+        teardown(() => {
+            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
+        });
+
         suite('Error handling', () => {
             teardown(() => {
                 Sinon.restore();
             });
 
-            test('Throws error if `sf`/`sfdx` is missing', async () => {
+            test('Throws error if `sf` is missing', async function () {
+                this.timeout(90000);
+
                 // ===== SETUP =====
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being unavailable.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
+                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
+                cliCommandExecutor.isSfInstalledReturnValue = false;
                 const fakeTelemetryName = 'FakeName';
 
                 const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
-                const dfaRunner: DfaRunner = new DfaRunner(context, stubTelemetryService, new SpyLogger())
+                const logger: Logger = new SpyLogger();
+                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, new VSCodeDisplay(logger));
+                const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, stubTelemetryService, logger)
 
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
@@ -321,17 +311,22 @@ suite('Extension Test Suite', () => {
                 expect(sentExceptions[0].data).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
             });
 
-            test('Throws error if `sfdx-scanner` is missing', async () => {
+            test('Throws error if `sfdx-scanner` is missing', async function () {
+                this.timeout(90000);
+
                 // ===== SETUP =====
                 const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
                 // Simulate SF being available but SFDX Scanner being absent.
                 const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
-                Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
+                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
+                cliCommandExecutor.isSfInstalledReturnValue = true;
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = null;
                 const fakeTelemetryName = 'FakeName';
 
                 const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
-                const dfaRunner: DfaRunner = new DfaRunner(context, stubTelemetryService, new SpyLogger())
+                const logger: Logger = new SpyLogger();
+                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, new VSCodeDisplay(logger));
+                const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, stubTelemetryService, logger)
 
                 // ===== TEST =====
                 try {
@@ -352,56 +347,18 @@ suite('Extension Test Suite', () => {
         });
     });
 
-    suite('#verifyPluginInstallation()', () => {
-        teardown(() => {
-            Sinon.restore();
-        });
-
-        test('Errors if `sfdx-scanner` is missing', async () => {
-            // ===== SETUP =====
-            // Simulate SF being available but SFDX Scanner being absent.
-            Sinon.stub(SfCli, 'isSfCliInstalled').resolves(true);
-            Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(false);
-
-            // ===== TEST =====
-            // Attempt to run the appropriate extension command, expecting an error.
-            let err: Error = null;
-            try {
-                await verifyPluginInstallation();
-            } catch (e) {
-                err = e as Error;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err.message).to.include(messages.error.sfdxScannerMissing);
-        });
-
-        test('Errors if `cli` is missing', async () => {
-            // ===== SETUP =====
-            // Simulate SF being available but SFDX Scanner being absent.
-            Sinon.stub(SfCli, 'isSfCliInstalled').resolves(false);
-            Sinon.stub(SfCli, 'isCodeAnalyzerInstalled').resolves(true);
-
-            // ===== TEST =====
-            // Attempt to run the appropriate extension command, expecting an error.
-            let err: Error = null;
-            try {
-                await verifyPluginInstallation();
-            } catch (e) {
-                err = e as Error;
-            }
-
-            // ===== ASSERTIONS =====
-            expect(err.message).to.include(messages.error.sfMissing);
-        });
-    });
-
     suite('#_shouldProceedWithDfaRun()', () => {
+        let settingsManager: SettingsManager;
+
+        setup(() => {
+            settingsManager = new SettingsManagerImpl();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+        });
+
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
         suiteSetup(async function () {
-            this.timeout(10000);
             // Activate the extension.
             const extData: SFCAExtensionData = await ext.activate();
             context = extData.context;
@@ -410,24 +367,34 @@ suite('Extension Test Suite', () => {
         teardown(async () => {
             Sinon.restore();
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
         });
 
-        test('Returns true and confirmation message not called when no existing DFA process detected', async () => {
+        test('Returns true and confirmation message not called when no existing DFA process detected', async function () {
+            this.timeout(90000);
+
             const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
 
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
 
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(new SpyLogger()), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             expect(await dfaRunner.shouldProceedWithDfaRun()).to.equal(true);
             Sinon.assert.callCount(infoMessageSpy, 0);
         });
 
-        test('Confirmation message called when DFA process detected', async () => {
+        test('Confirmation message called when DFA process detected', async function () {
+            this.timeout(90000);
+
             const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
             await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(new SpyLogger()),
+                settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             dfaRunner.shouldProceedWithDfaRun();
@@ -437,12 +404,19 @@ suite('Extension Test Suite', () => {
         });
     });
 
-    suite('#_stopExistingDfaRun()', () => {
+    suite('#_stopExistingDfaRun()', function () {
+
+        let settingsManager: SettingsManager;
+
+        setup(() => {
+            settingsManager = new SettingsManagerImpl();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
+        });
+
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let context: vscode.ExtensionContext;
 
-        suiteSetup(async function () {
-            this.timeout(10000);
+        suiteSetup(async () => {
             // Activate the extension.
             const extData: SFCAExtensionData = await ext.activate();
             context = extData.context;
@@ -451,20 +425,29 @@ suite('Extension Test Suite', () => {
         teardown(() => {
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
             Sinon.restore();
+            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
         });
 
-        test('Cache cleared as part of stopping the existing DFA run', async () => {
+        test('Cache cleared as part of stopping the existing DFA run', async function () {
+            this.timeout(90000);
+
             context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
 
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(logger), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             await dfaRunner.stopExistingDfaRun();
             expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
 
-        test('Cache stays cleared when there are no existing DFA runs', () => {
+        test('Cache stays cleared when there are no existing DFA runs', function () {
+            this.timeout(90000);
+
             void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            const dfaRunner: DfaRunner = new DfaRunner(context, new StubTelemetryService(), new SpyLogger())
+            const logger: Logger = new SpyLogger();
+            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(logger), settingsManager, new VSCodeDisplay(logger));
+            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
 
             // eslint-disable-next-line @typescript-eslint/no-floating-promises
             dfaRunner.stopExistingDfaRun();
@@ -497,14 +480,14 @@ suite('Extension Test Suite', () => {
         suiteSetup(() => {
             // Create a diagnostic collection before the test suite starts.
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
-            getTargetsStub = Sinon.stub(targeting, 'getTargets');
+            getTargetsStub = Sinon.stub(targeting, 'getFilesFromSelection');
         });
 
         setup(() => {
             // Ensure the diagnostic collection is clear before each test.
             diagnosticCollection.clear();
 
-            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
         });
 
         teardown(() => {
@@ -513,7 +496,9 @@ suite('Extension Test Suite', () => {
             getTargetsStub.reset();
         });
 
-        test('Should clear diagnostics for a single file', async () => {
+        test('Should clear diagnostics for a single file', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file1.cls');
             const diagnostics = [
@@ -525,13 +510,15 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri)).to.be.empty;
         });
 
-        test('Should clear diagnostics for multiple files', async () => {
+        test('Should clear diagnostics for multiple files', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri1 = vscode.Uri.file('/some/path/file2.cls');
             const uri2 = vscode.Uri.file('/some/path/file3.cls');
@@ -546,25 +533,29 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri1, uri2], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri1, uri2]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri1)).to.be.empty;
             expect(diagnosticCollection.get(uri2)).to.be.empty;
         });
 
-        test('Should handle case with no diagnostics to clear', async () => {
+        test('Should handle case with no diagnostics to clear', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file4.cls');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri)).to.be.empty;
         });
 
-        test('Should handle case with an empty URI array', async () => {
+        test('Should handle case with an empty URI array', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file5.cls');
             const diagnostics = [
@@ -576,13 +567,15 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri)).to.have.lengthOf(1, 'Expected diagnostics to remain unchanged');
         });
 
-        test('Should not affect other diagnostics not in the selected list', async () => {
+        test('Should not affect other diagnostics not in the selected list', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri1 = vscode.Uri.file('/some/path/file6.cls');
             const uri2 = vscode.Uri.file('/some/path/file7.cls');
@@ -600,7 +593,7 @@ suite('Extension Test Suite', () => {
             expect(diagnosticCollection.get(uri2)).to.have.lengthOf(1, 'Expected diagnostics to be present before clearing');
 
             // ===== TEST =====
-            await diagnosticManager.clearDiagnosticsForSelectedFiles([uri1], Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE);
+            diagnosticManager.clearDiagnosticsForFiles([uri1]);
 
             // ===== ASSERTIONS =====
             expect(diagnosticCollection.get(uri1)).to.be.empty;
@@ -615,7 +608,7 @@ suite('Extension Test Suite', () => {
         setup(() => {
             // Create a new diagnostic collection for each test
             diagnosticCollection = vscode.languages.createDiagnosticCollection();
-            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new StubTelemetryService(), new SpyLogger());
+            diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
         });
 
         teardown(() => {
@@ -623,7 +616,9 @@ suite('Extension Test Suite', () => {
             diagnosticCollection.clear();
         });
 
-        test('Should remove a single diagnostic from the collection', () => {
+        test('Should remove a single diagnostic from the collection', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file1.cls');
             const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
@@ -643,7 +638,9 @@ suite('Extension Test Suite', () => {
             expect(remainingDiagnostics[0].message).to.equal('Another diagnostic', 'Expected the remaining diagnostic to be the one not removed');
         });
 
-        test('Should handle removing a diagnostic from an empty collection', () => {
+        test('Should handle removing a diagnostic from an empty collection', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file2.cls');
             const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);
@@ -658,7 +655,9 @@ suite('Extension Test Suite', () => {
             expect(remainingDiagnostics).to.be.empty;
         });
 
-        test('Should handle case where diagnostic is not found', () => {
+        test('Should handle case where diagnostic is not found', function () {
+            this.timeout(90000);
+
             // ===== SETUP =====
             const uri = vscode.Uri.file('/some/path/file3.cls');
             const diagnosticToRemove = new vscode.Diagnostic(new vscode.Range(0, 0, 0, 5), 'Test diagnostic to remove', vscode.DiagnosticSeverity.Warning);

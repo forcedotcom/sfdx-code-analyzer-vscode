@@ -4,6 +4,7 @@ import {SpyLLMService, SpyLogger, StubLLMServiceProvider} from "../../stubs";
 import {StubCodeActionContext} from "../../vscode-stubs";
 import {messages} from "../../../../lib/messages";
 import {createTextDocument} from "jest-mock-vscode";
+import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
 
 describe('AgentforceCodeActionProvider Tests', () => {
     let spyLLMService: SpyLLMService;
@@ -19,17 +20,18 @@ describe('AgentforceCodeActionProvider Tests', () => {
     });
 
     describe('provideCodeActions Tests', () => {
-        const sampleDocument: vscode.TextDocument = createTextDocument(vscode.Uri.file('/someFile.cls'),'sampleContent', 'apex');
+        const sampleUri: vscode.Uri = vscode.Uri.file('/someFile.cls');
+        const sampleDocument: vscode.TextDocument = createTextDocument(sampleUri,'sampleContent', 'apex');
         const range: vscode.Range = new vscode.Range(1, 0, 5, 6);
-        const compatibleRange: vscode.Range = new vscode.Range(3, 1, 4, 5);
-        const incompatibleRange: vscode.Range = new vscode.Range(4, 1, 7, 0);
-        const supportedDiag1: vscode.Diagnostic = createDiagnostic('pmd via Code Analyzer', 'ApexBadCrypto', range);
-        const supportedDiag2: vscode.Diagnostic = createDiagnostic('pmd via Code Analyzer', 'AvoidHardcodingId', compatibleRange);
-        const supportedDiag3: vscode.Diagnostic = createDiagnostic('pmd via Code Analyzer', {value: 'EmptyWhileStmt', target: undefined}, compatibleRange);
-        const unsupportedDiag1: vscode.Diagnostic = createDiagnostic('pmd wrong suffix', 'ApexBadCrypto', range);
-        const unsupportedDiag2: vscode.Diagnostic = createDiagnostic('pmd via Code Analyzer', 'ApexBadCrypto', incompatibleRange);
-        const unsupportedDiag3: vscode.Diagnostic = createDiagnostic('pmd via Code Analyzer', 'UnsupportedRuleName', range);
-        const unsupportedDiag4: vscode.Diagnostic = createDiagnostic(undefined, 'UnsupportedRuleName', range);
+        const compatibleRange1: vscode.Range = new vscode.Range(3, 1, 4, 5); // completely contained
+        const compatibleRange2: vscode.Range = new vscode.Range(4, 1, 5, 9); // partially overlaps
+        const incompatibleRange: vscode.Range = new vscode.Range(5, 7, 7, 0);
+        const supportedDiag1: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, range, 'ApexBadCrypto');
+        const supportedDiag2: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, compatibleRange1, 'ApexDangerousMethods');
+        const supportedDiag3: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, compatibleRange2, 'InaccessibleAuraEnabledGetter');
+        const unsupportedDiag1: vscode.Diagnostic = createSampleDiagnostic('some other diagnostic', 'ApexBadCrypto', range);
+        const unsupportedDiag2: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, incompatibleRange, 'ApexBadCrypto');
+        const unsupportedDiag3: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, range, 'UnsupportedRuleName');
 
         it('When a single supported diagnostic is in the context, then should return the one code action with correctly filled in fields', async () => {
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [supportedDiag1]});
@@ -54,8 +56,7 @@ describe('AgentforceCodeActionProvider Tests', () => {
 
         it('When a mix of supported and unsupported diagnostics are in the context, then should return just code actions for the supported diagnostics', async () => {
             const context: vscode.CodeActionContext = new StubCodeActionContext({
-                diagnostics: [supportedDiag1, supportedDiag2, unsupportedDiag1, unsupportedDiag2, unsupportedDiag3,
-                    unsupportedDiag4, supportedDiag3]
+                diagnostics: [supportedDiag1, supportedDiag2, unsupportedDiag1, unsupportedDiag2, unsupportedDiag3, supportedDiag3]
             });
             const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context, undefined);
 
@@ -78,7 +79,7 @@ describe('AgentforceCodeActionProvider Tests', () => {
     });
 });
 
-function createDiagnostic(source: string, code: string | {value: string, target: vscode.Uri}, range: vscode.Range): vscode.Diagnostic {
+function createSampleDiagnostic(source: string, code: string, range: vscode.Range): vscode.Diagnostic {
     const diagnostic: vscode.Diagnostic = new vscode.Diagnostic(range, 'dummy message');
     diagnostic.source = source
     diagnostic.code = code;

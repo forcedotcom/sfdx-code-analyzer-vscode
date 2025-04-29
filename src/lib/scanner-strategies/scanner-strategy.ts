@@ -1,24 +1,9 @@
-import {DiagnosticConvertible} from '../diagnostics';
-import {SfCli} from '../sf-cli';
-import {messages} from '../messages';
+import {Violation} from '../diagnostics';
 
+export interface CliScannerStrategy {
+    scan(filesToScan: string[]): Promise<Violation[]>;
 
-export abstract class ScannerStrategy {
-    public abstract validateEnvironment(): Promise<void>;
+    getScannerName(): Promise<string>;
 
-    public abstract scan(targets: string[]): Promise<DiagnosticConvertible[]>;
-
-    public abstract getScannerName(): string;
-}
-
-
-export abstract class CliScannerStrategy extends ScannerStrategy {
-    public override async validateEnvironment(): Promise<void> {
-        if (!await SfCli.isSfCliInstalled()) {
-            throw new Error(messages.error.sfMissing);
-        }
-        await this.validatePlugin();
-    }
-
-    protected abstract validatePlugin(): Promise<void>;
+    getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string>;
 }

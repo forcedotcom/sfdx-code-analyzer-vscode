@@ -7,48 +7,81 @@
 import * as vscode from 'vscode';
 
 export interface SettingsManager {
-    getCodeAnalyzerV5Enabled(): boolean;
-
-    getCodeAnalyzerTags(): string;
-
-    getPmdCustomConfigFile(): string;
-
-    getGraphEngineDisableWarningViolations(): boolean;
-
-    getGraphEngineThreadTimeout(): number;
-
-    getGraphEnginePathExpansionLimit(): number;
-
-    getGraphEngineJvmArgs(): string;
-
-    getAnalyzeOnSave(): boolean;
-
+    // General Settings
     getAnalyzeOnOpen(): boolean;
-
-    getEnginesToRun(): string;
-
-    getNormalizeSeverityEnabled(): boolean;
-
-    getRulesCategory(): string;
-
+    getAnalyzeOnSave(): boolean;
     getApexGuruEnabled(): boolean;
+    getCodeAnalyzerUseV4Deprecated(): boolean;
+    setCodeAnalyzerUseV4Deprecated(value: boolean): void;
 
+    // v5 Settings
+    getCodeAnalyzerConfigFile(): string;
+    getCodeAnalyzerRuleSelectors(): string;
+
+    // v4 Settings (Deprecated)
+    getPmdCustomConfigFile(): string;
+    getGraphEngineDisableWarningViolations(): boolean;
+    getGraphEngineThreadTimeout(): number;
+    getGraphEnginePathExpansionLimit(): number;
+    getGraphEngineJvmArgs(): string;
+    getEnginesToRun(): string;
+    getNormalizeSeverityEnabled(): boolean;
+    getRulesCategory(): string;
     getSfgePartialSfgeRunsEnabled(): boolean;
+
+    // Other Settings that we may depend on
+    getEditorCodeLensEnabled(): boolean;
 }
 
 export class SettingsManagerImpl implements SettingsManager {
-    public getCodeAnalyzerV5Enabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('enableV5');
+    // =================================================================================================================
+    // ==== General Settings
+    // =================================================================================================================
+    public getAnalyzeOnOpen(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnOpen').get('enabled');
     }
 
-    public setCodeAnalyzerV5Enabled(value: boolean): void {
-        vscode.workspace.getConfiguration('codeAnalyzer').update('enableV5', value, vscode.ConfigurationTarget.Global);
+    public getAnalyzeOnSave(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnSave').get('enabled');
     }
 
-    public getCodeAnalyzerTags(): string {
+    public getApexGuruEnabled(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
+    }
+
+    public getCodeAnalyzerUseV4Deprecated(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('Use v4 (Deprecated)');
+    }
+
+    /**
+     * Sets the 'Use v4 (Deprecated)' value at the user (global) level and removes the setting at all other levels
+     */
+    public setCodeAnalyzerUseV4Deprecated(value: boolean): void {
+        void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', value, vscode.ConfigurationTarget.Global);
+
+        // If there is a workspace open (which is true if workspaceFolders is nonempty), then we should update the workspace settings
+        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.Workspace);
+            void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+        }
+    }
+
+
+    // =================================================================================================================
+    // ==== v5 Settings
+    // =================================================================================================================
+    public getCodeAnalyzerConfigFile(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('configFile');
+    }
+
+    public getCodeAnalyzerRuleSelectors(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
     }
 
+
+    // =================================================================================================================
+    // ==== v4 Settings (Deprecated)
+    // =================================================================================================================
     public getPmdCustomConfigFile(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('customConfigFile');
     }
@@ -70,14 +103,6 @@ export class SettingsManagerImpl implements SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('jvmArgs');
     }
 
-    public getAnalyzeOnSave(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnSave').get('enabled');
-    }
-
-    public getAnalyzeOnOpen(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnOpen').get('enabled');
-    }
-
     public getEnginesToRun(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer.scanner').get('engines');
     }
@@ -90,11 +115,14 @@ export class SettingsManagerImpl implements SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer.rules').get('category');
     }
 
-    public getApexGuruEnabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
-    }
-
     public getSfgePartialSfgeRunsEnabled(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.partialGraphEngineScans').get('enabled');
+    }
+
+    // =================================================================================================================
+    // ==== Other Settings that we may depend on
+    // =================================================================================================================
+    public getEditorCodeLensEnabled(): boolean {
+        return vscode.workspace.getConfiguration('editor').get('codeLens');
     }
 }

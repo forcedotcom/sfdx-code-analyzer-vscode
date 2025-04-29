@@ -5,19 +5,21 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import * as vscode from 'vscode';
-import {SettingsManager, SettingsManagerImpl} from './settings';
-import {ExecutionResult} from '../types';
+import {SettingsManager} from './settings';
+import {V4ExecutionResult} from './scanner-strategies/v4-scanner';
 import * as Constants from './constants';
-import * as cspawn from 'cross-spawn';
+import {CliCommandExecutor, CommandOutput} from "./cli-commands";
 
 /**
  * Class for interacting with the {@code @salesforce/sfdx-scanner} plug-in.
  */
-export class ScanRunner {
+export class ScanRunner { // TODO: I look forward to removing this once V4 goes away... but if it takes a long time for that to happen then we should consider moving all this DFA stuff inside of the v4-scanner.ts class instead.
     private readonly settingsManager: SettingsManager;
+    private readonly cliCommandExecutor: CliCommandExecutor;
 
-    public constructor(settingsManager?: SettingsManager) {
-        this.settingsManager = settingsManager ?? new SettingsManagerImpl();
+    public constructor(settingsManager: SettingsManager, cliCommandExecutor: CliCommandExecutor) {
+        this.settingsManager = settingsManager;
+        this.cliCommandExecutor = cliCommandExecutor;
     }
 
     /**
@@ -32,7 +34,7 @@ export class ScanRunner {
         const args: string[] = this.createDfaArgArray(targets, projectDir, cacheFilePath);
 
         // Invoke the scanner.
-        const executionResult: ExecutionResult = await this.invokeDfaAnalyzer(args, context);
+        const executionResult: V4ExecutionResult = await this.invokeDfaAnalyzer(args, context);
 
         // Process the results.
         return this.processDfaResults(executionResult);
@@ -96,25 +98,18 @@ export class ScanRunner {
     /**
      * Uses the provided arguments to run a Salesforce Code Analyzer command.
      * @param args The arguments to be supplied
+     * @param context
      */
-    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<ExecutionResult> {
-        return new Promise((res) => {
-            const cp = cspawn.spawn('sf', args);
-            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, cp.pid);
-
-            let stdout = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', () => {
-                // No matter what, stdout will be an execution result.
-                res(JSON.parse(stdout) as ExecutionResult);
-                void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            });
-
+    private async invokeDfaAnalyzer(args: string[], context: vscode.ExtensionContext): Promise<V4ExecutionResult> {
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, {
+            pidHandler: (pid: number | undefined) => {
+                void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, pid);
+            },
+            logLevel: vscode.LogLevel.Debug
         });
+        void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
+        // No matter what, stdout will be an execution result.
+        return JSON.parse(commandOutput.stdout) as V4ExecutionResult;
     }
 
     /**
@@ -125,7 +120,7 @@ export class ScanRunner {
      * @throws If {@code executionResult.warnings} contains any warnings about methods not being found.
      * @throws if {@code executionResult.status} is non-zero.
      */
-    private processDfaResults(executionResult: ExecutionResult): string {
+    private processDfaResults(executionResult: V4ExecutionResult): string {
         // 0 is the status code indicating a successful analysis.
         if (executionResult.status === 0) {
             // Since we're using HTML format, the results should always be a string.

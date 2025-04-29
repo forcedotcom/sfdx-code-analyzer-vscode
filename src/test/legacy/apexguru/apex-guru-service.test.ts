@@ -7,7 +7,7 @@
 
 import {expect} from 'chai';
 import * as Sinon from 'sinon';
-import {DiagnosticConvertible} from '../../../lib/diagnostics';
+import {CodeAnalyzerDiagnostic} from '../../../lib/diagnostics';
 import {CoreExtensionService} from '../../../lib/core-extension-service';
 import * as Constants from '../../../lib/constants';
 import * as ApexGuruFunctions from '../../../lib/apexguru/apex-guru-service'
@@ -149,8 +149,8 @@ suite('Apex Guru Test Suite', () => {
         });
     });
 
-    suite('#transformStringToDiagnosticConvertibles', () => {
-      test('Transforms valid JSON string to DiagnosticConvertibles for soql violations', () => {
+    suite('#transformReportJsonStringToDiagnostics', () => {
+      test('Transforms valid JSON string to Diagnostics for soql violations', () => {
           const fileName = 'TestFile.cls';
           const jsonString = JSON.stringify([{
               type: 'BestPractices',
@@ -162,28 +162,30 @@ suite('Apex Guru Test Suite', () => {
               ]
           }]);
 
-          const convertibles: DiagnosticConvertible[] = ApexGuruFunctions.transformStringToDiagnosticConvertibles(fileName, jsonString);
-
-          expect(convertibles).to.deep.equal([
-            {
-                rule: 'BestPractices',
-                engine: 'apexguru',
-                message: 'Avoid using System.debug',
-                severity: 1,
-                locations: [{
-                    file: fileName,
-                    startLine: 10,
-                    startColumn: 1
-                }],
-                primaryLocationIndex: 0,
-                resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'],
-                currentCode: 'System.out.println("Old Hello World");',
-                suggestedCode: 'System.out.println("New Hello World");'
-            }
-          ])
+          const diagnostics: CodeAnalyzerDiagnostic[] = ApexGuruFunctions.transformReportJsonStringToDiagnostics(fileName, jsonString);
+          expect(diagnostics).to.have.length(1);
+          expect(diagnostics[0].violation).to.deep.equal({
+              rule: 'BestPractices',
+              engine: 'apexguru',
+              message: 'Avoid using System.debug',
+              severity: 1,
+              tags: [],
+              locations: [{
+                  file: fileName,
+                  startLine: 10,
+                  startColumn: 1
+              }],
+              primaryLocationIndex: 0,
+              resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5']
+          });
+          const expectedCurrentCode: string = 'System.out.println("Old Hello World");';
+          const expectedSuggestedCode: string = 'System.out.println("New Hello World");';
+          expect(diagnostics[0].relatedInformation).to.have.length(2);
+          expect(diagnostics[0].relatedInformation[0].message).to.equal(`\n// Current Code: \n${expectedCurrentCode}`);
+          expect(diagnostics[0].relatedInformation[1].message).to.equal(`/*\n//ApexGuru Suggestions: \n${expectedSuggestedCode}\n*/`);
       });
 
-      test('Transforms valid JSON string to DiagnosticConvertibles for code violations', () => {
+      test('Transforms valid JSON string to Violations for code violations', () => {
         const fileName = 'TestFile.cls';
         const jsonString = JSON.stringify([{
             type: 'BestPractices',
@@ -195,28 +197,30 @@ suite('Apex Guru Test Suite', () => {
             ]
         }]);
 
-        const convertibles: DiagnosticConvertible[] = ApexGuruFunctions.transformStringToDiagnosticConvertibles(fileName, jsonString);
+          const diagnostics: CodeAnalyzerDiagnostic[] = ApexGuruFunctions.transformReportJsonStringToDiagnostics(fileName, jsonString);
+          expect(diagnostics).to.have.length(1);
+          expect(diagnostics[0].violation).to.deep.equal({
+              rule: 'BestPractices',
+              engine: 'apexguru',
+              message: 'Avoid using System.debug',
+              severity: 1,
+              tags: [],
+              locations: [{
+                  file: fileName,
+                  startLine: 10,
+                  startColumn: 1
+              }],
+              primaryLocationIndex: 0,
+              resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5']
+          });
+          const expectedCurrentCode: string = 'System.out.println("Old Hello World");';
+          const expectedSuggestedCode: string = 'System.out.println("New Hello World");';
+          expect(diagnostics[0].relatedInformation).to.have.length(2);
+          expect(diagnostics[0].relatedInformation[0].message).to.equal(`\n// Current Code: \n${expectedCurrentCode}`);
+          expect(diagnostics[0].relatedInformation[1].message).to.equal(`/*\n//ApexGuru Suggestions: \n${expectedSuggestedCode}\n*/`);
+      });
 
-        expect(convertibles).to.deep.equal([
-            {
-                rule: 'BestPractices',
-                engine: 'apexguru',
-                message: 'Avoid using System.debug',
-                severity: 1,
-                locations: [{
-                    file: fileName,
-                    startLine: 10,
-                    startColumn: 1
-                }],
-                primaryLocationIndex: 0,
-                resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'],
-                currentCode: 'System.out.println("Old Hello World");',
-                suggestedCode: 'System.out.println("New Hello World");'
-            }
-        ]);
-    });
-
-    test('Transforms valid JSON string to DiagnosticConvertibles for violations with no suggestions', () => {
+      test('Transforms valid JSON string to Violations for violations with no suggestions', () => {
         const fileName = 'TestFile.cls';
         const jsonString = JSON.stringify([{
             type: 'BestPractices',
@@ -225,32 +229,30 @@ suite('Apex Guru Test Suite', () => {
                 { name: 'line_number', value: '10' }            ]
         }]);
 
-        const convertibles: DiagnosticConvertible[] = ApexGuruFunctions.transformStringToDiagnosticConvertibles(fileName, jsonString);
-
-        expect(convertibles).to.deep.equal([
-            {
-                rule: 'BestPractices',
-                engine: 'apexguru',
-                message: 'Avoid using System.debug',
-                severity: 1,
-                locations: [{
-                    file: fileName,
-                    startLine: 10,
-                    startColumn: 1
-                }],
-                primaryLocationIndex: 0,
-                resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'],
-                currentCode: '',
-                suggestedCode: ''
-            }
-        ])
-    });
+        const diagnostics: CodeAnalyzerDiagnostic[] = ApexGuruFunctions.transformReportJsonStringToDiagnostics(fileName, jsonString);
+        expect(diagnostics).to.have.length(1);
+        expect(diagnostics[0].violation).to.deep.equal({
+            rule: 'BestPractices',
+            engine: 'apexguru',
+            message: 'Avoid using System.debug',
+            severity: 1,
+            tags: [],
+            locations: [{
+                file: fileName,
+                startLine: 10,
+                startColumn: 1
+            }],
+            primaryLocationIndex: 0,
+            resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5']
+        });
+        expect(diagnostics[0].relatedInformation).to.equal(undefined);
+      });
 
       test('Handles empty JSON string', () => {
           const fileName = 'TestFile.cls';
           const jsonString = '';
 
-          expect(() => ApexGuruFunctions.transformStringToDiagnosticConvertibles(fileName, jsonString)).to.throw();
+          expect(() => ApexGuruFunctions.transformReportJsonStringToDiagnostics(fileName, jsonString)).to.throw();
       });
     });
 
@@ -370,142 +372,6 @@ suite('Apex Guru Test Suite', () => {
             }
 
             expect(connectionStub.request.callCount).to.be.greaterThan(0);
-        });
-    });
-    suite('#getConvertiblesWithSuggestions', () => {
-        test('Returns 0 when there are no convertibles', () => {
-            // ===== TEST =====
-            const result = ApexGuruFunctions.getConvertiblesWithSuggestions([]);
-            // ===== ASSERTIONS =====
-            expect(result).to.equal(0);
-        });
-
-        test('Returns 0 when there are convertibles but no suggestions', () => {
-            // ===== SETUP =====
-            const convertibles: DiagnosticConvertible[] = [
-                {
-                    rule: 'BestPractices',
-                    engine: 'fake_engine',
-                    message: 'Avoid using system.debug',
-                    severity: 1,
-                    locations: [{
-                        file: 'test.cls',
-                        startLine: 10,
-                        startColumn: 1
-                    }],
-                    primaryLocationIndex: 0,
-                    resources: ['TestFile.cls'],
-                    currentCode: 'Syste.debug();',
-                    suggestedCode: '' // No suggested code
-                }
-            ];
-            // ===== TEST =====
-            const result = ApexGuruFunctions.getConvertiblesWithSuggestions(convertibles);
-            // ===== ASSERTIONS =====
-            expect(result).to.equal(0);
-        });
-
-        test('Returns correct count when there are convertibles with suggestions', () => {
-            // ===== SETUP =====
-            const convertibles: DiagnosticConvertible[] = [
-                {
-                    rule: 'BestPractices',
-                    engine: 'fake_engine',
-                    message: 'Avoid using System.debug',
-                    severity: 1,
-                    locations: [{
-                        file: 'test.cls',
-                        startLine: 10,
-                        startColumn: 1
-                    }],
-                    primaryLocationIndex: 0,
-                    resources: ['testFile.cls'],
-                    currentCode: 'System.debug();',
-                    suggestedCode: 'System.out.println("Hello World");'
-                }
-            ];
-            // ===== TEST =====
-            const result = ApexGuruFunctions.getConvertiblesWithSuggestions(convertibles);
-            // ===== ASSERTIONS =====
-            expect(result).to.equal(1);
-        });
-
-        test('Returns correct count when multiple convertibles have suggestions', () => {
-            // ===== SETUP =====
-            const convertibles: DiagnosticConvertible[] = [
-                {
-                    rule: 'BestPractices',
-                    engine: 'fake_engine',
-                    message: 'Avoid using System.debug',
-                    severity: 1,
-                    locations: [{
-                        file: 'test.cls',
-                        startLine: 10,
-                        startColumn: 1
-                    }],
-                    primaryLocationIndex: 0,
-                    resources: ['testFile.cls'],
-                    currentCode: 'System.debug();',
-                    suggestedCode: 'System.out.println("Hello World");'
-                }, {
-                    rule: 'CodeQuality',
-                    engine: 'fake_engine',
-                    message: 'Improve variable naming',
-                    severity: 1,
-                    locations: [{
-                        file: 'test.cls',
-                        startLine: 12,
-                        startColumn: 2
-                    }],
-                    primaryLocationIndex: 0,
-                    resources: ['TestFile.cls'],
-                    currentCode: 'int x;',
-                    suggestedCode: 'int userCount;'
-                }
-            ];
-            // ===== TEST =====
-            const result = ApexGuruFunctions.getConvertiblesWithSuggestions(convertibles);
-            // ===== ASSERTIONS =====
-            expect(result).to.equal(2);
-        });
-
-        test('Ignores convertibles without suggestedCode', () => {
-            // ===== SETUP =====
-            const convertibles: DiagnosticConvertible[] = [
-                {
-                    rule: 'BestPractices',
-                    engine: 'fake_engine',
-                    message: 'Avoid using System.debug',
-                    severity: 1,
-                    locations: [{
-                        file: 'test.cls',
-                        startLine: 10,
-                        startColumn: 1
-                    }],
-                    primaryLocationIndex: 0,
-                    resources: ['testFile.cls'],
-                    currentCode: 'System.debug();',
-                    suggestedCode: 'System.out.println("Hello World");'
-                }, {
-                    rule: 'CodeQuality',
-                    engine: 'fake_engine',
-                    message: 'Improve variable naming',
-                    severity: 1,
-                    locations: [{
-                        file: 'test.cls',
-                        startLine: 12,
-                        startColumn: 2
-                    }],
-                    primaryLocationIndex: 0,
-                    resources: ['TestFile.cls'],
-                    currentCode: 'int x;',
-                    suggestedCode: '' // No suggestion
-                }
-            ]
-            // ===== TEST =====
-            const result = ApexGuruFunctions.getConvertiblesWithSuggestions(convertibles);
-            // ===== ASSERTIONS =====
-            expect(result).to.equal(1);
         });
     });
 });

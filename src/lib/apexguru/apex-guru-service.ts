@@ -10,7 +10,7 @@ import * as fspromises from 'fs/promises';
 import {Connection, CoreExtensionService} from '../core-extension-service';
 import * as Constants from '../constants';
 import {messages} from '../messages';
-import {DiagnosticConvertible, DiagnosticManager} from '../diagnostics';
+import {CodeAnalyzerDiagnostic, DiagnosticManager, Violation} from '../diagnostics';
 import {TelemetryService} from "../external-services/telemetry-service";
 import {Logger} from "../logger";
 
@@ -27,12 +27,12 @@ export async function isApexGuruEnabledInOrg(logger: Logger): Promise<boolean> {
         // This could throw an error for a variety of reasons. The API endpoint has not been deployed to the instance, org has no perms, timeouts etc,.
         // In all of these scenarios, we return false.
         const errMsg = e instanceof Error ? e.message : e as string;
-        logger.error('Apex Guru perm check failed with error:' + errMsg);
+        logger.warn('Apex Guru perm check failed with error:' + errMsg);
         return false;
     }
 }
 
-export async function runApexGuruOnFile(selection: vscode.Uri, commandName: string, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger) {
+export async function runApexGuruOnFile(uri: vscode.Uri, commandName: string, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger) {
     const startTime = Date.now();
     try {
         await vscode.window.withProgress({
@@ -40,33 +40,33 @@ export async function runApexGuruOnFile(selection: vscode.Uri, commandName: stri
         }, async (progress) => {
             progress.report(messages.apexGuru.progress);
             const connection = await CoreExtensionService.getConnection();
-            const requestId = await initiateApexGuruRequest(selection, logger, connection);
+            const requestId = await initiateApexGuruRequest(uri, logger, connection);
             logger.log('Code Analyzer with ApexGuru request Id:' + requestId);
 
             const queryResponse: ApexGuruQueryResponse = await pollAndGetApexGuruResponse(connection, requestId, Constants.APEX_GURU_MAX_TIMEOUT_SECONDS, Constants.APEX_GURU_RETRY_INTERVAL_MILLIS);
 
             const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
 
-            const convertibles: DiagnosticConvertible[] = transformStringToDiagnosticConvertibles(selection.fsPath, decodedReport);
-            // TODO: For testability, the diagnostic manager should probably be passed in, not instantiated here.
-            diagnosticManager.displayAsDiagnostics([selection.fsPath], convertibles);
+            const diagnostics: CodeAnalyzerDiagnostic[] = transformReportJsonStringToDiagnostics(uri.fsPath, decodedReport);
+            diagnosticManager.addDiagnostics(diagnostics);
+
             telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
                 executedCommand: commandName,
                 duration: (Date.now() - startTime).toString(),
-                violationCount: convertibles.length.toString(),
-                violationsWithSuggestedCodeCount: getConvertiblesWithSuggestions(convertibles).toString()
+                violationCount: diagnostics.length.toString(),
+                violationsWithSuggestedCodeCount: getDiagnosticsWithSuggestions(diagnostics).length.toString()
             });
-            void vscode.window.showInformationMessage(messages.apexGuru.finishedScan(convertibles.length));
+            void vscode.window.showInformationMessage(messages.apexGuru.finishedScan(diagnostics.length));
         });
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
-        logger.error('Initial Code Analyzer with ApexGuru request failed: ' + errMsg);
+        logger.error('Failed to Scan for Performance Issues with ApexGuru: ' + errMsg);
     }
 }
 
-export function getConvertiblesWithSuggestions(convertibles: DiagnosticConvertible[]): number {
-    // Filter convertibles that have a non-empty suggestedCode and get count
-    return convertibles.filter(convertible => convertible.suggestedCode !== '').length;
+function getDiagnosticsWithSuggestions(diagnostics: CodeAnalyzerDiagnostic[]): CodeAnalyzerDiagnostic[] {
+    // If the diagnostic has relatedInformation, then it must have suggestions.
+    return diagnostics.filter(d => d.relatedInformation && d.relatedInformation.length > 0)
 }
 
 export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number): Promise<ApexGuruQueryResponse> {
@@ -118,39 +118,59 @@ export const fileSystem = {
     readFile: (path: string) => fspromises.readFile(path, 'utf8')
 };
 
-export function transformStringToDiagnosticConvertibles(fileName: string, jsonString: string): DiagnosticConvertible[] {
-    const reports: ApexGuruReport[] = JSON.parse(jsonString) as ApexGuruReport[];
+export function transformReportJsonStringToDiagnostics(fileName: string, jsonString: string): CodeAnalyzerDiagnostic[] {
+    try {
+        const reports: ApexGuruReport[] = JSON.parse(jsonString) as ApexGuruReport[];
+        return reports.map(report => reportToDiagnostic(fileName, report));
+    } catch (err) {
+        const errMsg: string = err instanceof Error ? err.stack : err as string;
+        throw new Error(`Unable to parse response from ApexGuru: ${errMsg}`);
+    }
+}
 
-    const convertibles: DiagnosticConvertible[] = [];
+function reportToDiagnostic(file: string, parsed: ApexGuruReport): CodeAnalyzerDiagnostic {
+    const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value
+        ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value
+        ?? '';
+    const currentCode: string = Buffer.from(encodedCodeBefore, 'base64').toString('utf8');
+    const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value
+        ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value
+        ?? '';
+    const suggestedCode: string = Buffer.from(encodedCodeAfter, 'base64').toString('utf8');
 
-    reports.forEach(parsed => {
-        const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value
-            ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value
-            ?? '';
-        const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value
-            ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value
-            ?? '';
-        const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
+    const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
 
-        convertibles.push({
-            rule: parsed.type,
-            engine: 'apexguru',
-            message: parsed.value,
-            severity: 1,
-            locations: [{
-                file: fileName,
-                startLine: lineNumber,
-                startColumn: 1
-            }],
-            primaryLocationIndex: 0,
-            resources: [
-                'https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'
-            ],
-            currentCode: Buffer.from(encodedCodeBefore, 'base64').toString('utf8'),
-            suggestedCode: Buffer.from(encodedCodeAfter, 'base64').toString('utf8')
-        });
-    });
-    return convertibles;
+    const violation: Violation = {
+        rule: parsed.type,
+        engine: 'apexguru',
+        message: parsed.value,
+        severity: 1, // TODO: Should this really be critical level violation? This seems off.
+        locations: [{
+            file: file,
+            startLine: lineNumber,
+            startColumn: 1
+        }],
+        primaryLocationIndex: 0,
+        tags: [],
+        resources: [
+            'https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'
+        ]
+    };
+
+    const diagnostic: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+    if (suggestedCode.length > 0) {
+        diagnostic.relatedInformation = [
+            new vscode.DiagnosticRelatedInformation(
+                new vscode.Location(vscode.Uri.parse(violation.resources[0]), diagnostic.range),
+                `\n// Current Code: \n${currentCode}`
+            ),
+            new vscode.DiagnosticRelatedInformation(
+                new vscode.Location(vscode.Uri.parse(violation.resources[0]), diagnostic.range),
+                `/*\n//ApexGuru Suggestions: \n${suggestedCode}\n*/`
+            )
+        ];
+    }
+    return diagnostic;
 }
 
 export type ApexGuruAuthResponse = {

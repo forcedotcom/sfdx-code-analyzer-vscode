@@ -1,160 +1,137 @@
+import * as vscode from "vscode";
 import {CliScannerStrategy} from './scanner-strategy';
-import { DiagnosticConvertible } from '../diagnostics';
-import {messages} from '../messages';
-import * as cspawn from 'cross-spawn';
-import { tmpFileWithCleanup } from '../file';
-import { stripAnsi } from '../string-utils';
-import { CODE_ANALYZER_V5_BETA_TEMPLATE } from '../constants';
+import {Violation} from '../diagnostics';
+import {FileHandler} from '../fs-utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-
-export type CliScannerV5StrategyOptions = {
-    tags: string;
-};
+import * as semver from 'semver';
+import {SettingsManager} from "../settings";
+import {CliCommandExecutor, CommandOutput} from "../cli-commands";
+import {VscodeWorkspace} from "../vscode-api";
 
 type ResultsJson = {
     runDir: string;
-    violations: DiagnosticConvertible[];
+    violations: Violation[];
 };
 
-// TODO: When v5 adds support for Graph Engine, we'll want to add its DFA rules to this array.
-const POTENTIALLY_LONG_RUNNING_RULES: string[] = [];
+type RulesJson = {
+    rules: RuleDescription[];
+}
 
-export class CliScannerV5Strategy extends CliScannerStrategy {
-    private readonly options: CliScannerV5StrategyOptions;
-    private readonly name: string = '@salesforce/plugin-code-analyzer@^5 via CLI';
+type RuleDescription = {
+    name: string,
+    description: string,
+    engine: string,
+    severity: number,
+    tags: string[],
+    resources: string[]
+}
 
-    public constructor(options: CliScannerV5StrategyOptions) {
-        super();
-        this.options = options;
+export class CliScannerV5Strategy implements CliScannerStrategy {
+    private readonly version: semver.SemVer;
+    private readonly cliCommandExecutor: CliCommandExecutor;
+    private readonly settingsManager: SettingsManager;
+    private readonly vscodeWorkspace: VscodeWorkspace;
+    private readonly fileHandler: FileHandler;
+
+    private ruleDescriptionMap?: Map<string, string>;
+
+    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, vscodeWorkspace: VscodeWorkspace, fileHandler: FileHandler) {
+        this.version = version;
+        this.cliCommandExecutor = cliCommandExecutor;
+        this.settingsManager = settingsManager;
+        this.vscodeWorkspace = vscodeWorkspace;
+        this.fileHandler = fileHandler;
     }
 
-    public override getScannerName(): string {
-        return this.name;
+    public getScannerName(): Promise<string> {
+        return Promise.resolve(`code-analyzer@${this.version.toString()} via CLI`);
     }
 
-    protected override async validatePlugin(): Promise<void> {
-        // @salesforce/plugin-code-analyzer is a JIT plugin, but the output format only stabilized
-        // in the beta release, so we need to make sure that the beta release is either already installed,
-        // or the version that will be installed via JIT installation.
-        const codeAnalyzerIsInstalled: boolean = await new Promise((res) => {
-            const cp = cspawn.spawn('sf', ['plugins']);
-            let stdout = '';
+    public async getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string> {
+        return (await this.getRuleDescriptionMap()).get(`${engineName}:${ruleName}`) || '';
+    }
 
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.on('exit', code => {
-                return res(code === 0 && stripAnsi(stdout).includes(CODE_ANALYZER_V5_BETA_TEMPLATE));
-            });
-        });
-        if (!codeAnalyzerIsInstalled) {
-            throw new Error(messages.error.codeAnalyzerMissing);
+    private async getRuleDescriptionMap(): Promise<Map<string, string>> {
+        if (this.ruleDescriptionMap === undefined) {
+            if (semver.gte(this.version, '5.0.0-beta.3')) {
+                this.ruleDescriptionMap = await this.createRuleDescriptionMap();
+            } else {
+                this.ruleDescriptionMap = new Map();
+            }
         }
+        return this.ruleDescriptionMap;
     }
 
-    public override async scan(targets: string[]): Promise<DiagnosticConvertible[]> {
-        const potentiallyLongRunningRules: string[] = await this.getLongRunningRules();
+    public async scan(filesToScan: string[]): Promise<Violation[]> {
+        const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
+        const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
 
-        if (potentiallyLongRunningRules.length > 0) {
-            await this.confirmPotentiallyLongRunningScan(potentiallyLongRunningRules);
+        const args: string[] = ['code-analyzer', 'run'];
+
+        if (semver.gte(this.version, '5.0.0')) {
+            // Just in case a file is open in the editor that does not live in the current workspace, or if there
+            // is no workspace open at all, we still want to be able to run code analyzer without error, so we
+            // include the files to scan always along with any workspace folders.
+            const workspacePaths: string[] = [
+                ...this.vscodeWorkspace.getWorkspaceFolders(),
+                ...filesToScan
+            ]
+            workspacePaths.forEach(p => args.push('-w', p));
+            filesToScan.forEach(p => args.push('-t', p));
+        } else {
+            // Before 5.0.0 the --target flag did not exist, so we just make the workspace equal to the files to scan
+            filesToScan.forEach(p => args.push('-w', p));
         }
 
-        const resultsJson: ResultsJson = await this.invokeAnalyzer(targets);
+        if (ruleSelector) {
+            args.push('-r', ruleSelector);
+        }
+        if (configFile) {
+            args.push('-c', configFile);
+        }
 
+        const outputFile: string = await this.fileHandler.createTempFile('.json');
+        args.push('-f', outputFile);
+
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, {logLevel: vscode.LogLevel.Debug});
+        if (commandOutput.exitCode !== 0) {
+            throw new Error(commandOutput.stderr);
+        }
+
+        const resultsJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+        const resultsJson: ResultsJson = JSON.parse(resultsJsonStr) as ResultsJson;
         return this.processResults(resultsJson);
     }
 
-    private async getLongRunningRules(): Promise<string[]> {
-        const args: string[] = [
-            'code-analyzer', 'rules',
-            '-r', this.options.tags || 'Recommended'
-        ];
-
-        const output: string = await new Promise((res, rej) => {
-            const cp = cspawn.spawn('sf', args);
-
-            let stdout = '';
-            let stderr = '';
-
-            cp.stdout.on('data', data => {
-                stdout += data;
-            });
-
-            cp.stderr.on('data', data => {
-                stderr += data;
-            });
-
-            cp.on('exit', (status) => {
-                if (status === 0) {
-                    return res(stdout);
-                } else {
-                    return rej(new Error(stderr));
-                }
-            });
-        });
-
-        return POTENTIALLY_LONG_RUNNING_RULES.filter(r => output.includes(r));
-    }
-
-    private confirmPotentiallyLongRunningScan(_rules: string[]): Promise<boolean> {
-        // TODO: When v5 adds support for Graph Engine, we'll want to implement the body of this method.
-        // We could add a new method called `.confirm` to the `Display` class and pass an instance of that in
-        // as part of the Options in the constructor, and then use that to prompt the user to confirm that they
-        // actually want to run what could potentially be a pretty long-running scan.
-        return Promise.resolve(true);
-    }
-
-    private async invokeAnalyzer(targets: string[]): Promise<ResultsJson> {
-        const args: string[] = [
-            'code-analyzer', 'run',
-            '-r', this.options.tags || 'Recommended',
-            '-w', `"${targets.join('","')}"`
-        ];
-
-        const outputFile: string = await tmpFileWithCleanup('.json');
-
-        args.push('-f', outputFile);
-
-        await new Promise<void>((res, rej) => {
-            const cp = cspawn.spawn('sf', args);
-            let stderr = '';
-
-            cp.stderr.on('data', data => {
-                stderr += data;
-            });
-
-            cp.on('exit', status => {
-                if (status === 0) {
-                    res();
-                } else {
-                    rej(new Error(stderr));
-                }
-            });
-        });
-
-        const outputString: string = await fs.promises.readFile(outputFile, 'utf-8');
-
-        const outputJson: ResultsJson = JSON.parse(outputString) as ResultsJson;
-
-        return outputJson;
-    }
-
-    private processResults(resultsJson: ResultsJson): DiagnosticConvertible[] {
-        const processedConvertibles: DiagnosticConvertible[] = [];
-
+    private processResults(resultsJson: ResultsJson): Violation[] {
+        const processedViolations: Violation[] = [];
         for (const violation of resultsJson.violations) {
             for (const location of violation.locations) {
                 // If the path isn't already absolute, it needs to be made absolute.
-                if (path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+                if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
                     // Relative paths are relative to the RunDir results property.
                     location.file = path.join(resultsJson.runDir, location.file);
                 }
-
             }
-            processedConvertibles.push(violation);
+            processedViolations.push(violation);
         }
-        return processedConvertibles;
+        return processedViolations;
+    }
+
+    private async createRuleDescriptionMap(): Promise<Map<string, string>> {
+        const outputFile: string = await this.fileHandler.createTempFile('.json');
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', ['code-analyzer', 'rules', '-r', 'all', '-f', outputFile]);
+        if (commandOutput.exitCode !== 0) {
+            throw new Error(commandOutput.stderr);
+        }
+        const rulesJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+        const rulesOutput: RulesJson = JSON.parse(rulesJsonStr) as RulesJson;
+
+        const ruleDescriptionMap: Map<string, string> = new Map();
+        for (const ruleDescription of rulesOutput.rules) {
+            ruleDescriptionMap.set(`${ruleDescription.engine}:${ruleDescription.name}`, ruleDescription.description);
+        }
+        return ruleDescriptionMap;
     }
 }

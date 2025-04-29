@@ -25,22 +25,25 @@ export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
 export const QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
 export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
 
+// other commands that we use
+export const VSCODE_COMMAND_OPEN_URL = 'vscode.open';
+
 // telemetry event keys
+export const TELEM_SETTING_USEV4 = 'sfdx__codeanalyzer_setting_useV4';
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_complete';
 export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
-export const TELEM_DIFF_SUGGESTION = 'sfdx__eGPT_suggest';
-export const TELEM_DIFF_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
-export const TELEM_DIFF_ACCEPT = 'sfdx__eGPT_accept';
-export const TELEM_DIFF_ACCEPT_FAILED = 'sfdx__eGPT_accept_failure';
-export const TELEM_DIFF_REJECT = 'sfdx__eGPT_clear';
-export const TELEM_DIFF_REJECT_FAILED = 'sfdx__eGPT_clear_failure';
+export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
+export const TELEM_A4D_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
+export const TELEM_A4D_ACCEPT = 'sfdx__eGPT_accept';
+export const TELEM_A4D_REJECT = 'sfdx__eGPT_clear';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
-export const CODE_ANALYZER_V5_BETA_TEMPLATE = 'code-analyzer 5.0.0-beta';
+export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0';
+export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
 
 // cache names
 export const WORKSPACE_DFA_PROCESS = 'dfaScanProcess';
@@ -50,3 +53,12 @@ export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
 export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
+
+// Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
+export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
+export const CONTEXT_VAR_V4_ENABLED = 'sfca.codeAnalyzerV4Enabled';
+export const CONTEXT_VAR_PARTIAL_RUNS_ENABLED = 'sfca.partialRunsEnabled';
+export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';
+
+// Documentation URLs
+export const DOCS_SETUP_LINK = 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze-vscode.html#install-and-configure-code-analyzer-vs-code-extension';

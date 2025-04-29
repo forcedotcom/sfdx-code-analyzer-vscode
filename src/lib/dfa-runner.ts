@@ -8,20 +8,24 @@ import fs from "fs";
 import path from "path";
 import * as targeting from "./targeting";
 import os from "os";
-import {SfCli} from "./sf-cli";
 import {ScanRunner} from "./scanner";
 import {SIGKILL} from "constants";
+import {CodeAnalyzer} from "./code-analyzer";
+import {CliCommandExecutorImpl} from "./cli-commands";
+import {SettingsManagerImpl} from "./settings";
 
 export class DfaRunner implements vscode.Disposable {
     private readonly sfgeCachePath: string = path.join(createTempDirectory(), 'sfca-graph-engine-cache.json');
     private readonly savedFilesCache: Set<string> = new Set();
 
     private readonly context: vscode.ExtensionContext;
+    private readonly codeAnalyzer: CodeAnalyzer;
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
 
-    constructor(context: vscode.ExtensionContext, telemetryService: TelemetryService, logger: Logger) {
+    constructor(context: vscode.ExtensionContext, codeAnalyzer: CodeAnalyzer, telemetryService: TelemetryService, logger: Logger) {
         this.context = context;
+        this.codeAnalyzer = codeAnalyzer;
         this.telemetryService = telemetryService;
         this.logger = logger;
     }
@@ -43,10 +47,10 @@ export class DfaRunner implements vscode.Disposable {
 
     async shouldProceedWithDfaRun(): Promise<boolean> {
         if (this.context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)) {
-            await vscode.window.showInformationMessage(messages.graphEngine.existingDfaRunText);
+            void vscode.window.showInformationMessage(messages.graphEngine.existingDfaRunText);
             return false;
         }
-        return true;
+        return Promise.resolve(true);
     }
 
     async runDfa(): Promise<void> {
@@ -89,8 +93,8 @@ export class DfaRunner implements vscode.Disposable {
             token.onCancellationRequested(async () => await this.stopExistingDfaRun());
 
             const customCancellationToken: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
-            customCancellationToken.token.onCancellationRequested(async () =>
-                await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
+            customCancellationToken.token.onCancellationRequested(() =>
+                void vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
 
             // We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
             // the root directory of that project as the projectDir argument to run DFA.
@@ -108,8 +112,8 @@ export class DfaRunner implements vscode.Disposable {
             token.onCancellationRequested(async () => await this.stopExistingDfaRun());
 
             const customCancellationToken: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
-            customCancellationToken.token.onCancellationRequested(async () =>
-                await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFoundForPartialRuns));
+            customCancellationToken.token.onCancellationRequested(() =>
+                void vscode.window.showInformationMessage(messages.graphEngine.noViolationsFoundForPartialRuns));
 
             // We only have one project loaded on VSCode at once. So, projectDir should have only one entry and we use
             // the root directory of that project as the projectDir argument to run DFA.
@@ -127,8 +131,8 @@ export class DfaRunner implements vscode.Disposable {
             token.onCancellationRequested(async () => await this.stopExistingDfaRun());
 
             const customCancellationToken: vscode.CancellationTokenSource = new vscode.CancellationTokenSource();
-            customCancellationToken.token.onCancellationRequested(async () =>
-                await vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
+            customCancellationToken.token.onCancellationRequested(() =>
+                void vscode.window.showInformationMessage(messages.graphEngine.noViolationsFound));
 
             // Pull out the file from the target and use it to identify the project directory.
             const currentFile: string = methodLevelTarget[0].substring(0, methodLevelTarget.lastIndexOf('#'));
@@ -144,8 +148,9 @@ export class DfaRunner implements vscode.Disposable {
                            projectDir: string): Promise<void> {
         const startTime = Date.now();
         try {
-            await verifyPluginInstallation();
-            const results = await new ScanRunner().runDfa(methodLevelTarget, projectDir, this.context, this.sfgeCachePath);
+            await this.codeAnalyzer.validateEnvironment(); // Since the ScanRunner currently doesn't take in the codeAnalyzer to run dfa commands, we just validate here
+            const scanRunner: ScanRunner = new ScanRunner(new SettingsManagerImpl(), new CliCommandExecutorImpl(this.logger));
+            const results = await scanRunner.runDfa(methodLevelTarget, projectDir, this.context, this.sfgeCachePath);
             if (results.length > 0) {
                 const panel = vscode.window.createWebviewPanel(
                     'dfaResults',
@@ -182,7 +187,7 @@ export class DfaRunner implements vscode.Disposable {
             try {
                 process.kill(pid as number, SIGKILL);
                 void this.context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-                await vscode.window.showInformationMessage(messages.graphEngine.dfaRunStopped);
+                void vscode.window.showInformationMessage(messages.graphEngine.dfaRunStopped);
             } catch (e) {
                 // Exception is thrown by process.kill if between the time the pid exists and kill is executed, the process
                 // ends by itself. Ideally it should clear the cache, but doing this as an abundant of caution.
@@ -191,8 +196,9 @@ export class DfaRunner implements vscode.Disposable {
                 this.logger.error(`Failed killing DFA process.\n${errMsg}`);
             }
         } else {
-            await vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);
+            void vscode.window.showInformationMessage(messages.graphEngine.noDfaRun);
         }
+        return Promise.resolve();
     }
 
     private violationsCacheExists(): boolean {
@@ -207,16 +213,5 @@ function createTempDirectory(): string {
     } catch (err) {
         const errMsg: string = err instanceof Error ? err.message : String(err);
         throw new Error(`Failed to create temporary directory:\n${errMsg}`);
-    }
-}
-
-/**
- * @throws If {@code sf}/{@code sfdx} or {@code @salesforce/sfdx-scanner} is not installed.
- */
-export async function verifyPluginInstallation(): Promise<void> {
-    if (!await SfCli.isSfCliInstalled()) {
-        throw new Error(messages.error.sfMissing);
-    } else if (!await SfCli.isCodeAnalyzerInstalled()) {
-        throw new Error(messages.error.sfdxScannerMissing);
     }
 }
