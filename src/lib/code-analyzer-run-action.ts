@@ -9,6 +9,7 @@ import {Display} from "./display";
 import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
 import {WindowManager} from "./vscode-api";
+import {Workspace} from "./workspace";
 
 export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
 
@@ -35,9 +36,9 @@ export class CodeAnalyzerRunAction {
     /**
      * Runs the scanner against the specified file and displays the results.
      * @param commandName The command being run
-     * @param filesToScan The files to run against
+     * @param workspace The workspace to run against
      */
-    run(commandName: string, filesToScan: string[]): Promise<void> {
+    run(commandName: string, workspace: Workspace): Promise<void> {
         return this.taskWithProgressRunner.runTask(async (progressReporter: ProgressReporter) => {
             const startTime: number = Date.now();
 
@@ -59,7 +60,7 @@ export class CodeAnalyzerRunAction {
                     increment: 20
                 });
                 this.logger.log(messages.info.scanningWith(await this.codeAnalyzer.getScannerName()));
-                const violations: Violation[] = await this.codeAnalyzer.scan(filesToScan);
+                const violations: Violation[] = await this.codeAnalyzer.scan(workspace);
 
                 progressReporter.reportProgress({
                     message: messages.scanProgressReport.processingResults,
@@ -78,9 +79,10 @@ export class CodeAnalyzerRunAction {
                 });
 
                 const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation.map(v => CodeAnalyzerDiagnostic.fromViolation(v));
-                this.diagnosticManager.clearDiagnosticsForFiles(filesToScan.map(f => vscode.Uri.file(f)));
+                const targetedFiles: string[] = await workspace.getTargetedFiles();
+                this.diagnosticManager.clearDiagnosticsForFiles(targetedFiles.map(f => vscode.Uri.file(f)));
                 this.diagnosticManager.addDiagnostics(diagnostics);
-                void this.displayResults(filesToScan.length, violationsWithFileLocation);
+                void this.displayResults(targetedFiles.length, violationsWithFileLocation);
 
                 this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
                     commandName: commandName,

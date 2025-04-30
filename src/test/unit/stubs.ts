@@ -15,6 +15,7 @@ import {CliCommandExecutor, CommandOutput, ExecOptions} from "../../lib/cli-comm
 import * as semver from "semver";
 import {FileHandler} from "../../lib/fs-utils";
 import {VscodeWorkspace, WindowManager} from "../../lib/vscode-api";
+import {Workspace} from "../../lib/workspace";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -147,7 +148,7 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
 
     scanReturnValue: Violation[] = [];
 
-    scan(_filesToScan: string[]): Promise<Violation[]> {
+    scan(_workspace: Workspace): Promise<Violation[]> {
         return Promise.resolve(this.scanReturnValue);
     }
 
@@ -169,7 +170,7 @@ export class ThrowingCodeAnalyzer implements CodeAnalyzer {
         throw new Error("Error from validateEnvironment");
     }
 
-    scan(_filesToScan: string[]): Promise<Violation[]> {
+    scan(_workspace: Workspace): Promise<Violation[]> {
         throw new Error("Error from scan");
     }
 
