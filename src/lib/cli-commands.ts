@@ -96,20 +96,30 @@ export class CliCommandExecutorImpl implements CliCommandExecutor {
 
     async exec(command: string, args: string[], options: ExecOptions = {}): Promise<CommandOutput> {
         return new Promise((resolve) => {
-            const childProcess: cp.ChildProcessWithoutNullStreams  = cp.spawn(command, args, {
-                shell: process.platform.startsWith('win'), // Use shell on Windows machines
-            });
-
-            if (options.pidHandler) {
-                options.pidHandler(childProcess.pid);
-            }
-            const logLevel: vscode.LogLevel = options.logLevel === undefined ? vscode.LogLevel.Trace : options.logLevel;
-
             const output: CommandOutput = {
                 stdout: '',
                 stderr: '',
                 exitCode: 0
             };
+
+            let childProcess: cp.ChildProcessWithoutNullStreams;
+            try {
+                childProcess = cp.spawn(command, args, {
+                    shell: process.platform.startsWith('win'), // Use shell on Windows machines
+                });
+            } catch (err) {
+                this.logger.logAtLevel(vscode.LogLevel.Error, `Failed to execute the following command:\n` +
+                    indent(`${command} ${args.map(arg => arg.includes(' ') ? `"${arg}"` : arg).join(' ')}`) + `\n\n` +
+                    'Error Thrown:\n' + indent(getErrorMessageWithStack(err)));
+                output.stderr = getErrorMessageWithStack(err);
+                output.exitCode = 127;
+                resolve(output);
+            }
+
+            if (options.pidHandler) {
+                options.pidHandler(childProcess.pid);
+            }
+            const logLevel: vscode.LogLevel = options.logLevel === undefined ? vscode.LogLevel.Trace : options.logLevel;
             let combinedOut: string = '';
 
             this.logger.logAtLevel(logLevel, `Executing with background process (${childProcess.pid}):\n` +

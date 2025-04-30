@@ -6,6 +6,7 @@ import {SettingsManager} from "../settings";
 import * as semver from 'semver';
 import {CliCommandExecutor, CommandOutput} from "../cli-commands";
 import {FileHandler} from "../fs-utils";
+import {Workspace} from "../workspace";
 
 export type BaseV4Violation = {
     ruleName: string;
@@ -66,9 +67,9 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
         return Promise.resolve(`@salesforce/sfdx-scanner@${this.version.toString()} via CLI`);
     }
 
-    public async scan(filesToScan: string[]): Promise<Violation[]> {
+    public async scan(workspace: Workspace): Promise<Violation[]> {
         // Create the arg array.
-        const args: string[] = await this.createArgArray(filesToScan);
+        const args: string[] = await this.createArgArray(workspace);
 
         // Invoke the scanner.
         const executionResult: V4ExecutionResult = await this.invokeAnalyzer(args);
@@ -77,7 +78,7 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
         return this.processResults(executionResult);
     }
 
-    private async createArgArray(targets: string[]): Promise<string[]> {
+    private async createArgArray(workspace: Workspace): Promise<string[]> {
         const engines: string = this.settingsManager.getEnginesToRun();
         const pmdCustomConfigFile: string | undefined = this.settingsManager.getPmdCustomConfigFile();
         const rulesCategory: string | undefined = this.settingsManager.getRulesCategory();
@@ -89,7 +90,7 @@ export class CliScannerV4Strategy implements CliScannerStrategy {
 
         const args: string[] = [
             'scanner', 'run',
-            '--target', `${targets.join(',')}`,
+            '--target', `${workspace.getRawTargetPaths().join(',')}`,
             `--engine`, engines,
             `--json`
         ];

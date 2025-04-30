@@ -33,6 +33,7 @@ import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
 import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
+import {Workspace} from "./lib/workspace";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -85,13 +86,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     context.subscriptions.push(scanManager);
 
     const windowManager: WindowManager = new WindowManagerImpl(outputChannel);
+    const vscodeWorkspace: VscodeWorkspace = new VscodeWorkspaceImpl();
 
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
 
+
     const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl(logger);
-    const vscodeWorkspace: VscodeWorkspace = new VscodeWorkspaceImpl();
     const fileHandler: FileHandler = new FileHandlerImpl();
-    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, vscodeWorkspace, fileHandler);
+    const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
     const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, telemetryService, logger); // This thing is really old and clunky. It'll go away when we remove v4 stuff. But if we don't want to wait we could move all this into the v4-scanner.ts file
     context.subscriptions.push(dfaRunner);
 
@@ -126,7 +128,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             vscode.window.showWarningMessage(messages.noActiveEditor);
             return;
         }
-        return codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+        const workspace: Workspace = await Workspace.fromTargetPaths([document.fileName], vscodeWorkspace, fileHandler);
+        return codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
     });
 
     // "Analyze On Open" and "Analyze on Save" functionality:
@@ -139,7 +142,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
-            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [editor.document.fileName]);
+            const workspace: Workspace = await Workspace.fromTargetPaths([editor.document.fileName], vscodeWorkspace, fileHandler);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
         }
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
@@ -154,22 +158,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
         if (settingsManager.getAnalyzeOnSave()) {
             scanManager.addFileToAlreadyScannedFiles(document.fileName);
-            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, [document.fileName]);
+            const workspace: Workspace = await Workspace.fromTargetPaths([document.fileName], vscodeWorkspace, fileHandler);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
         }
     });
 
     // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
     registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
         const selection: vscode.Uri[] = (multiSelection && multiSelection.length > 0) ? multiSelection : [singleSelection];
-        // TODO: We may wish to consider moving away from this target resolution, and just passing in files and folders
-        //       as given to us. It's possible the current style could lead to overflowing the CLI when a folder has
-        //       many files.
-        const selectedFiles: string[] = await targeting.getFilesFromSelection(selection);
-        if (selectedFiles.length == 0) { // I have not found a way to hit this, but we should check just in case
+        const workspace: Workspace = await Workspace.fromTargetPaths(selection.map(uri => uri.fsPath), vscodeWorkspace, fileHandler);
+        if (workspace.getRawTargetPaths().length == 0) { // I have not found a way to hit this, but we should check just in case
             vscode.window.showWarningMessage(messages.targeting.error.noFileSelected);
             return;
         }
-        await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_SELECTED, selectedFiles);
+        await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_SELECTED, workspace);
     });
 
 

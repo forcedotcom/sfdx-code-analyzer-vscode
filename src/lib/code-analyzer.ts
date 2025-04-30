@@ -11,8 +11,8 @@ import {
     RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
 } from "./constants";
 import {CliScannerStrategy} from "./scanner-strategies/scanner-strategy";
-import {VscodeWorkspace, VscodeWorkspaceImpl} from "./vscode-api";
 import {FileHandler, FileHandlerImpl} from "./fs-utils";
+import {Workspace} from "./workspace";
 
 export interface CodeAnalyzer extends CliScannerStrategy {
     validateEnvironment(): Promise<void>;
@@ -22,7 +22,6 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
     private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
     private readonly display: Display;
-    private readonly vscodeWorkspace: VscodeWorkspace;
     private readonly fileHandler: FileHandler
 
     private cliIsInstalled: boolean = false;
@@ -31,11 +30,10 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
     private codeAnalyzerV5?: CliScannerV5Strategy;
 
     constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
-                vscodeWorkspace: VscodeWorkspace = new VscodeWorkspaceImpl(), fileHandler: FileHandler = new FileHandlerImpl()) {
+                fileHandler: FileHandler = new FileHandlerImpl()) {
         this.cliCommandExecutor = cliCommandExecutor;
         this.settingsManager = settingsManager;
         this.display = display;
-        this.vscodeWorkspace = vscodeWorkspace;
         this.fileHandler = fileHandler;
     }
 
@@ -87,11 +85,11 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             this.display.displayWarning(messages.codeAnalyzer.usingOlderVersion(installedVersion.toString(), recommendedMinVersion.toString()) + '\n'
                 + messages.codeAnalyzer.installLatestVersion);
         }
-        this.codeAnalyzerV5 = new CliScannerV5Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.vscodeWorkspace, this.fileHandler);
+        this.codeAnalyzerV5 = new CliScannerV5Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.fileHandler);
     }
 
-    async scan(filesToScan: string[]): Promise<Violation[]> {
-        return (await this.getDelegate()).scan(filesToScan);
+    async scan(workspace: Workspace): Promise<Violation[]> {
+        return (await this.getDelegate()).scan(workspace);
     }
 
     async getScannerName(): Promise<string> {

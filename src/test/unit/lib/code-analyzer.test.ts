@@ -4,6 +4,8 @@ import * as stubs from "../stubs";
 import {messages} from "../../../lib/messages";
 import {Violation} from "../../../lib/diagnostics";
 import * as path from "path";
+import {Workspace} from "../../../lib/workspace";
+import {StubVscodeWorkspace} from "../stubs";
 
 const TEST_DATA_DIR: string = path.resolve(__dirname, '..', 'test-data');
 
@@ -11,7 +13,6 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
     let cliCommandExecutor: stubs.StubSpyCliCommandExecutor;
     let settingsManager: stubs.StubSettingsManager;
     let display: stubs.SpyDisplay;
-    let vscodeWorkspace: stubs.StubVscodeWorkspace;
     let fileHandler: stubs.StubFileHandler;
     let codeAnalyzer: CodeAnalyzer;
 
@@ -19,9 +20,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         cliCommandExecutor = new stubs.StubSpyCliCommandExecutor();
         settingsManager = new stubs.StubSettingsManager();
         display = new stubs.SpyDisplay();
-        vscodeWorkspace = new stubs.StubVscodeWorkspace();
         fileHandler = new stubs.StubFileHandler();
-        codeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, vscodeWorkspace, fileHandler);
+        codeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
     });
 
     describe('v5 tests', () => {
@@ -75,6 +75,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         });
 
         describe('v5 tests for the scan method', () => {
+            const vscodeWorkspace: stubs.StubVscodeWorkspace = new stubs.StubVscodeWorkspace();
+
             const expectedViolation1: Violation = {
                 engine: "eslint",
                 locations: [
@@ -119,7 +121,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
 
             it('Sanity check that scan first calls validateEnvironment', async () => {
                 cliCommandExecutor.isSfInstalledReturnValue = false;
-                await expect(codeAnalyzer.scan([])).rejects.toThrow(messages.error.sfMissing);
+                const workspace: Workspace = await Workspace.fromTargetPaths([], vscodeWorkspace, fileHandler);
+                await expect(codeAnalyzer.scan(workspace)).rejects.toThrow(messages.error.sfMissing);
             });
 
             it('When running a scan with a beta version of v5, then confirm we call the cli and process the results correctly using only --workspace', async () => {
@@ -129,8 +132,11 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 // Set up the file handler to point to a prepopulated results json file instead of actually calling the cli:
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
 
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls', '/my/project/subfolder'], vscodeWorkspace, fileHandler);
+
                 // Call scan
-                const violations: Violation[] = await codeAnalyzer.scan(['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls']);
+                const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
                 // First check that we are passing the correct arguments to the cli
                 expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
@@ -139,6 +145,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "code-analyzer", "run",
                     "-w", "/my/project/dummyFile1.cls",
                     "-w", "/my/project/dummyFile2.cls",
+                    "-w", "/my/project/subfolder", // Should not be expanded to files - should stay as raw folder
                     "-r", "Recommended",
                     "-f", prePopulatedResultsJsonFile
                 ]);
@@ -154,7 +161,9 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
 
                 // Call scan
-                const violations: Violation[] = await codeAnalyzer.scan(['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls']);
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls'], vscodeWorkspace, fileHandler);
+                const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
                 // First check that we are passing the correct arguments to the cli
                 expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
@@ -182,7 +191,10 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
 
                 // Call scan
-                const violations: Violation[] = await codeAnalyzer.scan(['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls', '/my/project/subfolder']);
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls', '/my/project/subfolder'],
+                    vscodeWorkspace, fileHandler);
+                const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
                 // First check that we are passing the correct arguments to the cli
                 expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
@@ -305,7 +317,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         describe('v4 tests for the scan method', () => {
             it('Sanity check that scan first calls validateEnvironment', async () => {
                 cliCommandExecutor.isSfInstalledReturnValue = false;
-                await expect(codeAnalyzer.scan([])).rejects.toThrow(messages.error.sfMissing);
+                const workspace: Workspace = await Workspace.fromTargetPaths([], new StubVscodeWorkspace(), fileHandler);
+                await expect(codeAnalyzer.scan(workspace)).rejects.toThrow(messages.error.sfMissing);
             });
 
             // TODO: More tests coming soon ...

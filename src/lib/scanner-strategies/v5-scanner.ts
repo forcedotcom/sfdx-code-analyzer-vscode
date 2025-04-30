@@ -7,7 +7,7 @@ import * as path from 'node:path';
 import * as semver from 'semver';
 import {SettingsManager} from "../settings";
 import {CliCommandExecutor, CommandOutput} from "../cli-commands";
-import {VscodeWorkspace} from "../vscode-api";
+import {Workspace} from "../workspace";
 
 type ResultsJson = {
     runDir: string;
@@ -31,16 +31,14 @@ export class CliScannerV5Strategy implements CliScannerStrategy {
     private readonly version: semver.SemVer;
     private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
-    private readonly vscodeWorkspace: VscodeWorkspace;
     private readonly fileHandler: FileHandler;
 
     private ruleDescriptionMap?: Map<string, string>;
 
-    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, vscodeWorkspace: VscodeWorkspace, fileHandler: FileHandler) {
+    public constructor(version: semver.SemVer, cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, fileHandler: FileHandler) {
         this.version = version;
         this.cliCommandExecutor = cliCommandExecutor;
         this.settingsManager = settingsManager;
-        this.vscodeWorkspace = vscodeWorkspace;
         this.fileHandler = fileHandler;
     }
 
@@ -63,25 +61,18 @@ export class CliScannerV5Strategy implements CliScannerStrategy {
         return this.ruleDescriptionMap;
     }
 
-    public async scan(filesToScan: string[]): Promise<Violation[]> {
+    public async scan(workspace: Workspace): Promise<Violation[]> {
         const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
         const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
 
         const args: string[] = ['code-analyzer', 'run'];
 
         if (semver.gte(this.version, '5.0.0')) {
-            // Just in case a file is open in the editor that does not live in the current workspace, or if there
-            // is no workspace open at all, we still want to be able to run code analyzer without error, so we
-            // include the files to scan always along with any workspace folders.
-            const workspacePaths: string[] = [
-                ...this.vscodeWorkspace.getWorkspaceFolders(),
-                ...filesToScan
-            ]
-            workspacePaths.forEach(p => args.push('-w', p));
-            filesToScan.forEach(p => args.push('-t', p));
+            workspace.getRawWorkspacePaths().forEach(p => args.push('-w', p));
+            workspace.getRawTargetPaths().forEach(p => args.push('-t', p));
         } else {
-            // Before 5.0.0 the --target flag did not exist, so we just make the workspace equal to the files to scan
-            filesToScan.forEach(p => args.push('-w', p));
+            // Before 5.0.0 the --target flag did not exist, so we just make the workspace equal to the target paths
+            workspace.getRawTargetPaths().forEach(p => args.push('-w', p));
         }
 
         if (ruleSelector) {
