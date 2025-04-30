@@ -28,7 +28,14 @@ import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/prog
 import {Display, VSCodeDisplay} from "../../lib/display";
 import {CliCommandExecutorImpl} from "../../lib/cli-commands";
 import {Logger} from "../../lib/logger";
-import {SpyWindowManager, StubSettingsManager, StubSpyCliCommandExecutor} from "../unit/stubs";
+import {
+    SpyWindowManager,
+    StubFileHandler,
+    StubSettingsManager,
+    StubSpyCliCommandExecutor,
+    StubVscodeWorkspace
+} from "../unit/stubs";
+import {Workspace} from "../../lib/workspace";
 
 suite('Extension Test Suite', () => {
     vscode.window.showInformationMessage('Start all tests.');
@@ -249,7 +256,8 @@ suite('Extension Test Suite', () => {
                 // ===== TEST =====
                 // Attempt to run the appropriate extension command.
                 // The arguments do not matter.
-                await codeAnalyzerRunAction.run(fakeTelemetryName, []);
+                const workspace: Workspace = await Workspace.fromTargetPaths([], new StubVscodeWorkspace(), new StubFileHandler());
+                await codeAnalyzerRunAction.run(fakeTelemetryName, workspace);
 
 
                 // ===== ASSERTIONS =====

@@ -6,15 +6,17 @@ import {
     SpyLogger,
     SpyTelemetryService,
     SpyWindowManager,
-    StubCodeAnalyzer
+    StubCodeAnalyzer, StubFileHandler, StubVscodeWorkspace
 } from "../stubs";
 import {CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {CodeAnalyzerRunAction, UNINSTANTIABLE_ENGINE_RULE} from "../../../lib/code-analyzer-run-action";
 import {messages} from "../../../lib/messages";
 import * as Constants from '../../../lib/constants';
+import {Workspace} from "../../../lib/workspace";
 
 describe('Tests for CodeAnalyzerRunAction', () => {
+    let sampleWorkspace: Workspace;
     let taskWithProgressRunner: FakeTaskWithProgressRunner;
     let codeAnalyzer: StubCodeAnalyzer;
     let diagnosticCollection: vscode.DiagnosticCollection;
@@ -25,7 +27,9 @@ describe('Tests for CodeAnalyzerRunAction', () => {
     let windowManager: SpyWindowManager;
     let codeAnalyzerRunAction: CodeAnalyzerRunAction;
 
-    beforeEach(() => {
+    beforeEach(async () => {
+        sampleWorkspace = await Workspace.fromTargetPaths(['someFile.flow-meta.xml'], new StubVscodeWorkspace(), new StubFileHandler());
+
         taskWithProgressRunner = new FakeTaskWithProgressRunner();
         codeAnalyzer = new StubCodeAnalyzer();
         diagnosticCollection = new FakeDiagnosticCollection();
@@ -48,7 +52,8 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createSampleViolation('F', 5, [{}])
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.cls']);
+        const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+        await codeAnalyzerRunAction.run('dummyCommandName', workspace);
 
         expect(display.displayErrorCallHistory).toEqual([
             {msg: '[engineA:ruleA] messageA', buttons: []},
@@ -73,7 +78,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE, 'some setup message')
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
 
         expect(display.displayErrorCallHistory).toHaveLength(1);
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
@@ -89,7 +94,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE, 'some setup message')
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         expect(display.displayErrorCallHistory).toHaveLength(1);
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
         expect(logger.errorCallHistory).toHaveLength(1);
@@ -97,7 +102,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(display.displayErrorCallHistory[0].buttons).toHaveLength(3);
         display.displayErrorCallHistory[0].buttons[1].callback(); // Invoke the 2nd button should ignore the error
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         expect(display.displayErrorCallHistory).toHaveLength(1); // Should still be 1 because we ignored the error
     });
 
@@ -107,7 +112,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE, 'some setup message1')
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         expect(display.displayErrorCallHistory).toHaveLength(1);
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
         expect(logger.errorCallHistory).toHaveLength(1);
@@ -120,7 +125,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createViolationWithoutLocation('pmd', UNINSTANTIABLE_ENGINE_RULE, 'some setup message2')
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         expect(display.displayErrorCallHistory).toHaveLength(2); // Should still be 1 because we ignored the error
         expect(logger.errorCallHistory).toHaveLength(2);
         expect(logger.errorCallHistory[1].msg).toEqual('some setup message2\n\nLearn more: ' + Constants.DOCS_SETUP_LINK);
@@ -132,7 +137,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE, 'some setup message1')
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         expect(display.displayErrorCallHistory).toHaveLength(1);
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
         expect(display.displayErrorCallHistory[0].buttons).toHaveLength(3);
@@ -148,7 +153,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             createViolationWithoutLocation(engine, UNINSTANTIABLE_ENGINE_RULE, 'some setup message1')
         ];
 
-        await codeAnalyzerRunAction.run('dummyCommandName', ['someFile.flow-meta.xml']);
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         expect(display.displayErrorCallHistory).toHaveLength(1);
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
         expect(display.displayErrorCallHistory[0].buttons).toHaveLength(3);

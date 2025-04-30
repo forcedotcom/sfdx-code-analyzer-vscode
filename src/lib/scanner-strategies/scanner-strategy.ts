@@ -1,7 +1,8 @@
 import {Violation} from '../diagnostics';
+import {Workspace} from "../workspace";
 
 export interface CliScannerStrategy {
-    scan(filesToScan: string[]): Promise<Violation[]>;
+    scan(workspace: Workspace): Promise<Violation[]>;
 
     getScannerName(): Promise<string>;
 
