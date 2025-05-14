@@ -70,7 +70,7 @@ suite('Extension Test Suite', () => {
         });
 
         suite('sfca.runOnActiveFile', () => {
-            const fileUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
+            const fileUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls'));
 
             setup(async function() {
                 // Open a file in the editor.
@@ -119,7 +119,7 @@ suite('Extension Test Suite', () => {
         suite('sfca.runOnSelected', () => {
             suite('One file selected', () => {
                 // Get the URI for a single file.
-                const targetUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
+                const targetUri: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls'));
 
                 teardown(() => {
                     Sinon.restore();
@@ -169,8 +169,8 @@ suite('Extension Test Suite', () => {
 
             suite('Multiple files selected', () => {
                 // Get the URIs for two separate files.
-                const targetUri1: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'));
-                const targetUri2: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder-a', 'MyClassA2.cls'));
+                const targetUri1: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls'));
+                const targetUri2: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder a', 'MyClassA2.cls'));
 
                 teardown(() => {
                     Sinon.restore();
