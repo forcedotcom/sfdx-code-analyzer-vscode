@@ -58,6 +58,8 @@ export interface CliCommandExecutor {
     exec(command: string, args: string[], options?: ExecOptions): Promise<CommandOutput>
 }
 
+const IS_WINDOWS: boolean = process.platform.startsWith('win');
+
 export class CliCommandExecutorImpl implements CliCommandExecutor {
     private readonly logger: Logger;
 
@@ -104,12 +106,11 @@ export class CliCommandExecutorImpl implements CliCommandExecutor {
 
             let childProcess: cp.ChildProcessWithoutNullStreams;
             try {
-                childProcess = cp.spawn(command, args, {
-                    shell: process.platform.startsWith('win'), // Use shell on Windows machines
-                });
+                childProcess = IS_WINDOWS ? cp.spawn(command, wrapArgsWithSpacesWithQuotes(args), {shell: true}) :
+                    cp.spawn(command, args);
             } catch (err) {
                 this.logger.logAtLevel(vscode.LogLevel.Error, `Failed to execute the following command:\n` +
-                    indent(`${command} ${args.map(arg => arg.includes(' ') ? `"${arg}"` : arg).join(' ')}`) + `\n\n` +
+                    indent(`${command} ${wrapArgsWithSpacesWithQuotes(args).join(' ')}`) + `\n\n` +
                     'Error Thrown:\n' + indent(getErrorMessageWithStack(err)));
                 output.stderr = getErrorMessageWithStack(err);
                 output.exitCode = 127;
@@ -123,7 +124,7 @@ export class CliCommandExecutorImpl implements CliCommandExecutor {
             let combinedOut: string = '';
 
             this.logger.logAtLevel(logLevel, `Executing with background process (${childProcess.pid}):\n` +
-                indent(`${command} ${args.map(arg => arg.includes(' ') ? `"${arg}"` : arg).join(' ')}`));
+                indent(`${command} ${wrapArgsWithSpacesWithQuotes(args).join(' ')}`));
 
             childProcess.stdout.on('data', data => {
                 output.stdout += data;
@@ -134,8 +135,10 @@ export class CliCommandExecutorImpl implements CliCommandExecutor {
                 combinedOut += data;
             });
             childProcess.on('error', (err: Error) => {
+                const errMsg: string = getErrorMessageWithStack(err);
                 output.exitCode = 127; // 127 signifies that the command could not be executed
-                output.stderr += getErrorMessageWithStack(err);
+                output.stderr += errMsg;
+                combinedOut += errMsg;
                 resolve(output);
                 this.logger.logAtLevel(logLevel,
                     `Error from background process (${childProcess.pid}):\n${indent(combinedOut)}`);
@@ -148,4 +151,8 @@ export class CliCommandExecutorImpl implements CliCommandExecutor {
             });
         });
     }
+}
+
+function wrapArgsWithSpacesWithQuotes(args: string[]): string[] {
+    return args.map(arg => arg.includes(' ') ? `"${arg}"` : arg);
 }

@@ -16,22 +16,22 @@ suite('file.ts', () => {
     suite('#exists()', () => {
 
         test('Returns true when file exists.', async () => {
-         expect(await (new FileHandlerImpl()).exists(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.equal(true);
+         expect(await (new FileHandlerImpl()).exists(path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls'))).to.equal(true);
         });
 
         test('Returns false when file does not exists.', async () => {
-            expect(await (new FileHandlerImpl()).exists(path.join(codeFixturesPath, 'folder-a', 'UnknownFile.cls'))).to.equal(false);
+            expect(await (new FileHandlerImpl()).exists(path.join(codeFixturesPath, 'folder a', 'UnknownFile.cls'))).to.equal(false);
         });
     });
 
     suite('#isDir()', () => {
 
         test('Returns true when path is dir.', async () => {
-         expect(await (new FileHandlerImpl()).isDir(path.join(codeFixturesPath, 'folder-a'))).to.equal(true);
+         expect(await (new FileHandlerImpl()).isDir(path.join(codeFixturesPath, 'folder a'))).to.equal(true);
         });
 
         test('Returns false when path is file.', async () => {
-            expect(await (new FileHandlerImpl()).isDir(path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls'))).to.equal(false);
+            expect(await (new FileHandlerImpl()).isDir(path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls'))).to.equal(false);
         });
     });
 });
