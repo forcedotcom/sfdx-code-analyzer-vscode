@@ -31,7 +31,7 @@ suite('targeting.ts', () => {
         test('Given a real file, returns that file', async () => {
             // ===== SETUP =====
             // Get a URI for one file.
-            const singlePath: string = path.join(codeFixturesPath, "folder-a", "MyClassA1.cls");
+            const singlePath: string = path.join(codeFixturesPath, "folder a", "MyClassA1.cls");
             const singleUri: vscode.Uri = vscode.Uri.file(singlePath);
 
             // ===== TEST =====
@@ -48,9 +48,9 @@ suite('targeting.ts', () => {
             // ===== SETUP =====
             // Get a few URIs for some files in a few folders.
             const multiplePaths: string[] = [
-                path.join(codeFixturesPath, "folder-a", "MyClassA2.cls"),
-                path.join(codeFixturesPath, "folder-a", "MyClassA3.cls"),
-                path.join(codeFixturesPath, "folder-a", "subfolder-a1", "MyClassA1i.cls"),
+                path.join(codeFixturesPath, "folder a", "MyClassA2.cls"),
+                path.join(codeFixturesPath, "folder a", "MyClassA3.cls"),
+                path.join(codeFixturesPath, "folder a", "subfolder-a1", "MyClassA1i.cls"),
                 path.join(codeFixturesPath, "folder-b", "MyClassB1.cls")
             ];
             const multipleUris: vscode.Uri[] = multiplePaths.map(p => vscode.Uri.file(p));
@@ -71,7 +71,7 @@ suite('targeting.ts', () => {
         test('Given a real folder with no subfolders, returns its contents', async () => {
             // ===== SETUP =====
             // Get a URI for a folder without subfolders.
-            const folderPath: string = path.join(codeFixturesPath, "folder-a", "subfolder-a1");
+            const folderPath: string = path.join(codeFixturesPath, "folder a", "subfolder-a1");
             const folderUri: vscode.Uri = vscode.Uri.file(folderPath);
 
             // ===== TEST =====
@@ -88,7 +88,7 @@ suite('targeting.ts', () => {
         test('Given a real folder with subfolders, returns contents deeply', async () => {
             // ===== SETUP =====
             // Get a URI for a folder with subfolders.
-            const folderPath: string = path.join(codeFixturesPath, "folder-a");
+            const folderPath: string = path.join(codeFixturesPath, "folder a");
             const folderUri: vscode.Uri = vscode.Uri.file(folderPath);
 
             // ===== TEST =====
@@ -108,7 +108,7 @@ suite('targeting.ts', () => {
         test('Given a non-existent file, throws error', async () => {
             // ===== SETUP =====
             // Get a URI for a non-existent file.
-            const fakeFilePath: string = path.join(codeFixturesPath, "folder-a", "DefinitelyFakeClass.cls");
+            const fakeFilePath: string = path.join(codeFixturesPath, "folder a", "DefinitelyFakeClass.cls");
             const fakeFileUri: vscode.Uri = vscode.Uri.file(fakeFilePath);
 
             // ===== TEST =====
@@ -128,7 +128,7 @@ suite('targeting.ts', () => {
         test('Given no selection, returns no files', async () => {
             // ===== SETUP =====
             // Open a file in the editor.
-            const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
+            const openFilePath: string = path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls');
             const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
             const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
             await vscode.window.showTextDocument(doc);
@@ -143,7 +143,7 @@ suite('targeting.ts', () => {
     });
 
     suite('#getSelectedMethod()', () => {
-        const openFilePath: string = path.join(codeFixturesPath, 'folder-a', 'MyClassA1.cls');
+        const openFilePath: string = path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls');
         const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
         // We expect our path to be unix-ified, or else it'll parse as a glob and flunk
         // the transaction.
