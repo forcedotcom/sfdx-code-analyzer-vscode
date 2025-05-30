@@ -1,12 +1,12 @@
-name: build-scanner-tarball
+name: build-tarball
 on:
   workflow_call:
     inputs:
       target-branch:
-        description: "Which branch of the scanner should be built?"
+        description: "Which branch of code analyzer should be built?"
         required: false
         type: string
-        default: "dev-4"
+        default: "dev"
 
 jobs:
   build-tarball:
@@ -22,11 +22,15 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '11' # Always use Java v11 for building the tarball.
+      - name: 'Install Python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10' # Minimum version required by code-analyzer.
       - name: 'Check out, build, pack'
         run: |
           # Check out the target branch.
-          git clone -b ${{ inputs.target-branch }} https://github.com/forcedotcom/sfdx-scanner.git sfdx-scanner
-          cd sfdx-scanner
+          git clone -b ${{ inputs.target-branch }} https://github.com/forcedotcom/code-analyzer.git code-analyzer
+          cd code-analyzer
           # Install and build dependencies.
           if [[ "${{ inputs.target-branch}}" == "dev-4" ]]; then
             yarn
@@ -40,5 +44,5 @@ jobs:
       # Upload the tarball as an artifact so it's usable elsewhere.
       - uses: actions/upload-artifact@v4
         with:
-          name: scanner-tarball-${{ inputs.target-branch }}
+          name: tarball-${{ inputs.target-branch }}
           path: ./**/salesforce-*.tgz
