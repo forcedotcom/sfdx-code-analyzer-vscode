@@ -49,6 +49,16 @@ describe('Tests for A4DFixAction', () => {
 
         expect(display.displayWarningCallHistory).toHaveLength(0);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
+
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__eGPT_no_fix_suggested',
+            properties: {
+                commandSource: 'sfca.a4dFix',
+                reason: 'unified_diff_cannot_be_shown'
+            }
+        });
     });
 
     it('When no fix is suggested (i.e. null is returned), then return with info msg displayed', async () => {
@@ -60,6 +70,17 @@ describe('Tests for A4DFixAction', () => {
         expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
+        
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__eGPT_no_fix_suggested',
+            properties: {
+                commandSource: 'sfca.a4dFix',
+                languageType: 'apex',
+                reason: 'empty'
+            }
+        });
     });
 
     it('When error is thrown while suggesting fix, then display error message and send exception telemetry event', async () => {
@@ -101,7 +122,9 @@ describe('Tests for A4DFixAction', () => {
             commandName: 'sfdx__eGPT_suggest',
             properties: {
                 commandSource: 'sfca.a4dFix',
-                languageType: 'apex'
+                completionNumLines: '1',
+                languageType: 'apex',
+                ruleName: 'someRule'
             }
         });
     });
@@ -140,7 +163,8 @@ describe('Tests for A4DFixAction', () => {
             properties: {
                 commandSource: 'sfca.a4dFix',
                 completionNumLines: '1',
-                languageType: 'apex'
+                languageType: 'apex',
+                ruleName: 'someRule'
             }
         });
     });
@@ -158,7 +182,9 @@ describe('Tests for A4DFixAction', () => {
             commandName: 'sfdx__eGPT_clear',
             properties: {
                 commandSource: 'sfca.a4dFix',
-                languageType: 'apex'
+                completionNumLines: '1',
+                languageType: 'apex',
+                ruleName: 'someRule'
             }
         });
     });
@@ -199,5 +225,16 @@ describe('Tests for A4DFixAction', () => {
         expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
+
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__eGPT_no_fix_suggested',
+            properties: {
+                commandSource: 'sfca.a4dFix',
+                languageType: 'apex',
+                reason: 'same_code'
+            }
+        });
     });
 });

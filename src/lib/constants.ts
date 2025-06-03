@@ -39,6 +39,12 @@ export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
 export const TELEM_A4D_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
 export const TELEM_A4D_ACCEPT = 'sfdx__eGPT_accept';
 export const TELEM_A4D_REJECT = 'sfdx__eGPT_clear';
+export const TELEM_A4D_EMPTY = 'sfdx__eGPT_no_fix_suggested';
+
+// telemetry event properties
+export const TELEM_A4D_NO_FIX_REASON_UNIFIED_DIFF_CANNOT_BE_SHOWN = 'unified_diff_cannot_be_shown';
+export const TELEM_A4D_NO_FIX_REASON_EMPTY = 'empty';
+export const TELEM_A4D_NO_FIX_REASON_SAME_CODE = 'same_code';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
