@@ -87,7 +87,7 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
         }
 
         try {
-            const coreTelemetryService: TelemetryServiceInterface = await ServiceProvider.getService(ServiceType.Telemetry);
+            const coreTelemetryService: TelemetryServiceInterface = await ServiceProvider.getService(ServiceType.Telemetry, Constants.EXTENSION_ID);
             return new LiveTelemetryService(coreTelemetryService, this.logger);
         } catch (err) {
             const errMsg: string = err instanceof Error? err.stack : String(err);

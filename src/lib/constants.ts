@@ -35,10 +35,20 @@ export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_faile
 export const TELEM_SUCCESSFUL_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_complete';
 export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
+
+// telemetry keys used by eGPT
 export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
 export const TELEM_A4D_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
 export const TELEM_A4D_ACCEPT = 'sfdx__eGPT_accept';
 export const TELEM_A4D_REJECT = 'sfdx__eGPT_clear';
+
+// quick fix telemetry events
+export const TELEM_QF_NO_FIX = 'sfdx__codeanalyzer_qf_no_fix_suggested';
+
+// quick fix telemetry event properties
+export const TELEM_QF_NO_FIX_REASON_UNIFIED_DIFF_CANNOT_BE_SHOWN = 'unified_diff_cannot_be_shown';
+export const TELEM_QF_NO_FIX_REASON_EMPTY = 'empty';
+export const TELEM_QF_NO_FIX_REASON_SAME_CODE = 'same_code';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
