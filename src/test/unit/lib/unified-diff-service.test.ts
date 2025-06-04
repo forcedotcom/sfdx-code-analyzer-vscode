@@ -1,6 +1,6 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 
-import {CodeGenieUnifiedDiffService, UnifiedDiff} from "../../../shared/UnifiedDiff";
+import {CodeGenieUnifiedDiffService, UnifiedDiff, DiffType} from "../../../shared/UnifiedDiff";
 import {createTextDocument} from "jest-mock-vscode";
 import * as stubs from "../stubs";
 import {UnifiedDiffService, UnifiedDiffServiceImpl} from "../../../lib/unified-diff-service";
@@ -122,6 +122,101 @@ describe('Tests for the UnifiedDiffServiceImpl class', () => {
                 .rejects.toThrow('some error from showUnifiedDiff');
 
             expect(revertUnifiedDiffSpy).toHaveBeenCalled();
+        });
+    });
+
+    describe('Tests for the getNumberOfDiffedLines method', () => {
+        it('When there is no diff, returns 0', () => {
+            jest.spyOn(CodeGenieUnifiedDiffService.prototype, 'getDiff').mockImplementation((): undefined => {
+                return undefined;
+            });
+
+            const result = unifiedDiffService.getNumberOfDiffedLines(sampleDocument);
+
+            expect(result).toEqual(0);
+        });
+
+        it('When there is a diff with only unmodified lines, returns 0', () => {
+            const mockDiff = new UnifiedDiff(sampleDocument, 'some\nsample content');
+            jest.spyOn(CodeGenieUnifiedDiffService.prototype, 'getDiff').mockImplementation((): UnifiedDiff => {
+                return mockDiff;
+            });
+
+            const result = unifiedDiffService.getNumberOfDiffedLines(sampleDocument);
+
+            expect(result).toEqual(0);
+        });
+
+        it('When there is a replacement (delete followed by insert), returns the max of their lengths', () => {
+            const mockDiff = new UnifiedDiff(sampleDocument, 'some\nnew content');
+            jest.spyOn(mockDiff, 'getHunks').mockImplementation(() => [
+                { type: DiffType.Unmodified, diff: { value: 'some\n' }, sourceLine: 0, targetLine: 0, unifiedLine: 0, lines: ['some'] },
+                { type: DiffType.Delete, diff: { value: 'sample\n' }, sourceLine: 1, targetLine: 1, unifiedLine: 1, lines: ['sample'] },
+                { type: DiffType.Insert, diff: { value: 'new content\n' }, sourceLine: 1, targetLine: 1, unifiedLine: 1, lines: ['new content'] }
+            ]);
+            jest.spyOn(CodeGenieUnifiedDiffService.prototype, 'getDiff').mockImplementation((): UnifiedDiff => {
+                return mockDiff;
+            });
+
+            const result = unifiedDiffService.getNumberOfDiffedLines(sampleDocument);
+
+            // max(1, 1) = 1
+            expect(result).toEqual(1);
+        });
+
+        it('When there is a replacement with different lengths, returns the max of their lengths', () => {
+            const mockDiff = new UnifiedDiff(sampleDocument, 'some\nnew\ncontent');
+            jest.spyOn(mockDiff, 'getHunks').mockImplementation(() => [
+                { type: DiffType.Unmodified, diff: { value: 'some\n' }, sourceLine: 0, targetLine: 0, unifiedLine: 0, lines: ['some'] },
+                { type: DiffType.Delete, diff: { value: 'sample\nold\n' }, sourceLine: 1, targetLine: 1, unifiedLine: 1, lines: ['sample', 'old'] },
+                { type: DiffType.Insert, diff: { value: 'new\ncontent\n' }, sourceLine: 1, targetLine: 1, unifiedLine: 1, lines: ['new', 'content'] }
+            ]);
+            jest.spyOn(CodeGenieUnifiedDiffService.prototype, 'getDiff').mockImplementation((): UnifiedDiff => {
+                return mockDiff;
+            });
+
+            const result = unifiedDiffService.getNumberOfDiffedLines(sampleDocument);
+
+            // max(2, 2) = 2
+            expect(result).toEqual(2);
+        });
+
+        it('When there are single insert and delete hunks not adjacent, counts both', () => {
+            const mockDiff = new UnifiedDiff(sampleDocument, 'some\nnew\ncontent\nhere');
+            jest.spyOn(mockDiff, 'getHunks').mockImplementation(() => [
+                { type: DiffType.Unmodified, diff: { value: 'some\n' }, sourceLine: 0, targetLine: 0, unifiedLine: 0, lines: ['some'] },
+                { type: DiffType.Delete, diff: { value: 'sample\n' }, sourceLine: 1, targetLine: 1, unifiedLine: 1, lines: ['sample'] },
+                { type: DiffType.Unmodified, diff: { value: 'foo\n' }, sourceLine: 2, targetLine: 1, unifiedLine: 2, lines: ['foo'] },
+                { type: DiffType.Insert, diff: { value: 'here\n' }, sourceLine: 2, targetLine: 2, unifiedLine: 3, lines: ['here'] }
+            ]);
+            jest.spyOn(CodeGenieUnifiedDiffService.prototype, 'getDiff').mockImplementation((): UnifiedDiff => {
+                return mockDiff;
+            });
+
+            const result = unifiedDiffService.getNumberOfDiffedLines(sampleDocument);
+
+            // 1 delete + 1 insert = 2
+            expect(result).toEqual(2);
+        });
+
+        it('When there are multiple replacements and single changes, sums appropriately', () => {
+            const mockDiff = new UnifiedDiff(sampleDocument, 'some\nnew\ncontent\nhere');
+            jest.spyOn(mockDiff, 'getHunks').mockImplementation(() => [
+                { type: DiffType.Delete, diff: { value: 'a\nb\n' }, sourceLine: 0, targetLine: 0, unifiedLine: 0, lines: ['a', 'b'] },
+                { type: DiffType.Insert, diff: { value: 'x\n' }, sourceLine: 0, targetLine: 0, unifiedLine: 0, lines: ['x'] },
+                { type: DiffType.Unmodified, diff: { value: 'foo\n' }, sourceLine: 2, targetLine: 1, unifiedLine: 2, lines: ['foo'] },
+                { type: DiffType.Delete, diff: { value: 'c\n' }, sourceLine: 3, targetLine: 2, unifiedLine: 3, lines: ['c'] },
+                { type: DiffType.Insert, diff: { value: 'y\nz\n' }, sourceLine: 3, targetLine: 2, unifiedLine: 3, lines: ['y', 'z'] },
+                { type: DiffType.Insert, diff: { value: 'here\n' }, sourceLine: 3, targetLine: 4, unifiedLine: 5, lines: ['here'] }
+            ]);
+            jest.spyOn(CodeGenieUnifiedDiffService.prototype, 'getDiff').mockImplementation((): UnifiedDiff => {
+                return mockDiff;
+            });
+
+            const result = unifiedDiffService.getNumberOfDiffedLines(sampleDocument);
+
+            // (max(2,1) for first replacement) + (max(1,2) for second replacement) + 1 (single insert) = 2+2+1=5
+            expect(result).toEqual(5);
         });
     });
 });

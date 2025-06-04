@@ -80,8 +80,8 @@ export class A4DFixAction {
         const diagnostic: CodeAnalyzerDiagnostic = codeFixSuggestion.codeFixData.diagnostic as CodeAnalyzerDiagnostic;
         const document: vscode.TextDocument = codeFixSuggestion.codeFixData.document;
         const suggestedNewDocumentCode: string = codeFixSuggestion.getFixedDocumentCode();
-        const numLinesInFix: number = codeFixSuggestion.getFixedCodeLines().length;
         const supportedRuleName: string = A4D_SUPPORTED_RULES.has(diagnostic.violation.rule) ? diagnostic.violation.rule : '';
+        let numLinesInFix: number = 0;
 
         const acceptCallback: ()=>Promise<void> = (): Promise<void> => {
             this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_ACCEPT, {
@@ -112,6 +112,7 @@ export class A4DFixAction {
             throw err;
         }
 
+        numLinesInFix = this.unifiedDiffService.getNumberOfDiffedLines(document);
         this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_SUGGESTION, {
             commandSource: Constants.QF_COMMAND_A4D_FIX,
             completionNumLines: numLinesInFix.toString(),

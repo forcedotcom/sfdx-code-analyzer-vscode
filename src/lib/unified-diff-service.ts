@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import {UnifiedDiff, CodeGenieUnifiedDiffService} from "../shared/UnifiedDiff";
+import {UnifiedDiff, CodeGenieUnifiedDiffService, DiffType} from "../shared/UnifiedDiff";
 import {SettingsManager} from "./settings";
 import {messages} from "./messages";
 import {Display} from "./display";
@@ -29,6 +29,13 @@ export interface UnifiedDiffService extends vscode.Disposable {
      * @param rejectCallback function to call when a user rejects the unified diff
      */
     showDiff(document: vscode.TextDocument, newCode: string, acceptCallback: ()=>Promise<void>, rejectCallback: ()=>Promise<void>): Promise<void>
+
+    /**
+     * Returns the number of lines that are different between the original document and the diff
+     * @param document Document to get diff for
+     * @returns Number of lines that are different (inserted or deleted)
+     */
+    getNumberOfDiffedLines(document: vscode.TextDocument): number;
 }
 
 /**
@@ -85,6 +92,26 @@ export class UnifiedDiffServiceImpl implements UnifiedDiffService {
             await this.codeGenieUnifiedDiffService.revertUnifiedDiff(document);
             throw err;
         }
+    }
+
+    getNumberOfDiffedLines(document: vscode.TextDocument): number {
+        const diff = this.codeGenieUnifiedDiffService.getDiff(document);
+        if (!diff) {
+            return 0;
+        }
+        const hunks = diff.getHunks();
+        let total = 0;
+        for (let i = 0; i < hunks.length; i++) {
+            const hunk = hunks[i];
+            if (hunk.type === DiffType.Delete && i + 1 < hunks.length && hunks[i + 1].type === DiffType.Insert) {
+                //Count max of deleted or inserted lines so we don't count as insert and a delete as two lines
+                total += Math.max(hunk.lines.length, hunks[i + 1].lines.length);
+                i++; // Skip the next hunk (the insert)
+            } else if (hunk.type === DiffType.Insert || hunk.type === DiffType.Delete) {
+                total += hunk.lines.length;
+            }
+        }
+        return total;
     }
 }
 

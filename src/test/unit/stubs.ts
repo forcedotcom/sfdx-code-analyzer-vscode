@@ -211,6 +211,10 @@ export class SpyUnifiedDiffService implements UnifiedDiffService {
         this.showDiffCallHistory.push({document, newCode, acceptCallback, rejectCallback});
         return Promise.resolve();
     }
+
+    getNumberOfDiffedLines(_document: TextDocument): number {
+        return 1;
+    }
 }
 
 export class ThrowingUnifiedDiffService implements UnifiedDiffService {
@@ -228,6 +232,10 @@ export class ThrowingUnifiedDiffService implements UnifiedDiffService {
 
     showDiff(_document: TextDocument, _newCode: string, _acceptCallback: () => Promise<void>, _rejectCallback: () => Promise<void>): Promise<void> {
         throw new Error('Error thrown from: showDiff');
+    }
+
+    getNumberOfDiffedLines(_document: TextDocument): number {
+        return 0;
     }
 }
 
