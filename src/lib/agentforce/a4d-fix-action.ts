@@ -8,6 +8,7 @@ import {FixSuggester, FixSuggestion} from "../fix-suggestion";
 import {messages} from "../messages";
 import {Display} from "../display";
 import {getErrorMessage, getErrorMessageWithStack} from "../utils";
+import {A4D_SUPPORTED_RULES} from "./supported-rules";
 
 export class A4DFixAction {
     private readonly fixSuggester: FixSuggester;
@@ -31,9 +32,9 @@ export class A4DFixAction {
         const startTime: number = Date.now();
         try {
             if (!this.unifiedDiffService.verifyCanShowDiff(document)) {
-                this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_EMPTY, {
+                this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
                     commandSource: Constants.QF_COMMAND_A4D_FIX,
-                    reason: Constants.TELEM_A4D_NO_FIX_REASON_UNIFIED_DIFF_CANNOT_BE_SHOWN
+                    reason: Constants.TELEM_QF_NO_FIX_REASON_UNIFIED_DIFF_CANNOT_BE_SHOWN
                 });
                 return;
             }
@@ -41,10 +42,10 @@ export class A4DFixAction {
             const fixSuggestion: FixSuggestion = await this.fixSuggester.suggestFix(document, diagnostic);
             if (!fixSuggestion) {
                 this.display.displayInfo(messages.agentforce.noFixSuggested);
-                this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_EMPTY, {
+                this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
                     commandSource: Constants.QF_COMMAND_A4D_FIX,
                     languageType: document.languageId,
-                    reason: Constants.TELEM_A4D_NO_FIX_REASON_EMPTY
+                    reason: Constants.TELEM_QF_NO_FIX_REASON_EMPTY
                 });
                 return;
             }
@@ -53,10 +54,10 @@ export class A4DFixAction {
             const fixedCode: string = fixSuggestion.getFixedCode();
             if (originalCode === fixedCode) {
                 this.display.displayInfo(messages.agentforce.noFixSuggested);
-                this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_EMPTY, {
+                this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
                     commandSource: Constants.QF_COMMAND_A4D_FIX,
                     languageType: document.languageId,
-                    reason: Constants.TELEM_A4D_NO_FIX_REASON_SAME_CODE
+                    reason: Constants.TELEM_QF_NO_FIX_REASON_SAME_CODE
                 });
                 return;
             }
@@ -80,14 +81,14 @@ export class A4DFixAction {
         const document: vscode.TextDocument = codeFixSuggestion.codeFixData.document;
         const suggestedNewDocumentCode: string = codeFixSuggestion.getFixedDocumentCode();
         const numLinesInFix: number = codeFixSuggestion.getFixedCodeLines().length;
-        const ruleName: string = diagnostic.violation.rule;
+        const supportedRuleName: string = A4D_SUPPORTED_RULES.has(diagnostic.violation.rule) ? diagnostic.violation.rule : '';
 
         const acceptCallback: ()=>Promise<void> = (): Promise<void> => {
             this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_ACCEPT, {
                 commandSource: Constants.QF_COMMAND_A4D_FIX,
                 completionNumLines: numLinesInFix.toString(),
                 languageType: document.languageId,
-                ruleName: ruleName
+                ruleName: supportedRuleName
             });
             return Promise.resolve();
         };
@@ -98,7 +99,7 @@ export class A4DFixAction {
                 commandSource: Constants.QF_COMMAND_A4D_FIX,
                 completionNumLines: numLinesInFix.toString(),
                 languageType: document.languageId,
-                ruleName: ruleName
+                ruleName: supportedRuleName
             });
             return Promise.resolve();
         };
@@ -115,7 +116,7 @@ export class A4DFixAction {
             commandSource: Constants.QF_COMMAND_A4D_FIX,
             completionNumLines: numLinesInFix.toString(),
             languageType: document.languageId,
-            ruleName: ruleName
+            ruleName: supportedRuleName
         });
     }
 

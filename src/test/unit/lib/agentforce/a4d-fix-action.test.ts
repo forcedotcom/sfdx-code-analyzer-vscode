@@ -12,7 +12,7 @@ import {FixSuggestion} from "../../../../lib/fix-suggestion";
 describe('Tests for A4DFixAction', () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/some/file.cls');
     const sampleDocument: vscode.TextDocument = createTextDocument(sampleUri, 'some\nsample content', 'apex');
-    const sampleDiagnostic1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1));
+    const sampleDiagnostic1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1), 'ApexDoc');
     const sampleDiagnostic2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(1,7,1,14));
     const sampleFixSuggestion: FixSuggestion = new FixSuggestion({
         document: sampleDocument,
@@ -53,7 +53,7 @@ describe('Tests for A4DFixAction', () => {
         // Telemetry event is sent
         expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
-            commandName: 'sfdx__eGPT_no_fix_suggested',
+            commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
             properties: {
                 commandSource: 'sfca.a4dFix',
                 reason: 'unified_diff_cannot_be_shown'
@@ -74,7 +74,7 @@ describe('Tests for A4DFixAction', () => {
         // Telemetry event is sent
         expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
-            commandName: 'sfdx__eGPT_no_fix_suggested',
+            commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
             properties: {
                 commandSource: 'sfca.a4dFix',
                 languageType: 'apex',
@@ -124,7 +124,7 @@ describe('Tests for A4DFixAction', () => {
                 commandSource: 'sfca.a4dFix',
                 completionNumLines: '1',
                 languageType: 'apex',
-                ruleName: 'someRule'
+                ruleName: 'ApexDoc'
             }
         });
     });
@@ -152,7 +152,7 @@ describe('Tests for A4DFixAction', () => {
     it('When fix is suggested, then the accept callback (when executed) sends a telemetry event', async () => {
         fixSuggester.suggestFixReturnValue = sampleFixSuggestion;
 
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDocument, sampleDiagnostic2);
 
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
         await unifiedDiffService.showDiffCallHistory[0].acceptCallback();
@@ -164,7 +164,7 @@ describe('Tests for A4DFixAction', () => {
                 commandSource: 'sfca.a4dFix',
                 completionNumLines: '1',
                 languageType: 'apex',
-                ruleName: 'someRule'
+                ruleName: 'ApexDoc'
             }
         });
     });
@@ -184,7 +184,7 @@ describe('Tests for A4DFixAction', () => {
                 commandSource: 'sfca.a4dFix',
                 completionNumLines: '1',
                 languageType: 'apex',
-                ruleName: 'someRule'
+                ruleName: 'ApexDoc'
             }
         });
     });
@@ -229,7 +229,7 @@ describe('Tests for A4DFixAction', () => {
         // Telemetry event is sent
         expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
-            commandName: 'sfdx__eGPT_no_fix_suggested',
+            commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
             properties: {
                 commandSource: 'sfca.a4dFix',
                 languageType: 'apex',
