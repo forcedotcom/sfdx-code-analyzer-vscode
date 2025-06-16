@@ -77,7 +77,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const logger: Logger = new LoggerImpl(outputChannel);
     const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
-    const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger);
+    const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));

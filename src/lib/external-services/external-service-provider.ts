@@ -25,12 +25,14 @@ const EXTENSION_THAT_SUPPLIES_TELEMETRY_SERVICE = 'salesforce.salesforcedx-vscod
  */
 export class ExternalServiceProvider implements LLMServiceProvider, TelemetryServiceProvider {
     private readonly logger: Logger;
+    private readonly extensionContext: vscode.ExtensionContext;
 
     private cachedLLMService?: LLMService;
     private cachedTelemetryService?: TelemetryService;
 
-    constructor(logger: Logger) {
+    constructor(logger: Logger, extensionContext: vscode.ExtensionContext) {
         this.logger = logger;
+        this.extensionContext = extensionContext;
     }
 
     // =================================================================================================================
@@ -87,7 +89,8 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
         }
 
         try {
-            const coreTelemetryService: TelemetryServiceInterface = await ServiceProvider.getService(ServiceType.Telemetry, Constants.EXTENSION_ID);
+            const coreTelemetryService: TelemetryServiceInterface = await ServiceProvider.getService(ServiceType.Telemetry);
+            await coreTelemetryService.initializeService(this.extensionContext);
             return new LiveTelemetryService(coreTelemetryService, this.logger);
         } catch (err) {
             const errMsg: string = err instanceof Error? err.stack : String(err);
