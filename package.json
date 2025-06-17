@@ -3,7 +3,7 @@
     "displayName": "Salesforce Code Analyzer",
     "description": "Salesforce Code Analyzer is a unified tool for source code analysis. Run Code Analyzer to scan multiple languages in your code and add diagnostic info to your code that describes the violations.",
     "o11yUploadEndpoint": "https://794testsite.my.site.com/byolwr/webruntime/log/metrics",
-	"enableO11y": "true",
+    "enableO11y": "true",
     "bugs": {
         "url": "https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     },
@@ -15,7 +15,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "1.7.0",
+    "version": "1.8.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
