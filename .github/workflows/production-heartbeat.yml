@@ -123,7 +123,7 @@ jobs:
 
         run: |
 
-          ALERT_SEV="critical"
+          ALERT_SEV="info"
           ALERT_SUMMARY="Production heartbeat script failed on ${{ runner.os }}"
           # Define a helper function to create our POST request's data, to sidestep issues with nested quotations.
           generate_post_data() {

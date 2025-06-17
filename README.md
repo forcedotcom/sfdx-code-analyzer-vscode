@@ -7,11 +7,11 @@ The Salesforce Code Analyzer Extension enables Visual Studio (VS) Code to use Sa
 For documentation, visit the [Salesforce Code Analyzer VS Code Extension](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer-vs-code-extension.html) documentation.
 
 # Bugs and Feedback
-To report issues with the Salesforce Code Analyzer VS Code Extension, create a [bug on Github](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues/new?assignees=&labels=&projects=&template=bug_report.md&title=%5BBUG%5D). To suggest a feature enhancement, create a [request on Github](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues/new?assignees=&labels=&projects=&template=feature_request.md&title=%5BFeature+Request%5D).
+To report issues or to suggest a feature enhancement with the Salesforce Code Analyzer VS Code Extension, log an [issue in Github](https://github.com/forcedotcom/code-analyzer/issues/new?template=2-vscode_extension_bug.yml).
 
 # Resources
 - [Developer Doc: Salesforce CLI Command Reference](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_top.htm)
-- [Developer Doc: Salesforce Code Analyzer](https://forcedotcom.github.io/sfdx-scanner/)
+- [Developer Doc: Salesforce Code Analyzer](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/)
 - [Developer Doc: Salesforce DX Developer Guide](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_develop.htm)
 - [Developer Doc: Salesforce Extensions for Visual Studio Code](https://developer.salesforce.com/tools/vscode)
 - [Trailhead: Quick Start: Salesforce DX](https://trailhead.salesforce.com/trails/sfdx_get_started)

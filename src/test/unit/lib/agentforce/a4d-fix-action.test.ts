@@ -12,7 +12,7 @@ import {FixSuggestion} from "../../../../lib/fix-suggestion";
 describe('Tests for A4DFixAction', () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/some/file.cls');
     const sampleDocument: vscode.TextDocument = createTextDocument(sampleUri, 'some\nsample content', 'apex');
-    const sampleDiagnostic1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1));
+    const sampleDiagnostic1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1), 'ApexDoc');
     const sampleDiagnostic2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(1,7,1,14));
     const sampleFixSuggestion: FixSuggestion = new FixSuggestion({
         document: sampleDocument,
@@ -49,6 +49,16 @@ describe('Tests for A4DFixAction', () => {
 
         expect(display.displayWarningCallHistory).toHaveLength(0);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
+
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
+            properties: {
+                commandSource: 'sfca.a4dFix',
+                reason: 'unified_diff_cannot_be_shown'
+            }
+        });
     });
 
     it('When no fix is suggested (i.e. null is returned), then return with info msg displayed', async () => {
@@ -60,6 +70,17 @@ describe('Tests for A4DFixAction', () => {
         expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
+        
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
+            properties: {
+                commandSource: 'sfca.a4dFix',
+                languageType: 'apex',
+                reason: 'empty'
+            }
+        });
     });
 
     it('When error is thrown while suggesting fix, then display error message and send exception telemetry event', async () => {
@@ -101,7 +122,9 @@ describe('Tests for A4DFixAction', () => {
             commandName: 'sfdx__eGPT_suggest',
             properties: {
                 commandSource: 'sfca.a4dFix',
-                languageType: 'apex'
+                completionNumLines: '1',
+                languageType: 'apex',
+                ruleName: 'ApexDoc'
             }
         });
     });
@@ -129,7 +152,7 @@ describe('Tests for A4DFixAction', () => {
     it('When fix is suggested, then the accept callback (when executed) sends a telemetry event', async () => {
         fixSuggester.suggestFixReturnValue = sampleFixSuggestion;
 
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDocument, sampleDiagnostic2);
 
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
         await unifiedDiffService.showDiffCallHistory[0].acceptCallback();
@@ -140,7 +163,8 @@ describe('Tests for A4DFixAction', () => {
             properties: {
                 commandSource: 'sfca.a4dFix',
                 completionNumLines: '1',
-                languageType: 'apex'
+                languageType: 'apex',
+                ruleName: 'ApexDoc'
             }
         });
     });
@@ -158,7 +182,9 @@ describe('Tests for A4DFixAction', () => {
             commandName: 'sfdx__eGPT_clear',
             properties: {
                 commandSource: 'sfca.a4dFix',
-                languageType: 'apex'
+                completionNumLines: '1',
+                languageType: 'apex',
+                ruleName: 'ApexDoc'
             }
         });
     });
@@ -199,5 +225,16 @@ describe('Tests for A4DFixAction', () => {
         expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
+
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
+            properties: {
+                commandSource: 'sfca.a4dFix',
+                languageType: 'apex',
+                reason: 'same_code'
+            }
+        });
     });
 });

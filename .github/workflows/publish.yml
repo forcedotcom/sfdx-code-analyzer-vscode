@@ -52,13 +52,13 @@ jobs:
       # Set other miscellaneous environment variables as outputs for later.
 
   run-tests:
-    name: 'Test against production scanner'
+    name: 'Test against production plugin'
     needs: [ 'validate-release-environment' ]
     uses: ./.github/workflows/run-tests.yml
     with:
       # Before publishing, we want to test the extension against whatever
-      # version of the scanner is currently live.
-      use-scanner-tarballs: false
+      # version of code analyzer is currently live.
+      use-tarballs: false
 
   publish-vscode:
     name: 'Publish to VSCode Marketplace'
