@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import {makePrompt, GUIDED_JSON_SCHEMA, LLMResponse, PromptInputs} from './llm-prompt';
 import {LLMService, LLMServiceProvider} from "../external-services/llm-service";
 import {Logger} from "../logger";
-import {A4D_SUPPORTED_RULES, ViolationContextScope} from "./supported-rules";
+import {ViolationContextScope} from "./supported-rules";
 import {RangeExpander} from "../range-expander";
 import {FixSuggester, FixSuggestion} from "../fix-suggestion";
 import {getErrorMessage} from "../utils";
@@ -32,7 +32,7 @@ export class AgentforceViolationFixer implements FixSuggester {
      * @param document
      * @param diagnostic
      */
-    async suggestFix(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
+    async suggestFix(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic, violationContextScope: ViolationContextScope): Promise<FixSuggestion | null> {
         const llmService: LLMService = await this.llmServiceProvider.getLLMService();
 
         const engineName: string = diagnostic.violation.engine;
@@ -40,7 +40,6 @@ export class AgentforceViolationFixer implements FixSuggester {
 
         const ruleDescription: string = await this.codeAnalyzer.getRuleDescriptionFor(engineName, ruleName);
 
-        const violationContextScope: ViolationContextScope | undefined = A4D_SUPPORTED_RULES.get(ruleName);
         if (!violationContextScope) {
             // Should never get called since suggestFix should only be called on supported rules
             throw new Error(`Unsupported rule: ${ruleName}`);

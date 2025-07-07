@@ -4,7 +4,7 @@ import * as Constants from "../constants";
 import {LLMServiceProvider} from "../external-services/llm-service";
 import {Logger} from "../logger";
 import {CodeAnalyzerDiagnostic} from "../diagnostics";
-import {A4D_SUPPORTED_RULES} from "./supported-rules";
+import {A4D_SUPPORTED_RULES, ViolationContextScope} from "./supported-rules";
 
 /**
  * Provides the A4D "Quick Fix" button on the diagnostics associated with SFCA violations for the rules we have trained the LLM on.
@@ -28,7 +28,7 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
         const codeActions: vscode.CodeAction[] = [];
         const filteredDiagnostics: CodeAnalyzerDiagnostic[] = context.diagnostics
             .filter(d => d instanceof CodeAnalyzerDiagnostic)
-            .filter(d => !d.isStale() && A4D_SUPPORTED_RULES.has(d.violation.rule))
+            .filter(d => !d.isStale())
             // Technically, I don't think VS Code sends in diagnostics that aren't overlapping with the users selection,
             // but just in case they do, then this last filter is an additional sanity check just to be safe
             .filter(d => range.intersection(d.range) != undefined);
@@ -47,17 +47,58 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
         }
 
         for (const diagnostic of filteredDiagnostics) {
-            const fixAction: vscode.CodeAction = new vscode.CodeAction(
-                messages.agentforce.fixViolationWithA4D(diagnostic.violation.rule),
+
+
+            let scope: ViolationContextScope | undefined = undefined;
+            if (A4D_SUPPORTED_RULES.has(diagnostic.violation.rule)) {
+                scope = A4D_SUPPORTED_RULES.get(diagnostic.violation.rule);
+            }
+
+            
+            if (scope === undefined || scope === ViolationContextScope.ViolationScope) {
+                const fixAction1: vscode.CodeAction = new vscode.CodeAction(
+                    messages.agentforce.fixViolationWithA4D(diagnostic.violation.rule) + " (Violation Scope)",
+                    vscode.CodeActionKind.QuickFix
+                );
+                fixAction1.diagnostics = [diagnostic] // Important: this ties the code fix action to the specific diagnostic.
+                fixAction1.command = {
+                    title: 'Fix Diagnostic Issue', // Doesn't actually show up anywhere
+                    command: Constants.QF_COMMAND_A4D_FIX + "1",
+                    arguments: [document, diagnostic] // The arguments passed to the run function of the AgentforceViolationFixAction
+                };
+                codeActions.push(fixAction1);
+            }
+
+
+
+            if (scope === undefined || scope === ViolationContextScope.MethodScope) {
+                const fixAction2: vscode.CodeAction = new vscode.CodeAction(
+                messages.agentforce.fixViolationWithA4D(diagnostic.violation.rule) + " (Method Scope)",
                 vscode.CodeActionKind.QuickFix
-            );
-            fixAction.diagnostics = [diagnostic] // Important: this ties the code fix action to the specific diagnostic.
-            fixAction.command = {
-                title: 'Fix Diagnostic Issue', // Doesn't actually show up anywhere
-                command: Constants.QF_COMMAND_A4D_FIX,
-                arguments: [document, diagnostic] // The arguments passed to the run function of the AgentforceViolationFixAction
-            };
-            codeActions.push(fixAction);
+                );
+                fixAction2.diagnostics = [diagnostic] // Important: this ties the code fix action to the specific diagnostic.
+                fixAction2.command = {
+                    title: 'Fix Diagnostic Issue', // Doesn't actually show up anywhere
+                    command: Constants.QF_COMMAND_A4D_FIX + "2",
+                    arguments: [document, diagnostic] // The arguments passed to the run function of the AgentforceViolationFixAction
+                };
+                codeActions.push(fixAction2);
+            }
+
+
+            if (scope === undefined || scope === ViolationContextScope.ClassScope) {
+                const fixAction3: vscode.CodeAction = new vscode.CodeAction(
+                messages.agentforce.fixViolationWithA4D(diagnostic.violation.rule) + " (Class Scope)",
+                vscode.CodeActionKind.QuickFix
+                );
+                fixAction3.diagnostics = [diagnostic] // Important: this ties the code fix action to the specific diagnostic.
+                fixAction3.command = {
+                    title: 'Fix Diagnostic Issue', // Doesn't actually show up anywhere
+                    command: Constants.QF_COMMAND_A4D_FIX + "3",
+                    arguments: [document, diagnostic] // The arguments passed to the run function of the AgentforceViolationFixAction
+                };
+                codeActions.push(fixAction3);
+            }
         }
 
         return codeActions;

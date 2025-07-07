@@ -107,7 +107,7 @@ export class _ApexGuruFixGenerator extends FixGenerator {
     }
 
     public generateApexGuruSuppresssion(document: vscode.TextDocument): vscode.CodeAction {
-        const suggestedCode = this.diagnostic.relatedInformation[1].message;
+        const suggestedCode = this.diagnostic.relatedInformation[1].message; // THIS IS A BUG - THERE ARE DIAGNOSTICS FOR APEX GURU THAT DO NOT HAVE CODE SUGGESTIONS
 
         const action = new vscode.CodeAction(messages.fixer.fixWithApexGuruSuggestions, vscode.CodeActionKind.QuickFix);
         action.diagnostics = [this.diagnostic];

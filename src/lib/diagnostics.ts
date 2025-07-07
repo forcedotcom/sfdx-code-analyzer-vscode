@@ -19,6 +19,18 @@ export type CodeLocation = {
     comment?: string;
 }
 
+export type Fix = {
+    message: string,
+    originalCodeLocation: CodeLocation
+    fixedCode: string,
+}
+
+export type Suggestion = {
+    message: string,
+    originalCodeLocation?: CodeLocation
+    suggestedCode?: string,
+}
+
 export type Violation = {
     rule: string;
     engine: string;
@@ -28,6 +40,10 @@ export type Violation = {
     primaryLocationIndex: number;
     tags: string[];
     resources: string[];
+
+    // The following fields don't exist in core (yet) but hopefully will soon.
+    fix?: Fix
+    suggestions?: Suggestion[]
 }
 
 const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';

@@ -8,7 +8,7 @@ import {FixSuggester, FixSuggestion} from "../fix-suggestion";
 import {messages} from "../messages";
 import {Display} from "../display";
 import {getErrorMessage, getErrorMessageWithStack} from "../utils";
-import {A4D_SUPPORTED_RULES} from "./supported-rules";
+import {ViolationContextScope} from "./supported-rules";
 
 export class A4DFixAction {
     private readonly fixSuggester: FixSuggester;
@@ -28,7 +28,7 @@ export class A4DFixAction {
         this.display = display;
     }
 
-    async run(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<void> {
+    async run(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic, violationContextScope: ViolationContextScope): Promise<void> {
         const startTime: number = Date.now();
         try {
             if (!this.unifiedDiffService.verifyCanShowDiff(document)) {
@@ -39,7 +39,7 @@ export class A4DFixAction {
                 return;
             }
 
-            const fixSuggestion: FixSuggestion = await this.fixSuggester.suggestFix(document, diagnostic);
+            const fixSuggestion: FixSuggestion = await this.fixSuggester.suggestFix(document, diagnostic, violationContextScope);
             if (!fixSuggestion) {
                 this.display.displayInfo(messages.agentforce.noFixSuggested);
                 this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
@@ -81,7 +81,7 @@ export class A4DFixAction {
         const document: vscode.TextDocument = codeFixSuggestion.codeFixData.document;
         const suggestedNewDocumentCode: string = codeFixSuggestion.getFixedDocumentCode();
         const numLinesInFix: number = codeFixSuggestion.getFixedCodeLines().length;
-        const supportedRuleName: string = A4D_SUPPORTED_RULES.has(diagnostic.violation.rule) ? diagnostic.violation.rule : '';
+        const supportedRuleName: string = diagnostic.violation.rule;
 
         const acceptCallback: ()=>Promise<void> = (): Promise<void> => {
             this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_ACCEPT, {

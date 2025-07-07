@@ -34,6 +34,7 @@ import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 import {Workspace} from "./lib/workspace";
+import {ViolationContextScope} from "./lib/agentforce/supported-rules";
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -298,8 +299,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
     // Invoked by the "quick fix" buttons on A4D enabled diagnostics
-    registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
-        await a4dFixAction.run(document, diagnostic);
+    registerCommand(Constants.QF_COMMAND_A4D_FIX + "1", async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
+        await a4dFixAction.run(document, diagnostic, ViolationContextScope.ViolationScope);
+    });
+    registerCommand(Constants.QF_COMMAND_A4D_FIX + "2", async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
+        await a4dFixAction.run(document, diagnostic, ViolationContextScope.MethodScope);
+    });
+    registerCommand(Constants.QF_COMMAND_A4D_FIX + "3", async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
+        await a4dFixAction.run(document, diagnostic, ViolationContextScope.ClassScope);
     });
 
 

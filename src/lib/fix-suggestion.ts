@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
 import {CodeAnalyzerDiagnostic} from "./diagnostics";
+import {ViolationContextScope} from "./agentforce/supported-rules";
 
 export interface FixSuggester {
-    suggestFix(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null>
+    suggestFix(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic, violationScope: ViolationContextScope): Promise<FixSuggestion | null>
 }
 
 export type CodeFixData = {

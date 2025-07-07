@@ -47,6 +47,8 @@ export async function runApexGuruOnFile(uri: vscode.Uri, commandName: string, di
 
             const decodedReport = Buffer.from(queryResponse.report, 'base64').toString('utf8');
 
+            console.log('Apex Guru Report:\n' + JSON.stringify(decodedReport, null, 2));
+
             const diagnostics: CodeAnalyzerDiagnostic[] = transformReportJsonStringToDiagnostics(uri.fsPath, decodedReport);
             diagnosticManager.addDiagnostics(diagnostics);
 
@@ -89,6 +91,9 @@ export async function pollAndGetApexGuruResponse(connection: Connection, request
         await new Promise(resolve => setTimeout(resolve, retryIntervalInMillis));
 
     }
+
+    console.log('Apex Guru Response:\n' + JSON.stringify(queryResponse,null,2));
+
     if (queryResponse) {
         return queryResponse;
     }
@@ -105,6 +110,8 @@ export async function initiateApexGuruRequest(selection: vscode.Uri, logger: Log
             classContent: base64EncodedContent
         })
     });
+
+    console.log('Apex Guru Init Response:\n' + JSON.stringify(response,null,2));
 
     if (response.status != 'new' && response.status != 'success') {
         logger.warn('Code Analyzer with Apex Guru returned unexpected response:' + response.status);
