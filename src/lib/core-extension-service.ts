@@ -27,12 +27,24 @@ export class CoreExtensionService {
                 return;
             }
 
-            const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
+            try {
+                const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
-            // TODO: For testability, this should probably be passed in, instead of instantiated.
-            if (new SettingsManagerImpl().getApexGuruEnabled()) {
-                CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
+                // TODO: For testability, this should probably be passed in, instead of instantiated.
+                if (new SettingsManagerImpl().getApexGuruEnabled()) {
+                    CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
+                }
+            } catch (error) {
+                // Handle any errors during Core Extension API loading
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('InvalidProjectWorkspaceError')) {
+                    outputChannel.warn('Core Extension validation failed due to invalid project workspace. Core Extension features will be disabled.');
+                } else {
+                    outputChannel.warn(`Failed to load Core Extension API: ${errorMessage}`);
+                }
+                // Don't throw - let the extension continue without Core Extension features
             }
+            
             CoreExtensionService.initialized = true;
         }
     }
@@ -84,7 +96,18 @@ export class CoreExtensionService {
 
         if (!coreExtension.isActive) {
             console.log(`${CORE_EXTENSION_ID} present but inactive. Activating now.`);
-            await coreExtension.activate(); // will call the extensions activate function and fill in the exports property with its return value
+            try {
+                await coreExtension.activate(); // will call the extensions activate function and fill in the exports property with its return value
+            } catch (error) {
+                // Handle activation errors gracefully, especially InvalidProjectWorkspaceError
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('InvalidProjectWorkspaceError')) {
+                    console.log(`${CORE_EXTENSION_ID} activation failed due to invalid project workspace. Core Extension features will be disabled.`);
+                } else {
+                    console.log(`${CORE_EXTENSION_ID} activation failed: ${errorMessage}`);
+                }
+                return undefined;
+            }
         }
 
         console.log(`${CORE_EXTENSION_ID} present and active. Returning its exported API.`);
