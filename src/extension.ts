@@ -104,7 +104,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // We need to do this first in case any other services need access to those provided by the core extension.
     // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
-    await CoreExtensionService.loadDependencies(outputChannel);
+    try {
+        await CoreExtensionService.loadDependencies(outputChannel);
+    } catch (error) {
+        // Log the error but don't fail extension activation
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.warn(`Failed to load Core Extension dependencies: ${errorMessage}`);
+        outputChannel.warn(`Core Extension dependencies could not be loaded: ${errorMessage}`);
+        // Continue with extension activation - the extension can still work for basic functionality
+        // even without the Core Extension (ApexGuru features will be disabled)
+    }
 
 
     // =================================================================================================================

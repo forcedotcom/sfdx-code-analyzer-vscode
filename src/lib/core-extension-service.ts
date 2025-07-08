@@ -19,6 +19,14 @@ export class CoreExtensionService {
 
     public static async loadDependencies(outputChannel: vscode.LogOutputChannel): Promise<void> {
         if (!CoreExtensionService.initialized) {
+            // Check if we have a valid Salesforce project workspace before trying to load dependencies
+            const hasValidProject = await this.hasValidSalesforceProject();
+            if (!hasValidProject) {
+                outputChannel.warn('No valid Salesforce project workspace detected. Core Extension features will be disabled.');
+                CoreExtensionService.initialized = true;
+                return;
+            }
+
             const coreExtensionApi = await this.getCoreExtensionApiOrUndefined();
 
             // TODO: For testability, this should probably be passed in, instead of instantiated.
@@ -26,6 +34,31 @@ export class CoreExtensionService {
                 CoreExtensionService.initializeWorkspaceContext(coreExtensionApi?.services.WorkspaceContext, outputChannel);
             }
             CoreExtensionService.initialized = true;
+        }
+    }
+
+    private static async hasValidSalesforceProject(): Promise<boolean> {
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders || workspaceFolders.length === 0) {
+                return false;
+            }
+
+            // Check if any workspace folder contains an sfdx-project.json file
+            for (const folder of workspaceFolders) {
+                const sfdxProjectPath = vscode.Uri.joinPath(folder.uri, 'sfdx-project.json');
+                try {
+                    await vscode.workspace.fs.stat(sfdxProjectPath);
+                    return true; // Found a valid sfdx-project.json file
+                } catch {
+                    // File doesn't exist, continue checking other folders
+                    continue;
+                }
+            }
+            return false;
+        } catch (_error) {
+            // If we can't check for the project file, assume it's not valid
+            return false;
         }
     }
 
@@ -62,8 +95,16 @@ export class CoreExtensionService {
         if (!workspaceContext) {
             outputChannel.warn('***Workspace Context not present in core dependency API. Check if the Core Extension installed.***');
             outputChannel.show();
+            return;
         }
-        CoreExtensionService.workspaceContext = workspaceContext.getInstance(false);
+        try {
+            CoreExtensionService.workspaceContext = workspaceContext.getInstance(false);
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            outputChannel.error(`***Failed to initialize Workspace Context: ${errorMsg}***`);
+            outputChannel.show();
+            // Don't throw here - let the extension continue without Core Extension features
+        }
     }
 
     static async getWorkspaceOrgId(): Promise<string | undefined> {
@@ -75,8 +116,16 @@ export class CoreExtensionService {
     }
 
     static async getConnection(): Promise<Connection> {
-        const connection = await CoreExtensionService.workspaceContext.getConnection();
-        return connection;
+        if (!CoreExtensionService.workspaceContext) {
+            throw new Error('Workspace Context not initialized. This usually means the Salesforce Core Extension is not properly loaded or there is no valid Salesforce project workspace.');
+        }
+        try {
+            const connection = await CoreExtensionService.workspaceContext.getConnection();
+            return connection;
+        } catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to get connection from Workspace Context: ${errorMsg}`);
+        }
     }
 }
 

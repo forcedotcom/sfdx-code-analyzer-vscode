@@ -39,7 +39,17 @@ export async function runApexGuruOnFile(uri: vscode.Uri, commandName: string, di
             location: vscode.ProgressLocation.Notification
         }, async (progress) => {
             progress.report(messages.apexGuru.progress);
-            const connection = await CoreExtensionService.getConnection();
+            
+            // Check if Core Extension is available before trying to get connection
+            let connection: Connection;
+            try {
+                connection = await CoreExtensionService.getConnection();
+            } catch (connectionError) {
+                const errorMsg = connectionError instanceof Error ? connectionError.message : String(connectionError);
+                logger.error(`Failed to get Core Extension connection: ${errorMsg}`);
+                throw new Error(`ApexGuru requires a valid Salesforce project workspace. Please ensure you have a valid sfdx-project.json file in your workspace root. Error: ${errorMsg}`);
+            }
+            
             const requestId = await initiateApexGuruRequest(uri, logger, connection);
             logger.log('Code Analyzer with ApexGuru request Id:' + requestId);
 
@@ -61,6 +71,8 @@ export async function runApexGuruOnFile(uri: vscode.Uri, commandName: string, di
     } catch (e) {
         const errMsg = e instanceof Error ? e.message : e as string;
         logger.error('Failed to Scan for Performance Issues with ApexGuru: ' + errMsg);
+        // Show user-friendly error message
+        void vscode.window.showErrorMessage(`ApexGuru analysis failed: ${errMsg}`);
     }
 }
 

@@ -126,13 +126,6 @@ suite('targeting.ts', () => {
         });
 
         test('Given no selection, returns no files', async () => {
-            // ===== SETUP =====
-            // Open a file in the editor.
-            const openFilePath: string = path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls');
-            const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
-            const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
-            await vscode.window.showTextDocument(doc);
-
             // ===== TEST =====
             // Feed an empty array into the target finder.
             const targets: string[] = await getFilesFromSelection([]);
