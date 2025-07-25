@@ -82,8 +82,6 @@ jobs:
           git checkout -b $INTERIM_BRANCH_NAME
           # Immediately push the interim branch with no changes, so GraphQL can push to it later.
           git push --set-upstream origin $INTERIM_BRANCH_NAME
-      # Update our dependencies
-      - run: npm update
       # Use the GraphQL API to create a signed commmit with our changes.
       - run: |
           # GraphQL needs to know what branch to push to.
@@ -93,11 +91,10 @@ jobs:
           MESSAGE="Preparing for v$NEW_VERSION release."
           # GraphQL needs the latest versions of the files we changed, as Base64 encoded strings.
           NEW_PACKAGE="$(cat package.json | base64)"
-          NEW_LOCKFILE="$(cat package-lock.json | base64)"
           gh api graphql -F message="$MESSAGE" -F oldOid=`git rev-parse HEAD` -F branch="$BRANCH" \
-          -F newPackage="$NEW_PACKAGE" -F newLockfile="$NEW_LOCKFILE" \
+          -F newPackage="$NEW_PACKAGE" \
           -f query='
-            mutation ($message: String!, $oldOid: GitObjectID!, $branch: String!, $newPackage: Base64String!, $newLockfile: Base64String!) {
+            mutation ($message: String!, $oldOid: GitObjectID!, $branch: String!, $newPackage: Base64String!) {
               createCommitOnBranch(input: {
                 branch: {
                   repositoryNameWithOwner: "forcedotcom/sfdx-code-analyzer-vscode",
@@ -111,9 +108,6 @@ jobs:
                     {
                       path: "package.json",
                       contents: $newPackage
-                    }, {
-                      path: "package-lock.json",
-                      contents: $newLockfile
                     }
                   ]
                 },
