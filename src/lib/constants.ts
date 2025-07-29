@@ -7,6 +7,7 @@
 
 // extension names
 export const EXTENSION_ID = 'salesforce.sfdx-code-analyzer-vscode';
+export const EXTENSION_BASE_ID = 'sfdx-code-analyzer-vscode';
 export const CORE_EXTENSION_ID = 'salesforce.salesforcedx-vscode-core';
 export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
 

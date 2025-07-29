@@ -75,8 +75,11 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
         const rulesToReduceViolationsToSingleLine: string[] = [
             'ApexDoc',                                      // https://github.com/pmd/pmd/issues/5614
             'ApexUnitTestMethodShouldHaveIsTestAnnotation', // https://github.com/pmd/pmd/issues/5669
+            'ApexUnitTestShouldNotUseSeeAllDataTrue',       // https://github.com/pmd/pmd/issues/5904
             'AvoidGlobalModifer',                           // https://github.com/pmd/pmd/issues/5668
             'ApexSharingViolations',                        // https://github.com/pmd/pmd/issues/5511
+            'ClassNamingConventions',                       // https://github.com/pmd/pmd/issues/5905
+            'MethodWithSameNameAsEnclosingClass',           // https://github.com/pmd/pmd/issues/5906
             'ExcessiveParameterList'];                      // https://github.com/pmd/pmd/issues/5616
         if (rulesToReduceViolationsToSingleLine.includes(violation.rule)) {
             diagnostic.range = new vscode.Range(diagnostic.range.start.line, diagnostic.range.start.character,
