@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "skipLibCheck": true, /* needed to avoid conflict between @types/jest and @types/mocha. When we remove mocha, we should remove this line */
+        "isolatedModules": true,
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "target": "ES2022",
