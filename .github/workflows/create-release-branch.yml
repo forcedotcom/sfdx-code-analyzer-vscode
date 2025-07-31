@@ -91,10 +91,11 @@ jobs:
           MESSAGE="Preparing for v$NEW_VERSION release."
           # GraphQL needs the latest versions of the files we changed, as Base64 encoded strings.
           NEW_PACKAGE="$(cat package.json | base64)"
+          NEW_LOCKFILE="$(cat package-lock.json | base64)"
           gh api graphql -F message="$MESSAGE" -F oldOid=`git rev-parse HEAD` -F branch="$BRANCH" \
-          -F newPackage="$NEW_PACKAGE" \
+          -F newPackage="$NEW_PACKAGE" -F newLockfile="$NEW_LOCKFILE" \
           -f query='
-            mutation ($message: String!, $oldOid: GitObjectID!, $branch: String!, $newPackage: Base64String!) {
+            mutation ($message: String!, $oldOid: GitObjectID!, $branch: String!, $newPackage: Base64String!, $newLockfile: Base64String!) {
               createCommitOnBranch(input: {
                 branch: {
                   repositoryNameWithOwner: "forcedotcom/sfdx-code-analyzer-vscode",
@@ -108,6 +109,9 @@ jobs:
                     {
                       path: "package.json",
                       contents: $newPackage
+                    }, {
+                      path: "package-lock.json",
+                      contents: $newLockfile
                     }
                   ]
                 },
