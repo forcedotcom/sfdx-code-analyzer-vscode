@@ -11,7 +11,6 @@ import {SettingsManager, SettingsManagerImpl} from './lib/settings';
 import * as targeting from './lib/targeting'
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
 import {messages} from './lib/messages';
-import {Fixer} from './lib/fixer';
 import {CoreExtensionService} from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 import * as path from 'path';
@@ -34,6 +33,8 @@ import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 import {Workspace} from "./lib/workspace";
+import { PMDSupressionsCodeActionProvider } from './lib/pmd/pmd-suppressions-code-action-provider';
+import { FixesCodeActionProvider } from './lib/fixes-code-action-provider';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -200,17 +201,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         diagnosticManager.clearDiagnosticsForFiles(selectedFiles.map(f => vscode.Uri.file(f)));
     });
 
-
     // =================================================================================================================
-    // ==  Code Analyzer Basic Quick-Fix Functionality
+    // ==  Code Analyzer PMD Quick-Fix Functionality for Line or Class Level Suppressions
     // =================================================================================================================
-    registerCodeActionsProvider({pattern: '**/**'}, new Fixer(), // TODO: We should separate the apex guru quick fix from this Fixer class into its own
-        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+    const pmdSuppressionsCodeActionProvider: PMDSupressionsCodeActionProvider = new PMDSupressionsCodeActionProvider();
+    registerCodeActionsProvider({language: 'apex'}, pmdSuppressionsCodeActionProvider,
+            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
     // QF_COMMAND_DIAGNOSTICS_IN_RANGE: Invoked by a Quick Fix button that appears on diagnostics
+    // TODO: We need to fix this - because we should be just removing the relevant diagnostics - not all in a specific range
     registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
         diagnosticManager.clearDiagnosticsInRange(uri, range));
-
 
     // =================================================================================================================
     // ==  DFA Run Functionality
@@ -277,6 +278,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             lines: suggestedCode.split('\n').length.toString()
         });
     });
+    
+    // TODO: Currently this code action provider is ApexGuru specific but soon it will be generalized:
+    const fixesCodeActionProvider: FixesCodeActionProvider = new FixesCodeActionProvider();
+    registerCodeActionsProvider({pattern: '**/**'}, fixesCodeActionProvider,
+            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+
+    // Note the apex guru services also uses Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE (registered above) but soon this will not be the case
 
 
     // =================================================================================================================

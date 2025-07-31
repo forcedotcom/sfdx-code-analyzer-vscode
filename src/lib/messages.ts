@@ -48,7 +48,7 @@ export const messages = {
     fixer: {
         suppressPMDViolationsOnLine: "Suppress all PMD violations on this line.",
         suppressPmdViolationsOnClass: (ruleName?: string) => ruleName ? `Suppress '${ruleName}' on this class.` : `Suppress all PMD violations on this class.`,
-        fixWithApexGuruSuggestions: "Insert ApexGuru suggestions."
+        fixWithApexGuruSuggestions: "Insert ApexGuru suggestions." // TODO: This will go away soon in favor of a generalized message
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,

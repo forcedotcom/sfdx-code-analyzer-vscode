@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import {CodeAnalyzerDiagnostic, Violation} from "../../lib/diagnostics";
 
-export function createSampleCodeAnalyzerDiagnostic(uri: vscode.Uri, range: vscode.Range, ruleName: string = 'someRule'): CodeAnalyzerDiagnostic {
+export function createSampleCodeAnalyzerDiagnostic(uri: vscode.Uri, range: vscode.Range, ruleName: string = 'someRule', engineName: string = 'pmd'): CodeAnalyzerDiagnostic {
     const sampleViolation: Violation = {
         rule: ruleName,
-        engine: 'pmd',
+        engine: engineName,
         message: 'This message is unimportant',
         severity: 3,
         locations: [
