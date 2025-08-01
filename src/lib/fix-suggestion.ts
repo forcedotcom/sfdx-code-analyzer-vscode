@@ -1,9 +1,4 @@
 import * as vscode from "vscode";
-import {CodeAnalyzerDiagnostic} from "./diagnostics";
-
-export interface FixSuggester {
-    suggestFix(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null>
-}
 
 export type CodeFixData = {
     // The document associated with the fix

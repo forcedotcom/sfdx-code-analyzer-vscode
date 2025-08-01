@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Salesforce, Inc.
+ * Copyright (c) 2025, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
@@ -23,8 +23,8 @@ export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnC
 
 // commands that are only invoked by quick fixes (which do not need to be declared in package.json since they can be registered dynamically)
 export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
-export const QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS = 'sfca.includeApexGuruSuggestions';
 export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
+export const QF_COMMAND_APPLY_VIOLATION_FIXES = 'sfca.applyViolationFixes';
 
 // other commands that we use
 export const VSCODE_COMMAND_OPEN_URL = 'vscode.open';
@@ -37,19 +37,18 @@ export const TELEM_SUCCESSFUL_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_complet
 export const TELEM_FAILED_DFA_ANALYSIS = 'sfdx__codeanalyzer_dfa_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
 
-// telemetry keys used by eGPT
+// telemetry keys used by eGPT (A4D)
 export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
 export const TELEM_A4D_SUGGESTION_FAILED = 'sfdx__eGPT_suggest_failure';
 export const TELEM_A4D_ACCEPT = 'sfdx__eGPT_accept';
 export const TELEM_A4D_REJECT = 'sfdx__eGPT_clear';
 
-// quick fix telemetry events
-export const TELEM_QF_NO_FIX = 'sfdx__codeanalyzer_qf_no_fix_suggested';
-
-// quick fix telemetry event properties
-export const TELEM_QF_NO_FIX_REASON_UNIFIED_DIFF_CANNOT_BE_SHOWN = 'unified_diff_cannot_be_shown';
-export const TELEM_QF_NO_FIX_REASON_EMPTY = 'empty';
-export const TELEM_QF_NO_FIX_REASON_SAME_CODE = 'same_code';
+// telemetry event keys for the general ApplyViolationFixesAction
+export const TELEM_QF_NO_FIX_SUGGESTED = 'sfdx__codeanalyzer_qf_no_fix_suggested';
+export const TELEM_QF_FIX_SUGGESTED = 'sfdx__codeanalyzer_qf_fix_suggested';
+export const TELEM_QF_FIX_SUGGESTION_FAILED = 'sfdx__codeanalyzer_qf_fix_suggestion_failed';
+export const TELEM_QF_FIX_ACCEPTED = 'sfdx__codeanalyzer_qf_fix_accepted';
+export const TELEM_QF_FIX_REJECTED = 'sfdx__codeanalyzer_qf_fix_rejected';
 
 // versioning
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';

@@ -1,130 +1,125 @@
+import * as vscode from "vscode";
+import * as Constants from "../constants";
+import {makePrompt, GUIDED_JSON_SCHEMA, LLMResponse, PromptInputs} from './llm-prompt';
 import {TelemetryService} from "../external-services/telemetry-service";
 import {UnifiedDiffService} from "../unified-diff-service";
-import * as Constants from "../constants";
-import * as vscode from "vscode";
 import {Logger} from "../logger";
 import {CodeAnalyzerDiagnostic, DiagnosticManager} from "../diagnostics";
-import {FixSuggester, FixSuggestion} from "../fix-suggestion";
-import {messages} from "../messages";
+import {FixSuggestion} from "../fix-suggestion";
+import {RangeExpander} from "../range-expander";
 import {Display} from "../display";
-import {getErrorMessage, getErrorMessageWithStack} from "../utils";
-import {A4D_SUPPORTED_RULES} from "./supported-rules";
+import {messages} from '../messages';
+import {SuggestFixWithDiffAction} from "../suggest-fix-with-diff-action";
+import {LLMService, LLMServiceProvider} from "../external-services/llm-service";
+import {CodeAnalyzer} from "../code-analyzer";
+import {A4D_SUPPORTED_RULES, ViolationContextScope} from "./supported-rules";
+import {getErrorMessage} from "../utils";
 
-export class A4DFixAction {
-    private readonly fixSuggester: FixSuggester;
-    private readonly unifiedDiffService: UnifiedDiffService;
-    private readonly diagnosticManager: DiagnosticManager;
-    private readonly telemetryService: TelemetryService;
-    private readonly logger: Logger;
-    private readonly display: Display;
+export class A4DFixAction extends SuggestFixWithDiffAction {
+    static readonly COMMAND: string = Constants.QF_COMMAND_A4D_FIX;
 
-    constructor(fixSuggester: FixSuggester, unifiedDiffService: UnifiedDiffService, diagnosticManager: DiagnosticManager,
+    static isRelevantDiagnostic(diagnostic: CodeAnalyzerDiagnostic): boolean {
+        return !diagnostic.isStale() && A4D_SUPPORTED_RULES.has(diagnostic.violation.rule);
+    }
+
+    private readonly llmServiceProvider: LLMServiceProvider;
+    private readonly codeAnalyzer: CodeAnalyzer;
+
+    constructor(llmServiceProvider: LLMServiceProvider, codeAnalyzer: CodeAnalyzer, unifiedDiffService: UnifiedDiffService, diagnosticManager: DiagnosticManager,
                 telemetryService: TelemetryService, logger: Logger, display: Display) {
-        this.fixSuggester = fixSuggester;
-        this.unifiedDiffService = unifiedDiffService;
-        this.diagnosticManager = diagnosticManager;
-        this.telemetryService = telemetryService;
-        this.logger = logger;
-        this.display = display;
+        super(unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+        this.llmServiceProvider = llmServiceProvider;
+        this.codeAnalyzer = codeAnalyzer;
     }
 
-    async run(document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<void> {
-        const startTime: number = Date.now();
-        try {
-            if (!this.unifiedDiffService.verifyCanShowDiff(document)) {
-                this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
-                    commandSource: Constants.QF_COMMAND_A4D_FIX,
-                    reason: Constants.TELEM_QF_NO_FIX_REASON_UNIFIED_DIFF_CANNOT_BE_SHOWN
-                });
-                return;
-            }
-
-            const fixSuggestion: FixSuggestion = await this.fixSuggester.suggestFix(document, diagnostic);
-            if (!fixSuggestion) {
-                this.display.displayInfo(messages.agentforce.noFixSuggested);
-                this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
-                    commandSource: Constants.QF_COMMAND_A4D_FIX,
-                    languageType: document.languageId,
-                    reason: Constants.TELEM_QF_NO_FIX_REASON_EMPTY
-                });
-                return;
-            }
-
-            const originalCode: string = fixSuggestion.getOriginalCodeToBeFixed();
-            const fixedCode: string = fixSuggestion.getFixedCode();
-            if (originalCode === fixedCode) {
-                this.display.displayInfo(messages.agentforce.noFixSuggested);
-                this.telemetryService.sendCommandEvent(Constants.TELEM_QF_NO_FIX, {
-                    commandSource: Constants.QF_COMMAND_A4D_FIX,
-                    languageType: document.languageId,
-                    reason: Constants.TELEM_QF_NO_FIX_REASON_SAME_CODE
-                });
-                return;
-            }
-            this.logger.debug(`Agentforce Fix Diff:\n` +
-                `=== ORIGINAL CODE ===:\n${originalCode}\n\n` +
-                `=== FIXED CODE ===:\n${fixedCode}`);
-
-            await this.displayDiffFor(fixSuggestion);
-
-            if (fixSuggestion.hasExplanation()) {
-                this.display.displayInfo(messages.agentforce.explanationOfFix(fixSuggestion.getExplanation()));
-            }
-        } catch (err) {
-            this.handleError(err, Constants.TELEM_A4D_SUGGESTION_FAILED, Date.now() - startTime);
-            return;
-        }
+    getCommandSource(): string {
+        return A4DFixAction.COMMAND;
     }
 
-    private async displayDiffFor(codeFixSuggestion: FixSuggestion): Promise<void> {
-        const diagnostic: CodeAnalyzerDiagnostic = codeFixSuggestion.codeFixData.diagnostic as CodeAnalyzerDiagnostic;
-        const document: vscode.TextDocument = codeFixSuggestion.codeFixData.document;
-        const suggestedNewDocumentCode: string = codeFixSuggestion.getFixedDocumentCode();
-        const numLinesInFix: number = codeFixSuggestion.getFixedCodeLines().length;
-        const supportedRuleName: string = A4D_SUPPORTED_RULES.has(diagnostic.violation.rule) ? diagnostic.violation.rule : '';
+    getFixSuggestedTelemEventName(): string {
+        return Constants.TELEM_A4D_SUGGESTION;
+    }
 
-        const acceptCallback: ()=>Promise<void> = (): Promise<void> => {
-            this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_ACCEPT, {
-                commandSource: Constants.QF_COMMAND_A4D_FIX,
-                completionNumLines: numLinesInFix.toString(),
-                languageType: document.languageId,
-                ruleName: supportedRuleName
-            });
-            return Promise.resolve();
-        };
+    getFixAcceptedTelemEventName(): string {
+        return Constants.TELEM_A4D_ACCEPT;
+    }
 
-        const rejectCallback: ()=>Promise<void> = (): Promise<void> => {
-            this.diagnosticManager.addDiagnostics([diagnostic]); // Put back the diagnostic
-            this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_REJECT, {
-                commandSource: Constants.QF_COMMAND_A4D_FIX,
-                completionNumLines: numLinesInFix.toString(),
-                languageType: document.languageId,
-                ruleName: supportedRuleName
-            });
-            return Promise.resolve();
-        };
+    getFixRejectedTelemEventName(): string {
+        return Constants.TELEM_A4D_REJECT;
+    }
 
-        this.diagnosticManager.clearDiagnostic(diagnostic);
-        try {
-            await this.unifiedDiffService.showDiff(document, suggestedNewDocumentCode, acceptCallback, rejectCallback);
-        } catch (err) {
-            this.diagnosticManager.addDiagnostics([diagnostic]); // Put back the diagnostic
-            throw err;
+    getFixSuggestionFailedTelemEventName(): string {
+        return Constants.TELEM_A4D_SUGGESTION_FAILED;
+    }
+
+    /**
+     * Returns suggested replacement code for the entire document that should fix the violation associated with the diagnostic (using A4D).
+     * @param document
+     * @param diagnostic
+     */
+    async suggestFix(diagnostic: CodeAnalyzerDiagnostic, document: vscode.TextDocument): Promise<FixSuggestion | null> {
+        if (!A4DFixAction.isRelevantDiagnostic(diagnostic)) {
+            // This line should theoretically should not be possible to hit because this filter is already used as a
+            // filter in  the A4DFixActionProvider, but it is here as a sanity check.
+            return null;
         }
 
-        this.telemetryService.sendCommandEvent(Constants.TELEM_A4D_SUGGESTION, {
-            commandSource: Constants.QF_COMMAND_A4D_FIX,
-            completionNumLines: numLinesInFix.toString(),
-            languageType: document.languageId,
-            ruleName: supportedRuleName
-        });
-    }
+        const llmService: LLMService = await this.llmServiceProvider.getLLMService();
 
-    private handleError(err: unknown, errCategory: string, duration: number): void {
-        this.display.displayError(`${messages.agentforce.failedA4DResponse}\n${getErrorMessage(err)}`);
-        this.telemetryService.sendException(errCategory, getErrorMessageWithStack(err), {
-            executedCommand: Constants.QF_COMMAND_A4D_FIX,
-            duration: duration.toString()
-        });
+        const engineName: string = diagnostic.violation.engine;
+        const ruleName: string = diagnostic.violation.rule;
+
+        const ruleDescription: string = await this.codeAnalyzer.getRuleDescriptionFor(engineName, ruleName);
+
+        const violationContextScope: ViolationContextScope = A4D_SUPPORTED_RULES.get(ruleName);
+
+        const rangeExpander: RangeExpander = new RangeExpander(document);
+        const violationLinesRange: vscode.Range = rangeExpander.expandToCompleteLines(diagnostic.range);
+        let contextRange: vscode.Range = violationLinesRange; // This is the default: ViolationContextScope.ViolationScope
+        if (violationContextScope === ViolationContextScope.ClassScope) {
+            contextRange = rangeExpander.expandToClass(diagnostic.range);
+        } else if (violationContextScope === ViolationContextScope.MethodScope) {
+            contextRange = rangeExpander.expandToMethod(diagnostic.range);
+        }
+
+        const promptInputs: PromptInputs = {
+            codeContext: document.getText(contextRange),
+            violatingLines: document.getText(violationLinesRange),
+            violationMessage: diagnostic.message,
+            ruleName: ruleName,
+            ruleDescription: ruleDescription
+        };
+        const prompt: string = makePrompt(promptInputs);
+
+        // Call the LLM service with the generated prompt
+        this.logger.trace('Sending prompt to LLM:\n' + prompt);
+        let llmResponseText: string;
+        try {
+            llmResponseText = await llmService.callLLM(prompt, GUIDED_JSON_SCHEMA);
+        } catch (error) {
+            throw new Error(`${messages.agentforce.failedA4DResponse}\n${getErrorMessage(error)}`)
+        }
+
+        let llmResponse: LLMResponse;
+        try {
+            llmResponse = JSON.parse(llmResponseText) as LLMResponse;
+        } catch (error) {
+            throw new Error(`Response from LLM is not valid JSON: ${getErrorMessage(error)}`);
+        }
+
+        if (llmResponse.fixedCode === undefined) {
+            throw new Error(`Response from LLM is missing the 'fixedCode' property.`);
+        }
+
+        this.logger.trace('Received response from LLM:\n' + JSON.stringify(llmResponse, undefined, 2));
+
+        // TODO: convert the contextRange and the fixedCode into a more narrow CodeFixData that doesn't include
+        // leading and trailing lines that are common to the original lines.
+        return new FixSuggestion({
+            document: document,
+            diagnostic: diagnostic,
+            rangeToBeFixed: contextRange,
+            fixedCode: llmResponse.fixedCode
+        }, llmResponse.explanation);
     }
 }

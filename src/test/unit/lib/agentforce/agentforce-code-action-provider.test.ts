@@ -1,22 +1,23 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
-import {AgentforceCodeActionProvider} from "../../../../lib/agentforce/agentforce-code-action-provider";
+import {A4DFixActionProvider} from "../../../../lib/agentforce/a4d-fix-action-provider";
 import {SpyLLMService, SpyLogger, StubLLMServiceProvider} from "../../stubs";
 import {StubCodeActionContext} from "../../vscode-stubs";
 import {messages} from "../../../../lib/messages";
 import {createTextDocument} from "jest-mock-vscode";
 import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
+import { A4DFixAction } from "../../../../lib/agentforce/a4d-fix-action";
 
 describe('AgentforceCodeActionProvider Tests', () => {
     let spyLLMService: SpyLLMService;
     let llmServiceProvider: StubLLMServiceProvider;
     let spyLogger: SpyLogger;
-    let actionProvider: AgentforceCodeActionProvider;
+    let actionProvider: A4DFixActionProvider;
 
     beforeEach(() => {
         spyLLMService = new SpyLLMService();
         llmServiceProvider = new StubLLMServiceProvider(spyLLMService);
         spyLogger = new SpyLogger();
-        actionProvider = new AgentforceCodeActionProvider(llmServiceProvider, spyLogger);
+        actionProvider = new A4DFixActionProvider(llmServiceProvider, spyLogger);
     });
 
     describe('provideCodeActions Tests', () => {
@@ -35,21 +36,22 @@ describe('AgentforceCodeActionProvider Tests', () => {
 
         it('When a single supported diagnostic is in the context, then should return the one code action with correctly filled in fields', async () => {
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [supportedDiag1]});
-            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context, undefined);
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
 
             expect(codeActions).toHaveLength(1);
-            expect(codeActions[0].title).toEqual(messages.agentforce.fixViolationWithA4D('ApexBadCrypto'));
+            const fixMsg: string = messages.agentforce.fixViolationWithA4D('pmd', 'ApexBadCrypto');
+            expect(codeActions[0].title).toEqual(fixMsg);
             expect(codeActions[0].kind).toEqual(vscode.CodeActionKind.QuickFix);
             expect(codeActions[0].diagnostics).toEqual([supportedDiag1]);
             expect(codeActions[0].command).toEqual({
-                arguments: [sampleDocument, supportedDiag1],
-                command: 'sfca.a4dFix',
-                title: 'Fix Diagnostic Issue'});
+                arguments: [supportedDiag1, sampleDocument],
+                command: A4DFixAction.COMMAND,
+                title: fixMsg});
         });
 
         it('When no supported diagnostic is in the context, then should return no code actions', async () => {
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [unsupportedDiag1]});
-            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context, undefined);
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
 
             expect(codeActions).toHaveLength(0);
         });
@@ -58,7 +60,7 @@ describe('AgentforceCodeActionProvider Tests', () => {
             const context: vscode.CodeActionContext = new StubCodeActionContext({
                 diagnostics: [supportedDiag1, supportedDiag2, unsupportedDiag1, unsupportedDiag2, unsupportedDiag3, supportedDiag3]
             });
-            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context, undefined);
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
 
             expect(codeActions).toHaveLength(3);
             expect(codeActions[0].diagnostics).toEqual([supportedDiag1]);
@@ -69,8 +71,8 @@ describe('AgentforceCodeActionProvider Tests', () => {
         it('When the LLMService is unavailable, then warn once and return no code actions', async () => {
             llmServiceProvider.isLLMServiceAvailableReturnValue = false;
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [supportedDiag1]});
-            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context, undefined);
-            await actionProvider.provideCodeActions(sampleDocument, range, context, undefined); // Sanity check that multiple calls do not produce additional warnings
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
+            await actionProvider.provideCodeActions(sampleDocument, range, context); // Sanity check that multiple calls do not produce additional warnings
 
             expect(codeActions).toHaveLength(0);
             expect(spyLogger.warnCallHistory).toHaveLength(1);

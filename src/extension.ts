@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Salesforce, Inc.
+ * Copyright (c) 2025, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
@@ -15,13 +15,12 @@ import {CoreExtensionService} from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 import * as path from 'path';
 import * as ApexGuruFunctions from './lib/apexguru/apex-guru-service';
-import {AgentforceViolationFixer} from './lib/agentforce/agentforce-violation-fixer'
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {DfaRunner} from "./lib/dfa-runner";
 import {CodeAnalyzerRunAction} from "./lib/code-analyzer-run-action";
-import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-action-provider";
+import {A4DFixActionProvider} from "./lib/agentforce/a4d-fix-action-provider";
 import {ScanManager} from './lib/scan-manager';
 import {A4DFixAction} from './lib/agentforce/a4d-fix-action';
 import {UnifiedDiffService, UnifiedDiffServiceImpl} from "./lib/unified-diff-service";
@@ -33,8 +32,9 @@ import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 import {Workspace} from "./lib/workspace";
-import { PMDSupressionsCodeActionProvider } from './lib/pmd/pmd-suppressions-code-action-provider';
-import { FixesCodeActionProvider } from './lib/fixes-code-action-provider';
+import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-action-provider';
+import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
+import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -191,6 +191,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         diagnosticManager.clearDiagnosticsForFiles(selectedFiles.map(f => vscode.Uri.file(f)));
     });
 
+
     // =================================================================================================================
     // ==  Code Analyzer PMD Quick-Fix Functionality for Line or Class Level Suppressions
     // =================================================================================================================
@@ -202,6 +203,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // TODO: We need to fix this - because we should be just removing the relevant diagnostics - not all in a specific range
     registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
         diagnosticManager.clearDiagnosticsInRange(uri, range));
+
+
+    // =================================================================================================================
+    // ==  Unified Diff Service
+    // =================================================================================================================
+    const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl(settingsManager, display);
+    unifiedDiffService.register();
+    context.subscriptions.push(unifiedDiffService);
+
+
+    // =================================================================================================================
+    // ==  Apply Violation Fixes Functionality
+    // =================================================================================================================
+    const applyViolationFixesAction: ApplyViolationFixesAction = new ApplyViolationFixesAction(
+        unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+    const applyViolationFixesActionProvider: ApplyViolationFixesActionProvider = new ApplyViolationFixesActionProvider();
+    registerCommand(ApplyViolationFixesAction.COMMAND, async (diagnostic: CodeAnalyzerDiagnostic, document: vscode.TextDocument) => {
+        await applyViolationFixesAction.run(diagnostic, document);
+    });
+    registerCodeActionsProvider({pattern: '**/**'}, applyViolationFixesActionProvider,
+        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+
 
     // =================================================================================================================
     // ==  Apex Guru Integration Functionality
@@ -232,47 +255,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
     });
 
-    // QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS: Invoked by a Quick Fix button that appears on diagnostics that have an "apexguru" engine name.
-    registerCommand(Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS, async (document: vscode.TextDocument, position: vscode.Position, suggestedCode: string) => {
-        const edit = new vscode.WorkspaceEdit();
-        edit.insert(document.uri, position, suggestedCode);
-        await vscode.workspace.applyEdit(edit);
-        telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
-            executedCommand: Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
-            lines: suggestedCode.split('\n').length.toString()
-        });
-    });
-    
-    // TODO: Currently this code action provider is ApexGuru specific but soon it will be generalized:
-    const fixesCodeActionProvider: FixesCodeActionProvider = new FixesCodeActionProvider();
-    registerCodeActionsProvider({pattern: '**/**'}, fixesCodeActionProvider,
-            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
-
     // Note the apex guru services also uses Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE (registered above) but soon this will not be the case
-
-
-    // =================================================================================================================
-    // ==  Unified Diff Service
-    // =================================================================================================================
-    const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl(settingsManager, display);
-    unifiedDiffService.register();
-    context.subscriptions.push(unifiedDiffService);
 
 
     // =================================================================================================================
     // ==  Agentforce for Developers Integration
     // =================================================================================================================
-    const agentforceCodeActionProvider: AgentforceCodeActionProvider = new AgentforceCodeActionProvider(externalServiceProvider, logger);
-    const agentforceViolationFixer: AgentforceViolationFixer = new AgentforceViolationFixer( externalServiceProvider, codeAnalyzer, logger);
-    const a4dFixAction: A4DFixAction = new A4DFixAction(agentforceViolationFixer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
-
-    registerCodeActionsProvider({language: 'apex'}, agentforceCodeActionProvider,
-            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
-
-    // Invoked by the "quick fix" buttons on A4D enabled diagnostics
-    registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
-        await a4dFixAction.run(document, diagnostic);
+    const a4dFixAction: A4DFixAction = new A4DFixAction(externalServiceProvider, codeAnalyzer, unifiedDiffService, 
+        diagnosticManager, telemetryService, logger, display);
+    const a4dFixActionProvider: A4DFixActionProvider = new A4DFixActionProvider(externalServiceProvider, logger);
+    registerCommand(A4DFixAction.COMMAND, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
+        await a4dFixAction.run(diagnostic, document);
     });
+    // Invoked by the "quick fix" buttons on A4D enabled diagnostics
+    registerCodeActionsProvider({language: 'apex'}, a4dFixActionProvider,
+        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
 
     // =================================================================================================================
@@ -289,6 +286,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         context: context
     };
 }
+
 
 // This method is called when your extension is deactivated
 export async function deactivate(): Promise<void> {
