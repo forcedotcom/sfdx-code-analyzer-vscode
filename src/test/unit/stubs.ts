@@ -272,16 +272,6 @@ export class StubSettingsManager implements SettingsManager {
         return this.getApexGuruEnabledReturnValue;
     }
 
-    getCodeAnalyzerUseV4DeprecatedReturnValue: boolean = false;
-
-    getCodeAnalyzerUseV4Deprecated(): boolean {
-        return this.getCodeAnalyzerUseV4DeprecatedReturnValue;
-    }
-
-    setCodeAnalyzerUseV4Deprecated(value: boolean): void {
-        this.getCodeAnalyzerUseV4DeprecatedReturnValue = value;
-    }
-
     // =================================================================================================================
     // ==== v5 Settings
     // =================================================================================================================

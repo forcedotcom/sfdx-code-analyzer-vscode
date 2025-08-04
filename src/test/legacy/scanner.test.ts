@@ -370,12 +370,6 @@ class StubSettingsManager implements SettingsManager {
         this.resetSettings();
     }
 
-    getCodeAnalyzerUseV4Deprecated(): boolean {
-        throw new Error('Method not implemented.');
-    }
-    setCodeAnalyzerUseV4Deprecated(_value: boolean): void {
-        throw new Error('Method not implemented.');
-    }
     getCodeAnalyzerConfigFile(): string | undefined {
         throw new Error('Method not implemented.');
     }
