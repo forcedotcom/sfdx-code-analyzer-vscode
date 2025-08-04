@@ -15,23 +15,19 @@ import {
     SFCAExtensionData
 } from '../../extension';
 import {messages} from '../../lib/messages';
-import {SettingsManager, SettingsManagerImpl} from '../../lib/settings';
+import {SettingsManagerImpl} from '../../lib/settings';
 import * as Constants from '../../lib/constants';
 import * as targeting from '../../lib/targeting';
 import * as vscode from 'vscode';
 import {DiagnosticManager, DiagnosticManagerImpl} from '../../lib/diagnostics';
 import {SpyLogger, StubTelemetryService} from "./test-utils";
-import {DfaRunner} from "../../lib/dfa-runner";
 import {CodeAnalyzerRunAction} from "../../lib/code-analyzer-run-action";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "../../lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "../../lib/progress";
 import {Display, VSCodeDisplay} from "../../lib/display";
-import {CliCommandExecutorImpl} from "../../lib/cli-commands";
-import {Logger} from "../../lib/logger";
 import {
     SpyWindowManager,
     StubFileHandler,
-    StubSettingsManager,
     StubSpyCliCommandExecutor,
     StubVscodeWorkspace
 } from "../unit/stubs";
@@ -82,10 +78,7 @@ suite('Extension Test Suite', () => {
                 Sinon.restore();
             });
 
-            async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
-                // ===== SETUP =====
-                // Set V5's enablement to the desired state.
-                Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
+            async function runTest(): Promise<void> {
 
                 // ===== TEST =====
                 // Run the "scan active file" command.
@@ -105,14 +98,9 @@ suite('Extension Test Suite', () => {
                 }
             }
 
-            test('Adds proper diagnostics when running with v4', async function() {
-                this.timeout(90000);
-                await runTest(false);
-            });
-
             test('Adds proper diagnostics when running with v5', async function() {
                 this.timeout(90000);
-                await runTest(true);
+                await runTest();
             });
         });
 
@@ -125,11 +113,7 @@ suite('Extension Test Suite', () => {
                     Sinon.restore();
                 });
 
-                async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
-                    // ===== SETUP =====
-                    // Set V5's enablement to the desired state.
-                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
-
+                async function runTest(): Promise<void> {
                     // ===== TEST =====
                     // Run the "scan selected files" command.
                     // Pass the URI in as the first parameter, since that's what happens on a single-file selection.
@@ -146,21 +130,13 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                test('Adds proper diagnostics when running with v4', async function() {
-                    this.timeout(90000);
-                    await runTest(false);
-                });
-
                 test('Adds proper diagnostics when running with v5', async function() {
                     this.timeout(90000);
-                    await runTest(true);
+                    await runTest();
                 });
             });
 
             suite('One folder selected', () => {
-                test('Adds proper diagnostics when running with v4', async function() {
-                    // TODO: WRITE THIS TEST
-                });
 
                 test('Adds proper diagnostics when running with v5', async function() {
                     // TODO: WRITE THIS TEST
@@ -176,11 +152,7 @@ suite('Extension Test Suite', () => {
                     Sinon.restore();
                 });
 
-                async function runTest(desiredV5EnablementStatus: boolean): Promise<void> {
-                    // ===== SETUP =====
-                    // Set V5's enablement to the desired state.
-                    Sinon.stub(SettingsManagerImpl.prototype, 'getCodeAnalyzerUseV4Deprecated').returns(!desiredV5EnablementStatus);
-
+                async function runTest(): Promise<void> {
                     // ===== TEST =====
                     // Run the "scan selected files" command.
                     // Pass the URIs in as the second parameter, since that's what happens on a multi-select pick.
@@ -200,21 +172,13 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                test('Adds proper diagnostics when running with v4', async function() {
-                    this.timeout(90000);
-                    await runTest(false);
-                });
-
                 test('Adds proper diagnostics when running with v5', async function() {
                     this.timeout(90000);
-                    await runTest(true);
+                    await runTest();
                 });
             });
         });
 
-        test('sfca.runDfaOnSelected', async () => {
-            // TODO: Add actual tests for `runDfaOnSelected`.
-        });
     });
 
     suite('#_runAndDisplay()', () => {
@@ -269,197 +233,6 @@ suite('Extension Test Suite', () => {
                 expect(sentExceptions[0].message).to.include(messages.error.sfMissing);
                 expect(sentExceptions[0].data).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
             });
-        });
-    });
-
-    suite('#_runAndDisplayDfa()', () => {
-        let settingsManager: SettingsManager;
-
-        setup(() => {
-            settingsManager = new StubSettingsManager();
-            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
-        });
-
-        teardown(() => {
-            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
-        });
-
-        suite('Error handling', () => {
-            teardown(() => {
-                Sinon.restore();
-            });
-
-            test('Throws error if `sf` is missing', async function () {
-                this.timeout(90000);
-
-                // ===== SETUP =====
-                const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
-                // Simulate SF being unavailable.
-                const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
-                cliCommandExecutor.isSfInstalledReturnValue = false;
-                const fakeTelemetryName = 'FakeName';
-
-                const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
-                const logger: Logger = new SpyLogger();
-                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, new VSCodeDisplay(logger));
-                const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, stubTelemetryService, logger)
-
-                // ===== TEST =====
-                // Attempt to run the appropriate extension command.
-                await dfaRunner._runAndDisplayDfa(fakeTelemetryName, null, ['someMethod'], 'some/project/dir');
-
-                // ===== ASSERTIONS =====
-                Sinon.assert.callCount(errorSpy, 1);
-                expect(errorSpy.firstCall.args[0]).to.include(messages.error.sfMissing);
-                const sentExceptions = stubTelemetryService.getSentExceptions();
-                expect(sentExceptions.length).to.equal(1, 'Wrong number of exceptions sent');
-                expect(sentExceptions[0].name).to.equal(Constants.TELEM_FAILED_DFA_ANALYSIS, 'Wrong telemetry key');
-                expect(sentExceptions[0].message).to.include(messages.error.sfMissing);
-                expect(sentExceptions[0].data).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
-            });
-
-            test('Throws error if `sfdx-scanner` is missing', async function () {
-                this.timeout(90000);
-
-                // ===== SETUP =====
-                const stubTelemetryService: StubTelemetryService = new StubTelemetryService();
-                // Simulate SF being available but SFDX Scanner being absent.
-                const errorSpy = Sinon.spy(vscode.window, 'showErrorMessage');
-                const cliCommandExecutor: StubSpyCliCommandExecutor = new StubSpyCliCommandExecutor();
-                cliCommandExecutor.isSfInstalledReturnValue = true;
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = null;
-                const fakeTelemetryName = 'FakeName';
-
-                const context: vscode.ExtensionContext = null; // Not needed for this test, so just setting it to null
-                const logger: Logger = new SpyLogger();
-                const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, new VSCodeDisplay(logger));
-                const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, stubTelemetryService, logger)
-
-                // ===== TEST =====
-                try {
-                    await dfaRunner._runAndDisplayDfa(fakeTelemetryName, null, ['someMethod'], 'some/project/dir');
-                } catch (_e) {
-                    // Spy will check the error
-                }
-
-                // ===== ASSERTIONS =====
-                Sinon.assert.callCount(errorSpy, 1);
-                expect(errorSpy.firstCall.args[0]).to.include(messages.error.sfdxScannerMissing);
-                const sentExceptions = stubTelemetryService.getSentExceptions();
-                expect(sentExceptions.length).to.equal(1, 'Wrong number of exceptions');
-                expect(sentExceptions[0].name).to.equal(Constants.TELEM_FAILED_DFA_ANALYSIS, 'Wrong telemetry key');
-                expect(sentExceptions[0].message).to.include(messages.error.sfdxScannerMissing);
-                expect(sentExceptions[0].data).to.haveOwnProperty('executedCommand', fakeTelemetryName, 'Wrong command name applied');
-            });
-        });
-    });
-
-    suite('#_shouldProceedWithDfaRun()', () => {
-        let settingsManager: SettingsManager;
-
-        setup(() => {
-            settingsManager = new SettingsManagerImpl();
-            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
-        });
-
-        const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-        let context: vscode.ExtensionContext;
-
-        suiteSetup(async function () {
-            // Activate the extension.
-            const extData: SFCAExtensionData = await ext.activate();
-            context = extData.context;
-        });
-
-        teardown(async () => {
-            Sinon.restore();
-            await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
-        });
-
-        test('Returns true and confirmation message not called when no existing DFA process detected', async function () {
-            this.timeout(90000);
-
-            const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
-
-            await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-
-            const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(new SpyLogger()), settingsManager, new VSCodeDisplay(logger));
-            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
-
-            expect(await dfaRunner.shouldProceedWithDfaRun()).to.equal(true);
-            Sinon.assert.callCount(infoMessageSpy, 0);
-        });
-
-        test('Confirmation message called when DFA process detected', async function () {
-            this.timeout(90000);
-
-            const infoMessageSpy = Sinon.spy(vscode.window, 'showInformationMessage');
-            await context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-
-            const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(new SpyLogger()),
-                settingsManager, new VSCodeDisplay(logger));
-            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
-
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            dfaRunner.shouldProceedWithDfaRun();
-
-            Sinon.assert.callCount(infoMessageSpy, 1);
-            expect(infoMessageSpy.firstCall.args[0]).to.include(messages.graphEngine.existingDfaRunText);
-        });
-    });
-
-    suite('#_stopExistingDfaRun()', function () {
-
-        let settingsManager: SettingsManager;
-
-        setup(() => {
-            settingsManager = new SettingsManagerImpl();
-            settingsManager.setCodeAnalyzerUseV4Deprecated(true);
-        });
-
-        const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-        let context: vscode.ExtensionContext;
-
-        suiteSetup(async () => {
-            // Activate the extension.
-            const extData: SFCAExtensionData = await ext.activate();
-            context = extData.context;
-        });
-
-        teardown(() => {
-            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            Sinon.restore();
-            settingsManager.setCodeAnalyzerUseV4Deprecated(false);
-        });
-
-        test('Cache cleared as part of stopping the existing DFA run', async function () {
-            this.timeout(90000);
-
-            context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, 1234);
-
-            const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(logger), settingsManager, new VSCodeDisplay(logger));
-            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
-
-            await dfaRunner.stopExistingDfaRun();
-            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
-        });
-
-        test('Cache stays cleared when there are no existing DFA runs', function () {
-            this.timeout(90000);
-
-            void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-            const logger: Logger = new SpyLogger();
-            const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(new CliCommandExecutorImpl(logger), settingsManager, new VSCodeDisplay(logger));
-            const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, new StubTelemetryService(), logger)
-
-            // eslint-disable-next-line @typescript-eslint/no-floating-promises
-            dfaRunner.stopExistingDfaRun();
-            expect(context.workspaceState.get(Constants.WORKSPACE_DFA_PROCESS)).to.be.undefined;
         });
     });
 

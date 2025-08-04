@@ -11,8 +11,6 @@ export interface SettingsManager {
     getAnalyzeOnOpen(): boolean;
     getAnalyzeOnSave(): boolean;
     getApexGuruEnabled(): boolean;
-    getCodeAnalyzerUseV4Deprecated(): boolean;
-    setCodeAnalyzerUseV4Deprecated(value: boolean): void;
 
     // v5 Settings
     getCodeAnalyzerConfigFile(): string;
@@ -49,26 +47,8 @@ export class SettingsManagerImpl implements SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
     }
 
-    public getCodeAnalyzerUseV4Deprecated(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('Use v4 (Deprecated)');
-    }
-
-    /**
-     * Sets the 'Use v4 (Deprecated)' value at the user (global) level and removes the setting at all other levels
-     */
-    public setCodeAnalyzerUseV4Deprecated(value: boolean): void {
-        void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', value, vscode.ConfigurationTarget.Global);
-
-        // If there is a workspace open (which is true if workspaceFolders is nonempty), then we should update the workspace settings
-        if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-            void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.Workspace);
-            void vscode.workspace.getConfiguration('codeAnalyzer').update('Use v4 (Deprecated)', undefined, vscode.ConfigurationTarget.WorkspaceFolder);
-        }
-    }
-
-
     // =================================================================================================================
-    // ==== v5 Settings
+    // ==== Configuration Settings
     // =================================================================================================================
     public getCodeAnalyzerConfigFile(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('configFile');

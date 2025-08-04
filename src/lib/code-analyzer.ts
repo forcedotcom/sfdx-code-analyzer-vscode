@@ -1,5 +1,4 @@
 import {Violation} from "./diagnostics";
-import {CliScannerV4Strategy} from "./scanner-strategies/v4-scanner";
 import {CliScannerV5Strategy} from "./scanner-strategies/v5-scanner";
 import {SettingsManager} from "./settings";
 import {Display} from "./display";
@@ -26,7 +25,6 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
     private cliIsInstalled: boolean = false;
 
-    private codeAnalyzerV4?: CliScannerV4Strategy;
     private codeAnalyzerV5?: CliScannerV5Strategy;
 
     constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
@@ -44,28 +42,12 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             }
             this.cliIsInstalled = true;
         }
-        if (this.settingsManager.getCodeAnalyzerUseV4Deprecated()) {
-            await this.validateV4Plugin();
-        } else {
-            await this.validateV5Plugin();
-        }
+        await this.validateV5Plugin();
     }
 
     private async getDelegate(): Promise<CliScannerStrategy> {
         await this.validateEnvironment();
-        return this.settingsManager.getCodeAnalyzerUseV4Deprecated() ? this.codeAnalyzerV4 : this.codeAnalyzerV5;
-    }
-
-    private async validateV4Plugin(): Promise<void> {
-        if (this.codeAnalyzerV4 !== undefined) {
-            return; // Already validated
-        }
-        // Even though v4 is a JIT plugin... in the future it might not be. So we validate for future proofing.
-        const installedVersion: semver.SemVer | undefined = await this.cliCommandExecutor.getSfCliPluginVersion('@salesforce/sfdx-scanner');
-        if (!installedVersion) {
-            throw new Error(messages.error.sfdxScannerMissing);
-        }
-        this.codeAnalyzerV4 = new CliScannerV4Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.fileHandler);
+        return this.codeAnalyzerV5;
     }
 
     private async validateV5Plugin(): Promise<void> {

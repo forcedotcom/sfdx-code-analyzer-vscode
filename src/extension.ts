@@ -111,18 +111,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Code Analyzer Run Functionality
     // =================================================================================================================
-    await establishVariableInContext(Constants.CONTEXT_VAR_V4_ENABLED,
-        () => Promise.resolve(settingsManager.getCodeAnalyzerUseV4Deprecated()));
 
-    // Monitor the "codeAnalyzer.Use v4 (Deprecated)" setting with telemetry
-    vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
-        if (event.affectsConfiguration('codeAnalyzer.Use v4 (Deprecated)')) {
-            telemetryService.sendCommandEvent(Constants.TELEM_SETTING_USEV4, {
-                value: settingsManager.getCodeAnalyzerUseV4Deprecated().toString()});
-        }
-    });
-
-    // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
+    // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always.
     registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
         const document: vscode.TextDocument = await getActiveDocument();
         if (document === null) {
@@ -214,32 +204,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         diagnosticManager.clearDiagnosticsInRange(uri, range));
 
     // =================================================================================================================
-    // ==  DFA Run Functionality
-    // =================================================================================================================
-
-    // It is possible that the cache was not cleared when VS Code exited the last time. Just to be on the safe side, we clear the DFA process cache at activation.
-    void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-    await establishVariableInContext(Constants.CONTEXT_VAR_PARTIAL_RUNS_ENABLED,
-        () => Promise.resolve(settingsManager.getSfgePartialSfgeRunsEnabled()));
-
-    // COMMAND_RUN_DFA_ON_SELECTED_METHOD: Invokable by 'editor/context' only when "sfca.codeAnalyzerV4Enabled"
-    registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
-        if (await dfaRunner.shouldProceedWithDfaRun()) {
-            const methodLevelTarget: string[] = [await targeting.getSelectedMethod()];
-            await dfaRunner.runMethodLevelDfa(methodLevelTarget);
-        }
-    });
-
-    // COMMAND_RUN_DFA: Invokable by 'commandPalette' only when "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
-    registerCommand(Constants.COMMAND_RUN_DFA, async () => {
-        await dfaRunner.runDfa();
-        dfaRunner.clearSavedFilesCache();
-    });
-
-    onDidSaveTextDocument((document: vscode.TextDocument) => dfaRunner.addSavedFileToCache(document.fileName));
-
-
-    // =================================================================================================================
     // ==  Apex Guru Integration Functionality
     // =================================================================================================================
     const isApexGuruEnabled: () => Promise<boolean> =
@@ -314,17 +278,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Finalize activation
     // =================================================================================================================
-
-    if(settingsManager.getCodeAnalyzerUseV4Deprecated()) {
-        vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, messages.buttons.startUsingV5, messages.buttons.showSettings).then(selection => {
-            if (selection === messages.buttons.startUsingV5) {
-                settingsManager.setCodeAnalyzerUseV4Deprecated(false);
-            } else if (selection === messages.buttons.showSettings) {
-                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.Use v4 (Deprecated)');
-                vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
-            }
-        });
-    }
 
     telemetryService.sendExtensionActivationEvent(extensionHrStart);
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
