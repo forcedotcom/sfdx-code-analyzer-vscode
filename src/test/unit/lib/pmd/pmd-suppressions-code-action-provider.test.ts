@@ -53,7 +53,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(codeActions).toHaveLength(2);
 
             // Validate the line level suppression action
-            expect(codeActions[0].title).toEqual("Suppress all PMD violations on this line.");
+            expect(codeActions[0].title).toEqual("Suppress all 'pmd' violations on this line");
             const lineEdits: vscode.TextEdit[] = codeActions[0].edit.get(sampleApexUri);
             expect(lineEdits).toHaveLength(1);
             expect(lineEdits[0].range).toEqual(new vscode.Range(4, MAX_COL, 4, MAX_COL));
@@ -62,7 +62,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
 
 
             // Validate the class level supression action
-            expect(codeActions[1].title).toEqual("Suppress 'PMD.EmptyCatchBlock' on this class.");
+            expect(codeActions[1].title).toEqual("Suppress 'pmd.EmptyCatchBlock' on this class");
             const classEdits: vscode.TextEdit[] = codeActions[1].edit.get(sampleApexUri);
             expect(classEdits).toHaveLength(1);
             expect(classEdits[0].range).toEqual(new vscode.Range(0, 0, 0, 0));
@@ -76,10 +76,10 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(sampleApexDocument1, selectedRange, context);
 
             expect(codeActions).toHaveLength(4);
-            expect(codeActions[0].title).toEqual("Suppress all PMD violations on this line."); // TODO: We should really say the line number here to avoid confusion
-            expect(codeActions[1].title).toEqual("Suppress 'PMD.ApexDoc' on this class.");
-            expect(codeActions[2].title).toEqual("Suppress all PMD violations on this line."); // TODO: We should really say the line number here to avoid confusion
-            expect(codeActions[3].title).toEqual("Suppress 'PMD.EmptyCatchBlock' on this class.");
+            expect(codeActions[0].title).toEqual("Suppress all 'pmd' violations on this line"); // TODO: We should really say the line number here to avoid confusion
+            expect(codeActions[1].title).toEqual("Suppress 'pmd.ApexDoc' on this class");
+            expect(codeActions[2].title).toEqual("Suppress all 'pmd' violations on this line"); // TODO: We should really say the line number here to avoid confusion
+            expect(codeActions[3].title).toEqual("Suppress 'pmd.EmptyCatchBlock' on this class");
         });
 
         it('When multiple valid pmd diagnostics are on the same line, then we only return 1 of the line suppressing diagnostics', () => {
@@ -90,9 +90,9 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(sampleApexDocument1, selectedRange, context);
 
             expect(codeActions).toHaveLength(3);
-            expect(codeActions[0].title).toEqual("Suppress all PMD violations on this line.");
-            expect(codeActions[1].title).toEqual("Suppress 'PMD.DummyRule1' on this class.");
-            expect(codeActions[2].title).toEqual("Suppress 'PMD.DummyRule2' on this class.");
+            expect(codeActions[0].title).toEqual("Suppress all 'pmd' violations on this line");
+            expect(codeActions[1].title).toEqual("Suppress 'pmd.DummyRule1' on this class");
+            expect(codeActions[2].title).toEqual("Suppress 'pmd.DummyRule2' on this class");
         });
 
         it('When a valid pmd diagnostic exists in a class that already has an existing SuppressWarning annotation, then 2 code action appends to it correctly', () => {
@@ -103,7 +103,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(codeActions).toHaveLength(2);
 
             // Validate the line level suppression action
-            expect(codeActions[0].title).toEqual("Suppress all PMD violations on this line.");
+            expect(codeActions[0].title).toEqual("Suppress all 'pmd' violations on this line");
             const lineEdits: vscode.TextEdit[] = codeActions[0].edit.get(sampleApexUri);
             expect(lineEdits).toHaveLength(1);
             expect(lineEdits[0].range).toEqual(new vscode.Range(2, MAX_COL, 2, MAX_COL));
@@ -112,7 +112,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
 
 
             // Validate the class level supression action
-            expect(codeActions[1].title).toEqual("Suppress 'PMD.ApexDoc' on this class.");
+            expect(codeActions[1].title).toEqual("Suppress 'pmd.ApexDoc' on this class");
             const classEdits: vscode.TextEdit[] = codeActions[1].edit.get(sampleApexUri);
             expect(classEdits).toHaveLength(1);
             expect(classEdits[0].range).toEqual(new vscode.Range(0, 0, 0, 40));
@@ -148,8 +148,8 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(sampleApexDocument1, selectedRange, context);
 
             expect(codeActions).toHaveLength(2);
-            expect(codeActions[0].title).toEqual("Suppress all PMD violations on this line.");
-            expect(codeActions[1].title).toEqual("Suppress 'PMD.DummyRule2' on this class.");
+            expect(codeActions[0].title).toEqual("Suppress all 'pmd' violations on this line");
+            expect(codeActions[1].title).toEqual("Suppress 'pmd.DummyRule2' on this class");
         });
 
         it('stale diagnostics are filtered out', () => {
@@ -163,8 +163,8 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(sampleApexDocument1, selectedRange, context);
 
             expect(codeActions).toHaveLength(2);
-            expect(codeActions[0].title).toEqual("Suppress all PMD violations on this line.");
-            expect(codeActions[1].title).toEqual("Suppress 'PMD.DummyRule1' on this class.");
+            expect(codeActions[0].title).toEqual("Suppress all 'pmd' violations on this line");
+            expect(codeActions[1].title).toEqual("Suppress 'pmd.DummyRule1' on this class");
         });
 
         it('Diagnostics which are not CodeAnalyzerDiagnostic instances are filtered out', () => {

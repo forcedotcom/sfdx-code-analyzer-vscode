@@ -95,14 +95,14 @@ describe('ApplyViolationFixesActionProvider Tests', () => {
             expect(codeActions).toHaveLength(2);
 
             // Validate the first one is associated with diag 1
-            expect(codeActions[0].title).toEqual("Apply fix for 'AvoidUsingSchemaGetGlobalDescribe' from 'apexguru'");
+            expect(codeActions[0].title).toEqual("Fix 'apexguru.AvoidUsingSchemaGetGlobalDescribe' using Code Analyzer");
             expect(codeActions[0].diagnostics).toEqual([sampleDiag1]);
             expect(codeActions[0].command.command).toEqual(ApplyViolationFixesAction.COMMAND);
             expect(codeActions[0].command.arguments).toEqual([sampleDiag1, sampleApexDocument])
 
 
             // Validate the second is associated with diag 6
-            expect(codeActions[1].title).toEqual("Apply fix for 'AvoidUsingSObjectsToInBind' from 'apexguru'");
+            expect(codeActions[1].title).toEqual("Fix 'apexguru.AvoidUsingSObjectsToInBind' using Code Analyzer");
             expect(codeActions[1].diagnostics).toEqual([sampleDiag6]);
             expect(codeActions[1].command.command).toEqual(ApplyViolationFixesAction.COMMAND);
             expect(codeActions[1].command.arguments).toEqual([sampleDiag6, sampleApexDocument]);

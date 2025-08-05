@@ -164,60 +164,37 @@ suite('Apex Guru Test Suite', () => {
 
           const diagnostics: CodeAnalyzerDiagnostic[] = ApexGuruFunctions.transformReportJsonStringToDiagnostics(fileName, jsonString);
           expect(diagnostics).to.have.length(1);
+          const expectedSuggestedCode: string = 'System.out.println("New Hello World");';
           expect(diagnostics[0].violation).to.deep.equal({
               rule: 'BestPractices',
               engine: 'apexguru',
               message: 'Avoid using System.debug',
               severity: 1,
-              tags: [],
               locations: [{
                   file: fileName,
                   startLine: 10,
                   startColumn: 1
               }],
               primaryLocationIndex: 0,
-              resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5']
-          });
-          const expectedCurrentCode: string = 'System.out.println("Old Hello World");';
-          const expectedSuggestedCode: string = 'System.out.println("New Hello World");';
-          expect(diagnostics[0].relatedInformation).to.have.length(2);
-          expect(diagnostics[0].relatedInformation[0].message).to.equal(`\n// Current Code: \n${expectedCurrentCode}`);
-          expect(diagnostics[0].relatedInformation[1].message).to.equal(`/*\n//ApexGuru Suggestions: \n${expectedSuggestedCode}\n*/`);
-      });
-
-      test('Transforms valid JSON string to Violations for code violations', () => {
-        const fileName = 'TestFile.cls';
-        const jsonString = JSON.stringify([{
-            type: 'BestPractices',
-            value: 'Avoid using System.debug',
-            properties: [
-                { name: 'line_number', value: '10' },
-                { name: 'class_after', value: Buffer.from('System.out.println("New Hello World");').toString('base64') },
-                { name: 'class_before', value: Buffer.from('System.out.println("Old Hello World");').toString('base64') }
-            ]
-        }]);
-
-          const diagnostics: CodeAnalyzerDiagnostic[] = ApexGuruFunctions.transformReportJsonStringToDiagnostics(fileName, jsonString);
-          expect(diagnostics).to.have.length(1);
-          expect(diagnostics[0].violation).to.deep.equal({
-              rule: 'BestPractices',
-              engine: 'apexguru',
-              message: 'Avoid using System.debug',
-              severity: 1,
               tags: [],
-              locations: [{
+              resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'],
+              fixes: [{
+                location: {
                   file: fileName,
                   startLine: 10,
                   startColumn: 1
+                },
+                fixedCode: `/*\n//ApexGuru Suggestions: \n${expectedSuggestedCode}\n*/`
               }],
-              primaryLocationIndex: 0,
-              resources: ['https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5']
+              suggestions: [{
+                location: {
+                  file: fileName,
+                  startLine: 10,
+                  startColumn: 1
+                },
+                message: `ApexGuru Suggestion:\n    ${expectedSuggestedCode}\n`
+              }]
           });
-          const expectedCurrentCode: string = 'System.out.println("Old Hello World");';
-          const expectedSuggestedCode: string = 'System.out.println("New Hello World");';
-          expect(diagnostics[0].relatedInformation).to.have.length(2);
-          expect(diagnostics[0].relatedInformation[0].message).to.equal(`\n// Current Code: \n${expectedCurrentCode}`);
-          expect(diagnostics[0].relatedInformation[1].message).to.equal(`/*\n//ApexGuru Suggestions: \n${expectedSuggestedCode}\n*/`);
       });
 
       test('Transforms valid JSON string to Violations for violations with no suggestions', () => {
