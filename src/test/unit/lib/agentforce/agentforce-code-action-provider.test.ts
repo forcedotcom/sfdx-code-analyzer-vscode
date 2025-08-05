@@ -39,7 +39,7 @@ describe('AgentforceCodeActionProvider Tests', () => {
             const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
 
             expect(codeActions).toHaveLength(1);
-            const fixMsg: string = messages.agentforce.fixViolationWithA4D('pmd', 'ApexBadCrypto');
+            const fixMsg: string = messages.fixer.applyFix('pmd', 'ApexBadCrypto');
             expect(codeActions[0].title).toEqual(fixMsg);
             expect(codeActions[0].kind).toEqual(vscode.CodeActionKind.QuickFix);
             expect(codeActions[0].diagnostics).toEqual([supportedDiag1]);

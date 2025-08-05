@@ -47,7 +47,7 @@ export class A4DFixActionProvider implements vscode.CodeActionProvider {
 }
 
 function createCodeAction(diag: CodeAnalyzerDiagnostic, document: vscode.TextDocument): vscode.CodeAction {
-    const fixMsg: string = messages.agentforce.fixViolationWithA4D(diag.violation.engine, diag.violation.rule);
+    const fixMsg: string = messages.fixer.applyFix(diag.violation.engine, diag.violation.rule);
     const action = new vscode.CodeAction(fixMsg, vscode.CodeActionKind.QuickFix);
     action.diagnostics = [diag]; // Important: this ties the code fix action to the specific diagnostic.
     action.command = {
