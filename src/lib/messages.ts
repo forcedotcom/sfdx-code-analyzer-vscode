@@ -45,13 +45,9 @@ export const messages = {
         }
     },
     targeting: {
-        warnings: {
-            apexLspUnavailable: "Apex Language Server is unavailable. Defaulting to strict targeting."
-        },
         error: {
             nonexistentSelectedFileGenerator: (file: string) => `Selected file doesn't exist: ${file}`,
-            noFileSelected: "Select a file to scan",
-            noMethodIdentified: "Select a single method to run Graph Engine path-based analysis."
+            noFileSelected: "Select a file to scan"
         }
     },
     codeAnalyzer: {

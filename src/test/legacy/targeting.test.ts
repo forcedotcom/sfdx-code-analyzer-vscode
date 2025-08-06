@@ -9,17 +9,11 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as Sinon from 'sinon';
 import {expect} from 'chai';
-import {getSelectedMethod, getFilesFromSelection} from '../../lib/targeting';
-import {ApexLsp, GenericSymbol} from '../../lib/apex-lsp';
+import {getFilesFromSelection} from '../../lib/targeting';
 
 suite('targeting.ts', () => {
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
-
-    function moveCursor(line: number, column: number): void {
-        const position = new vscode.Position(line, column);
-        vscode.window.activeTextEditor.selection = new vscode.Selection(position, position);
-    }
 
     teardown(async () => {
         // Close all open editors after each test.
@@ -139,110 +133,6 @@ suite('targeting.ts', () => {
 
             // ===== ASSERTIONS =====
             expect(targets).to.have.lengthOf(0, 'Wrong nubmer of targets returned');
-        });
-    });
-
-    suite('#getSelectedMethod()', () => {
-        const openFilePath: string = path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls');
-        const openFileUri: vscode.Uri = vscode.Uri.file(openFilePath);
-        // We expect our path to be unix-ified, or else it'll parse as a glob and flunk
-        // the transaction.
-        const expectedFilePath = openFilePath.replace(/\\/g, '/');
-        suite('When Apex LSP is available...', () => {
-
-            setup(async () => {
-                // Open and display the document.
-                const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
-                await vscode.window.showTextDocument(doc);
-                // Declare a spoofed array of symbols like what we'd get from the Apex LSP, then
-                // use a stub to return it.
-                const symbols: GenericSymbol[] = [
-                    new vscode.SymbolInformation('MyClassA1', vscode.SymbolKind.Class, '',
-                        new vscode.Location(openFileUri, new vscode.Range(
-                            new vscode.Position(6, 26), new vscode.Position(6, 35)
-                        ))
-                    ),
-                    new vscode.SymbolInformation('beep() : Boolean', vscode.SymbolKind.Method, '',
-                        new vscode.Location(openFileUri, new vscode.Range(
-                            new vscode.Position(7, 26), new vscode.Position(7, 30)
-                        ))
-                    ),
-                    new vscode.SymbolInformation('boop() : Boolean', vscode.SymbolKind.Method, '',
-                        new vscode.Location(openFileUri, new vscode.Range(
-                            new vscode.Position(11, 26), new vscode.Position(11, 30)
-                        ))
-                    ),
-                    new vscode.SymbolInformation('instanceBoop() : Boolean', vscode.SymbolKind.Method, '',
-                        new vscode.Location(openFileUri, new vscode.Range(
-                            new vscode.Position(15, 19), new vscode.Position(15, 31)
-                        ))
-                    )
-                ];
-                Sinon.stub(ApexLsp, 'getSymbols').resolves(symbols);
-            });
-
-            test('Returns nearest preceding method if locateable', async () => {
-                // ===== SETUP =====
-                // Move the cursor to a line with a preceding method.
-                moveCursor(14, 0);
-
-                // ===== TEST =====
-                // Get the method currently selected.
-                const selectedMethod: string = await getSelectedMethod();
-
-                // ===== ASSERTIONS =====
-                expect(selectedMethod).to.equal(`${expectedFilePath}#boop`, 'Wrong method identified');
-            });
-
-            test('Throws error if no method can be found', async () => {
-                // ===== SETUP =====
-                // Move the cursor to the beginning of the doc, where there's
-                // definitely no method.
-                moveCursor(6, 15);
-
-                // ===== TEST =====
-                // Attempt to get the method currently selected, expecting an error.
-                let err: Error = null;
-                try {
-                    await getSelectedMethod();
-                } catch (e) {
-                    err = e as Error;
-                }
-
-                // ===== ASSERTIONS =====
-                // Verify we got the right error.
-                expect(err).to.not.be.null;
-            });
-        });
-
-        suite('When Apex LSP is unavailable...', () => {
-            let warningSpy: Sinon.SinonSpy;
-            setup(() => {
-                // Simulate the Apex LSP being unavailable by stubbing the appropriate
-                // method to return `undefined`.
-                Sinon.stub(ApexLsp, 'getSymbols').resolves(undefined);
-                // Create a Spy so we can see what's going on with the warnings.
-                warningSpy = Sinon.spy(vscode.window, 'showWarningMessage')
-            });
-
-            test('Displays warning and returns current word', async () => {
-                // ===== SETUP =====
-                // Open a file in the editor.
-                const doc: vscode.TextDocument = await vscode.workspace.openTextDocument(openFileUri);
-                await vscode.window.showTextDocument(doc);
-                // Move the cursor to the declaration of a method.
-                vscode.window.activeTextEditor.selection = new vscode.Selection(new vscode.Position(7, 29), new vscode.Position(7, 29));
-
-                // ===== TEST =====
-                // Attempt to get the currently selected method.
-                const selectedMethod: string = await getSelectedMethod();
-
-                // ===== ASSERTIONS =====
-                // Verify that a warning was displayed.
-                Sinon.assert.callCount(warningSpy, 1);
-                // Verify that the first word of the file was returned.
-                expect(selectedMethod).to.equal(`${expectedFilePath}#beep`, 'Wrong word returned');
-            });
         });
     });
 });
