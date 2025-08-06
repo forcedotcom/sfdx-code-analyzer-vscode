@@ -6,7 +6,7 @@ import {Logger} from "../logger";
  * TelemetryService interface with only the methods that we care to use with the signatures that are best for us.
  */
 export interface TelemetryService {
-    sendExtensionActivationEvent(hrStart: [number, number]): void;
+    sendExtensionActivationEvent(hrStart: number): void;
     sendCommandEvent(commandName: string, properties: Record<string, string>): void;
     sendException(name: string, errorMessage: string, properties?: Record<string, string>): void;
 }
@@ -29,7 +29,7 @@ export class LiveTelemetryService implements TelemetryService {
         this.logger = logger;
     }
 
-    sendExtensionActivationEvent(hrStart: [number, number]): void {
+    sendExtensionActivationEvent(hrStart: number): void {
         this.traceLogTelemetryEvent({hrStart});
         this.coreTelemetryService.sendExtensionActivationEvent(hrStart);
     }
@@ -59,7 +59,7 @@ export class LogOnlyTelemetryService implements TelemetryService {
         this.logger = logger;
     }
 
-    sendExtensionActivationEvent(hrStart: [number, number]): void {
+    sendExtensionActivationEvent(hrStart: number): void {
         this.traceLogTelemetryEvent({hrStart});
     }
 

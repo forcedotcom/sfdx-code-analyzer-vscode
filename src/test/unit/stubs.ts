@@ -18,9 +18,9 @@ import {Workspace} from "../../lib/workspace";
 
 
 export class SpyTelemetryService implements TelemetryService {
-    sendExtensionActivationEventCallHistory: { hrStart: [number, number] }[] = [];
+    sendExtensionActivationEventCallHistory: { hrStart: number }[] = [];
 
-    sendExtensionActivationEvent(hrStart: [number, number]): void {
+    sendExtensionActivationEvent(hrStart: number): void {
         this.sendExtensionActivationEventCallHistory.push({hrStart});
     }
 
