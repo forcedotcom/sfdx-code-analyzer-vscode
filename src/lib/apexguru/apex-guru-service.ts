@@ -10,9 +10,10 @@ import * as fspromises from 'fs/promises';
 import {Connection, CoreExtensionService} from '../core-extension-service';
 import * as Constants from '../constants';
 import {messages} from '../messages';
-import {CodeAnalyzerDiagnostic, DiagnosticManager, Violation} from '../diagnostics';
+import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, toRange, Violation} from '../diagnostics';
 import {TelemetryService} from "../external-services/telemetry-service";
 import {Logger} from "../logger";
+import { indent } from '../utils';
 
 export async function isApexGuruEnabledInOrg(logger: Logger): Promise<boolean> {
     try {
@@ -129,10 +130,12 @@ export function transformReportJsonStringToDiagnostics(fileName: string, jsonStr
 }
 
 function reportToDiagnostic(file: string, parsed: ApexGuruReport): CodeAnalyzerDiagnostic {
-    const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value
-        ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value
-        ?? '';
-    const currentCode: string = Buffer.from(encodedCodeBefore, 'base64').toString('utf8');
+    // TODO: We have no need for "currentCode" right now. Temporarily leaving this code here until we get the new payload updates.
+    // const encodedCodeBefore = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_before')?.value
+    //     ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_before')?.value
+    //     ?? '';
+    // const currentCode: string = Buffer.from(encodedCodeBefore, 'base64').toString('utf8');
+
     const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value
         ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value
         ?? '';
@@ -140,16 +143,18 @@ function reportToDiagnostic(file: string, parsed: ApexGuruReport): CodeAnalyzerD
 
     const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
 
+    const violationLocation: CodeLocation = {
+        file: file,
+        startLine: lineNumber,
+        startColumn: 1
+    };
+
     const violation: Violation = {
         rule: parsed.type,
         engine: 'apexguru',
         message: parsed.value,
         severity: 1, // TODO: Should this really be critical level violation? This seems off.
-        locations: [{
-            file: file,
-            startLine: lineNumber,
-            startColumn: 1
-        }],
+        locations: [violationLocation],
         primaryLocationIndex: 0,
         tags: [],
         resources: [
@@ -157,19 +162,39 @@ function reportToDiagnostic(file: string, parsed: ApexGuruReport): CodeAnalyzerD
         ]
     };
 
-    const diagnostic: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+    // TODO: Soon we'll be receiving a different looking payload which will help us differentiate between fixes and suggestions.
+    //       For now, we are going to treat suggestedCode as a fix and a suggestion (as the current pilot code does)
     if (suggestedCode.length > 0) {
+        violation.fixes = [
+            {
+                location: violationLocation,
+                fixedCode: `/*\n//ApexGuru Suggestions: \n${suggestedCode}\n*/`
+            }
+        ]
+        violation.suggestions = [
+            {
+                location: violationLocation,
+                // This message is temporary and will be improved as we get a better response back and unify the suggestions experience
+                message: `ApexGuru Suggestion:\n${indent(suggestedCode)}\n`
+            }
+        ]
+    }
+
+    const diagnostic: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+
+
+    // TODO: This is temporary until we address the unification of suggestions (which will have a better way of showing suggestions on the vscode editor window)
+    if (violation.suggestions?.length > 0) {
         diagnostic.relatedInformation = [
             new vscode.DiagnosticRelatedInformation(
-                new vscode.Location(vscode.Uri.parse(violation.resources[0]), diagnostic.range),
-                `\n// Current Code: \n${currentCode}`
-            ),
-            new vscode.DiagnosticRelatedInformation(
-                new vscode.Location(vscode.Uri.parse(violation.resources[0]), diagnostic.range),
-                `/*\n//ApexGuru Suggestions: \n${suggestedCode}\n*/`
+                new vscode.Location(
+                    vscode.Uri.parse(violation.suggestions[0].location.file), // When we have a better way of displaying these, we'll need a loop instead of assuming just 1 suggestion
+                    toRange(violation.suggestions[0].location)),
+                violation.suggestions[0].message
             )
         ];
     }
+
     return diagnostic;
 }
 

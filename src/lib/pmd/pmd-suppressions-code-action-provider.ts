@@ -76,7 +76,7 @@ function generateClassLevelSuppression(document: vscode.TextDocument, diag: Code
 
     const ruleName: string = diag.violation.rule;
     const suppressionTag: string = `PMD.${ruleName}`;
-    const suppressMsg: string = messages.fixer.suppressPmdViolationsOnClass(suppressionTag);
+    const suppressMsg: string = messages.fixer.suppressPmdViolationsOnClass(ruleName);
 
     const action = new vscode.CodeAction(suppressMsg, vscode.CodeActionKind.QuickFix);
     action.edit = new vscode.WorkspaceEdit();

@@ -7,6 +7,26 @@
 import {messages} from './messages';
 import * as vscode from 'vscode';
 
+// For now we attempt to match the JsonViolationOutput schema as much as possible so that we don't need to transform
+// the results that we read from the output json files too much. When we move away from using the CLI, then we can
+// instead use the results data structures from core. But for now, see:
+// - https://github.com/forcedotcom/code-analyzer-core/blob/dev/packages/code-analyzer-core/src/output-formats/results/json-run-results-format.ts
+export type Violation = {
+    rule: string;
+    engine: string;
+    message: string;
+    severity: number;
+    locations: CodeLocation[];
+    primaryLocationIndex: number;
+    tags: string[];
+    resources: string[];
+
+    // NOTE: The following fields currently do not exist our json schema, and only lives here for apex guru. Eventually
+    //       these fields might get added to Code Analyzer core for engines like "eslint" and our output schemas.
+    fixes?: Fix[];
+    suggestions?: Suggestion[];
+}
+
 export type CodeLocation = {
     // These all should be optional just like it is over at:
     // - https://github.com/forcedotcom/code-analyzer-core/blob/dev/packages/code-analyzer-core/src/results.ts#L14
@@ -19,15 +39,20 @@ export type CodeLocation = {
     comment?: string;
 }
 
-export type Violation = {
-    rule: string;
-    engine: string;
+export type Fix = {
+    // The location associated with the block of original code that will be replaced by the fixed code
+    location: CodeLocation;
+
+    // The new code that will replace the block of original code
+    fixedCode: string;
+}
+
+export type Suggestion = {
+    // The location associated with the block of code that the suggestion is associated with
+    location: CodeLocation;
+
+    // The suggestion message
     message: string;
-    severity: number;
-    locations: CodeLocation[];
-    primaryLocationIndex: number;
-    tags: string[];
-    resources: string[];
 }
 
 const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
@@ -39,11 +64,12 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
     readonly violation: Violation;
     readonly uri: vscode.Uri;
 
+    // Private - see the fromViolation method below to see assumptions made on this constructor
     private constructor(violation: Violation) {
         const primaryLocation: CodeLocation = violation.locations[violation.primaryLocationIndex];
         super(toRange(primaryLocation),
             messages.diagnostics.messageGenerator(violation.severity, violation.message.trim()),
-            vscode.DiagnosticSeverity.Warning); // TODO: For V5, we should consider using Error for sev 1 and Information for sev 5 instead of always just using Warning.
+            vscode.DiagnosticSeverity.Warning); // TODO: We should consider using 'Error' for sev 1 instead of always just using 'Warning'. Note that we reserve 'Information' for stale diagnostics.
         this.violation = violation;
         this.uri = vscode.Uri.file(primaryLocation.file);
     }
@@ -86,7 +112,7 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
                 diagnostic.range.start.line, Number.MAX_SAFE_INTEGER);
         }
 
-        diagnostic.source = messages.diagnostics.source.generator(violation.engine);
+        diagnostic.source = `${violation.engine} ${messages.diagnostics.source.suffix}`;
         diagnostic.code = violation.resources.length > 0 ? {
             target: vscode.Uri.parse(violation.resources[0]),
             value: violation.rule
@@ -96,11 +122,11 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
         if (violation.locations.length > 1) {
             const relatedLocations: vscode.DiagnosticRelatedInformation[] = [];
             for (let i = 0 ; i < violation.locations.length; i++) {
-                if (i !== violation.primaryLocationIndex) {
-                    const relatedLocation = violation.locations[i];
+                const relatedLocation: CodeLocation = violation.locations[i];
+                if (i !== violation.primaryLocationIndex && relatedLocation.file) {
                     const relatedRange = toRange(relatedLocation);
                     const vscodeLocation: vscode.Location = new vscode.Location(vscode.Uri.file(relatedLocation.file), relatedRange);
-                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment));
+                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ?? ''));
                 }
             }
             diagnostic.relatedInformation = relatedLocations;
@@ -195,7 +221,7 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
 }
 
 
-function toRange(codeLocation: CodeLocation): vscode.Range {
+export function toRange(codeLocation: CodeLocation): vscode.Range {
     // If there's no explicit startLine, just use the first line.
     const startLine: number = codeLocation.startLine != null ? adjustToZeroBased(codeLocation.startLine) : 0;
     // If there's no explicit startColumn, just use the first column.

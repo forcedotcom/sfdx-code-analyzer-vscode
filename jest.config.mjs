@@ -5,7 +5,7 @@ const config = {
     testMatch: ['**/*.test.ts'],
     collectCoverage: true,
     collectCoverageFrom: [
-      'src/**/*.ts',
+      './src/**/*.ts',
     ],
     coveragePathIgnorePatterns: [
         '/src/test/',

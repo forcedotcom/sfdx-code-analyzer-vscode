@@ -1,17 +1,16 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
-import { createSampleCodeAnalyzerDiagnostic } from '../test-utils';
+import { createSampleViolation } from '../test-utils';
 import { createTextDocument } from "jest-mock-vscode";
 import { StubCodeActionContext } from "../vscode-stubs";
-import { FixesCodeActionProvider } from "../../../lib/fixes-code-action-provider";
+import { ApplyViolationFixesAction } from "../../../lib/apply-violation-fixes-action";
+import { ApplyViolationFixesActionProvider } from "../../../lib/apply-violation-fixes-action-provider";
 import { CodeAnalyzerDiagnostic } from "../../../lib/diagnostics";
 
-const MAX_COL: number = Number.MAX_SAFE_INTEGER;
-
-describe('PMDSupressionsCodeActionProvider Tests', () => {
-    let actionProvider: FixesCodeActionProvider;
+describe('ApplyViolationFixesActionProvider Tests', () => {
+    let actionProvider: ApplyViolationFixesActionProvider;
 
     beforeEach(() => {
-        actionProvider = new FixesCodeActionProvider();
+        actionProvider = new ApplyViolationFixesActionProvider();
     });
 
     describe('provideCodeActions Tests', () => {
@@ -52,33 +51,37 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             `}`;
 
         const sampleApexDocument: vscode.TextDocument = createTextDocument(sampleApexUri, sampleApexContent, 'apex');
-        const sampleDiag1Range: vscode.Range = new vscode.Range(3, 0, 3, MAX_COL);
-        const sampleDiag1: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag1Range, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru'); // Note that these rule names are made up right now
-        sampleDiag1.relatedInformation = [ // TODO: Replace this since it was a temporary way for pilot to store before and after code for suggestions
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(sampleApexUri, new vscode.Position(0, 0)),
-                `Schema.DescribeSObjectResult opportunityDescribe = Schema.getGlobalDescribe().get('Opportunity').getDescribe();`),
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(sampleApexUri, new vscode.Position(0, 0)),
-                `Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe();`)
-        ];
-        const sampleDiag2Range: vscode.Range = new vscode.Range(8, 0, 8, MAX_COL);
-        const sampleDiag2: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag2Range, 'AvoidSOQLInLoop', 'apexguru');
-        const sampleDiag3Range: vscode.Range = new vscode.Range(12, 0, 12, MAX_COL);
-        const sampleDiag3: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag3Range, 'AvoidDMLInLoop', 'apexguru');
-        const sampleDiag4Range: vscode.Range = new vscode.Range(17, 0, 17, MAX_COL);
-        const sampleDiag4: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag4Range, 'AvoidSOQLWithNegativeExpression', 'apexguru');
-        const sampleDiag5Range: vscode.Range = new vscode.Range(21, 0, 21, MAX_COL);
-        const sampleDiag5: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag5Range, 'AvoidSOQLWithoutWhereClauseOrLimit', 'apexguru');
-        const sampleDiag6Range: vscode.Range = new vscode.Range(25, 0, 25, MAX_COL);
-        const sampleDiag6: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag6Range, 'AvoidUsingSObjectsToInBind', 'apexguru');
-        sampleDiag6.relatedInformation = [ // TODO: Replace this since it was a temporary way for pilot to store before and after code for suggestions
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(sampleApexUri, new vscode.Position(0, 0)),
-                `[SELECT Id, FirstName, LastName FROM Contact WHERE AccountId IN :accounts]`),
-            new vscode.DiagnosticRelatedInformation(new vscode.Location(sampleApexUri, new vscode.Position(0, 0)),
-                `Map<Id, Account> accountsMap = new Map<Id, Account>(accounts);\n` +
-                `//Inside the SOQL: convert "accounts" into "accountsMap.keySet()"`)
-        ];
-        const sampleDiag7Range: vscode.Range = new vscode.Range(29, 0, 29, MAX_COL);
-        const sampleDiag7: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag7Range, 'AvoidSOQLWithWildcardFilters', 'apexguru');
+        const sampleDiag1: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru', // Note that these rule names are made up right now
+            [{ 
+                location: { file: sampleApexUri.fsPath, startLine: 4, startColumn: 9 },
+                fixedCode: 'Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe()'
+            }]
+        ))
+        const sampleDiag2: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 9 }, 'AvoidSOQLInLoop', 'apexguru'
+        ))
+        const sampleDiag3: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 13 }, 'AvoidDMLInLoop', 'apexguru'
+        ))
+        const sampleDiag4: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 18 }, 'AvoidSOQLWithNegativeExpression', 'apexguru'
+        ))
+        const sampleDiag5: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 22 }, 'AvoidSOQLWithoutWhereClauseOrLimit', 'apexguru'
+        ))
+        const sampleDiag6: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 26 }, 'AvoidUsingSObjectsToInBind', 'apexguru',
+            [{ 
+                location: { file: sampleApexUri.fsPath, startLine: 26 },
+                fixedCode: `Map<Id, Account> accountsMap = new Map<Id, Account>(accounts);\n` +
+                    `//Inside the SOQL: convert "accounts" into "accountsMap.keySet()"`
+            }]
+
+        ))
+        const sampleDiag7: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            { file: sampleApexUri.fsPath, startLine: 30 }, 'AvoidSOQLWithWildcardFilters', 'apexguru'
+        ))
 
 
         // TODO: This test is temporary (as it is tied to the apex guru pilot code) and will be generalized soon.
@@ -92,30 +95,27 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(codeActions).toHaveLength(2);
 
             // Validate the first one is associated with diag 1
-            expect(codeActions[0].title).toEqual("Insert ApexGuru suggestions.");
+            expect(codeActions[0].title).toEqual("Fix 'apexguru.AvoidUsingSchemaGetGlobalDescribe' using Code Analyzer");
             expect(codeActions[0].diagnostics).toEqual([sampleDiag1]);
-            expect(codeActions[0].command.command).toEqual("sfca.includeApexGuruSuggestions");
-            expect(codeActions[0].command.arguments).toEqual([sampleApexDocument, sampleDiag1Range.start,
-                 `Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe();\n`])
+            expect(codeActions[0].command.command).toEqual(ApplyViolationFixesAction.COMMAND);
+            expect(codeActions[0].command.arguments).toEqual([sampleDiag1, sampleApexDocument])
 
 
             // Validate the second is associated with diag 6
-            expect(codeActions[1].title).toEqual("Insert ApexGuru suggestions.");
+            expect(codeActions[1].title).toEqual("Fix 'apexguru.AvoidUsingSObjectsToInBind' using Code Analyzer");
             expect(codeActions[1].diagnostics).toEqual([sampleDiag6]);
-            expect(codeActions[1].command.command).toEqual("sfca.includeApexGuruSuggestions");
-            expect(codeActions[1].command.arguments).toEqual([sampleApexDocument, sampleDiag6Range.start,
-                 `Map<Id, Account> accountsMap = new Map<Id, Account>(accounts);\n` +
-                `//Inside the SOQL: convert "accounts" into "accountsMap.keySet()"\n`])
+            expect(codeActions[1].command.command).toEqual(ApplyViolationFixesAction.COMMAND);
+            expect(codeActions[1].command.arguments).toEqual([sampleDiag6, sampleApexDocument]);
         });
 
         it('stale diagnostics are filtered out', () => {
-            const staleDiag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleApexUri, sampleDiag1Range, 'Dummy', 'apexguru');
-            staleDiag.relatedInformation = [ // TODO: Replace this since it was a temporary way for pilot to store before and after code for suggestions
-                new vscode.DiagnosticRelatedInformation(new vscode.Location(sampleApexUri, new vscode.Position(0, 0)),
-                    `before code`),
-                new vscode.DiagnosticRelatedInformation(new vscode.Location(sampleApexUri, new vscode.Position(0, 0)),
-                    `after code`)
-            ];
+            const staleDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+                { file: sampleApexUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru',
+                [{ 
+                    location: { file: sampleApexUri.fsPath, startLine: 4, startColumn: 9 },
+                    fixedCode: 'Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe()'
+                }]
+            ));
             staleDiag.markStale();
 
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [sampleDiag1, staleDiag]});
@@ -141,7 +141,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
         it('Valid diagnostics not within the selected range should be filtered out', () => {
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [
                 sampleDiag1, sampleDiag2, sampleDiag3, sampleDiag4, sampleDiag5, sampleDiag6, sampleDiag7]});
-            const selectedRange: vscode.Range = sampleDiag2Range; // select the range of diag 2 (which isn't valid because it has no suggestions)
+            const selectedRange: vscode.Range = sampleDiag2.range; // select the range of diag 2 (which isn't valid because it has no suggestions)
             const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(sampleApexDocument, selectedRange, context);
             
             expect(codeActions).toHaveLength(0);

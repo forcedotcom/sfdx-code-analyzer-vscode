@@ -3,11 +3,10 @@ import * as vscode from "vscode";// The vscode module is mocked out. See: script
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Logger} from "../../lib/logger";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
-import {CodeAnalyzerDiagnostic, Violation} from "../../lib/diagnostics";
+import {Violation} from "../../lib/diagnostics";
 import {Display, DisplayButton} from "../../lib/display";
 import {UnifiedDiffService} from "../../lib/unified-diff-service";
 import {TextDocument} from "vscode";
-import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 import {SettingsManager} from "../../lib/settings";
 import {CodeAnalyzer} from "../../lib/code-analyzer";
 import {ProgressEvent, ProgressReporter, TaskWithProgress, TaskWithProgressRunner} from "../../lib/progress";
@@ -228,23 +227,6 @@ export class ThrowingUnifiedDiffService implements UnifiedDiffService {
 
     showDiff(_document: TextDocument, _newCode: string, _acceptCallback: () => Promise<void>, _rejectCallback: () => Promise<void>): Promise<void> {
         throw new Error('Error thrown from: showDiff');
-    }
-}
-
-
-export class SpyFixSuggester implements FixSuggester {
-    suggestFixReturnValue: FixSuggestion | null = null;
-    suggestFixCallHistory: { document: TextDocument, diagnostic: CodeAnalyzerDiagnostic }[] = [];
-
-    suggestFix(document: TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
-        this.suggestFixCallHistory.push({document, diagnostic});
-        return Promise.resolve(this.suggestFixReturnValue);
-    }
-}
-
-export class ThrowingFixSuggester implements FixSuggester {
-    suggestFix(_document: TextDocument, _diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
-        throw new Error('Error thrown from: suggestFix');
     }
 }
 

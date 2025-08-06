@@ -16,10 +16,7 @@ export const messages = {
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
-        fixViolationWithA4D: (ruleName: string) => `Fix '${ruleName}' using Agentforce for Developers.`,
-        failedA4DResponse: "Unable to receive code fix suggestion from Agentforce for Developers.",
-        explanationOfFix: (explanation: string) => `Fix Explanation: ${explanation}`,
-        noFixSuggested: "No fix was suggested."
+        failedA4DResponse: "Unable to receive code fix suggestion from Agentforce for Developers."
     },
     unifiedDiff: {
         mustAcceptOrRejectDiffFirst: "You must accept or reject all changes before performing this action.",
@@ -46,15 +43,16 @@ export const messages = {
         existingDfaRunText: "A Salesforce Graph Engine analysis is already running. Cancel it by clicking in the Status Bar.",
     },
     fixer: {
-        suppressPMDViolationsOnLine: "Suppress all PMD violations on this line.",
-        suppressPmdViolationsOnClass: (ruleName?: string) => ruleName ? `Suppress '${ruleName}' on this class.` : `Suppress all PMD violations on this class.`,
-        fixWithApexGuruSuggestions: "Insert ApexGuru suggestions." // TODO: This will go away soon in favor of a generalized message
+        suppressPMDViolationsOnLine: "Suppress all 'pmd' violations on this line",
+        suppressPmdViolationsOnClass: (ruleName: string) => `Suppress 'pmd.${ruleName}' on this class`,
+        applyFix: (engineName: string, ruleName: string) => `Fix '${engineName}.${ruleName}' using Code Analyzer`,
+        noFixSuggested: "No fix was suggested.",
+        explanationOfFix: (explanation: string) => `Fix Explanation: ${explanation}`
     },
     diagnostics: {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
-            suffix: 'via Code Analyzer',
-            generator: (engine: string) => `${engine} ${messages.diagnostics.source.suffix}`
+            suffix: 'via Code Analyzer'
         }
     },
     targeting: {

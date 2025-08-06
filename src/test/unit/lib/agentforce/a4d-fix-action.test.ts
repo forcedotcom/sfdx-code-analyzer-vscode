@@ -1,4 +1,4 @@
-import * as vscode from "vscode";// The vscode module is mocked out. See: scripts/setup.jest.ts
+import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from "../../../../lib/diagnostics";
 import * as stubs from "../../stubs";
@@ -7,21 +7,24 @@ import {A4DFixAction} from "../../../../lib/agentforce/a4d-fix-action";
 import {createTextDocument} from "jest-mock-vscode";
 import {createSampleCodeAnalyzerDiagnostic} from "../../test-utils";
 import {messages} from "../../../../lib/messages";
-import {FixSuggestion} from "../../../../lib/fix-suggestion";
+import { LLMServiceProvider } from "../../../../lib/external-services/llm-service";
+import { CodeAnalyzer } from "../../../../lib/code-analyzer";
 
 describe('Tests for A4DFixAction', () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/some/file.cls');
-    const sampleDocument: vscode.TextDocument = createTextDocument(sampleUri, 'some\nsample content', 'apex');
-    const sampleDiagnostic1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1), 'ApexDoc');
-    const sampleDiagnostic2: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(1,7,1,14));
-    const sampleFixSuggestion: FixSuggestion = new FixSuggestion({
-        document: sampleDocument,
-        diagnostic: sampleDiagnostic1,
-        rangeToBeFixed: new vscode.Range(0, 1, 0, 4),
-        fixedCode: 'someFixedCode'
-    });
+    const sampleContent: string =
+        'This is some dummy content\n' +
+        'that is multi-line\n' +
+        '  with spaces and such\n' +
+        '  within the content.';
+    const sampleDocument: vscode.TextDocument = createTextDocument(sampleUri, sampleContent, 'apex');
+    // These diagnostics are associated with rules that only care about the ViolationScope (where the range expander expands to full lines)
+    const sampleDiagForSingleLine: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1), 'ApexAssertionsShouldIncludeMessage');
+    const sampleDiagThatSpansTwoLines: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(1,7,2,14), 'UnusedLocalVariable');
 
-    let fixSuggester: stubs.SpyFixSuggester;
+    let spyLLMService: stubs.SpyLLMService;
+    let llmServiceProvider: LLMServiceProvider;
+    let codeAnalyzer: stubs.StubCodeAnalyzer;
     let unifiedDiffService: stubs.SpyUnifiedDiffService;
     let diagnosticCollection: vscode.DiagnosticCollection;
     let diagnosticManager: DiagnosticManager;
@@ -31,21 +34,23 @@ describe('Tests for A4DFixAction', () => {
     let a4dFixAction: A4DFixAction;
 
     beforeEach(() => {
+        spyLLMService = new stubs.SpyLLMService();
+        llmServiceProvider = new stubs.StubLLMServiceProvider(spyLLMService);
+        codeAnalyzer = new stubs.StubCodeAnalyzer();
         unifiedDiffService = new stubs.SpyUnifiedDiffService();
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticCollection.set(sampleUri, [sampleDiagnostic1, sampleDiagnostic2]);
+        diagnosticCollection.set(sampleUri, [sampleDiagForSingleLine, sampleDiagThatSpansTwoLines]);
         diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
         telemetryService = new stubs.SpyTelemetryService();
         logger = new stubs.SpyLogger();
-        fixSuggester = new stubs.SpyFixSuggester();
         display = new stubs.SpyDisplay();
-        a4dFixAction = new A4DFixAction(fixSuggester, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+        a4dFixAction = new A4DFixAction(llmServiceProvider, codeAnalyzer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
     });
 
     it('When unified diff service cannot show diff, then return without trying to show diff', async () => {
         unifiedDiffService.verifyCanShowDiffReturnValue = false;
 
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
 
         expect(display.displayWarningCallHistory).toHaveLength(0);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
@@ -55,19 +60,20 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
             commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
             properties: {
-                commandSource: 'sfca.a4dFix',
+                commandSource: A4DFixAction.COMMAND,
                 reason: 'unified_diff_cannot_be_shown'
             }
         });
     });
 
-    it('When no fix is suggested (i.e. null is returned), then return with info msg displayed', async () => {
-        fixSuggester.suggestFixReturnValue = null;
+    it('When diagnostic is not relevant (i.e. null is returned from suggestFix), then return with info msg displayed', async () => {
+        const staleDiagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0,0,0,1), 'ApexDoc');
+        staleDiagnostic.markStale();
 
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(staleDiagnostic, sampleDocument);
 
         expect(display.displayInfoCallHistory).toHaveLength(1);
-        expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
+        expect(display.displayInfoCallHistory[0].msg).toEqual(messages.fixer.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
         
@@ -76,44 +82,115 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
             commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
             properties: {
-                commandSource: 'sfca.a4dFix',
+                commandSource: A4DFixAction.COMMAND,
                 languageType: 'apex',
                 reason: 'empty'
             }
         });
     });
 
-    it('When error is thrown while suggesting fix, then display error message and send exception telemetry event', async () => {
-        const fixSuggester: stubs.ThrowingFixSuggester = new stubs.ThrowingFixSuggester();
-        a4dFixAction = new A4DFixAction(fixSuggester, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+    it('When error is thrown from the LLMServiceProvider, then display error message and send exception telemetry event', async () => {
+        llmServiceProvider = new stubs.ThrowingLLMServiceProvider();
+        a4dFixAction = new A4DFixAction(llmServiceProvider, codeAnalyzer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
 
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
 
         expect(display.displayErrorCallHistory).toHaveLength(1);
-        expect(display.displayErrorCallHistory[0].msg).toContain('Error thrown from: suggestFix');
+        expect(display.displayErrorCallHistory[0].msg).toContain('Error from getLLMService');
 
         expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
         expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
-            'Error thrown from: suggestFix');
+            'Error from getLLMService');
         expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
             'sfdx__eGPT_suggest_failure');
         expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
-            'sfca.a4dFix');
+            A4DFixAction.COMMAND);
+    });
+
+    it('When error is thrown while suggesting fix, then display error message and send exception telemetry event', async () => {
+        llmServiceProvider = new stubs.StubLLMServiceProvider(new stubs.ThrowingLLMService());
+        a4dFixAction = new A4DFixAction(llmServiceProvider, codeAnalyzer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+        expect(display.displayErrorCallHistory).toHaveLength(1);
+        expect(display.displayErrorCallHistory[0].msg).toContain('Error from callLLM');
+
+        expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+        expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
+            'Error from callLLM');
+        expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
+            'sfdx__eGPT_suggest_failure');
+        expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
+            A4DFixAction.COMMAND);
+    });
+
+    it('When error is thrown from Code Analyzer, then display error message and send exception telemetry event', async () => {
+        const throwingCodeAnalyzer: CodeAnalyzer = new stubs.ThrowingCodeAnalyzer();
+        a4dFixAction = new A4DFixAction(llmServiceProvider, throwingCodeAnalyzer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+        expect(display.displayErrorCallHistory).toHaveLength(1);
+        expect(display.displayErrorCallHistory[0].msg).toContain('Error from getRuleDescriptionFor.');
+
+        expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+        expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
+            'Error from getRuleDescriptionFor.');
+        expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
+            'sfdx__eGPT_suggest_failure');
+        expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
+            A4DFixAction.COMMAND);
+    });
+
+    it('When llm response does not contain fixedCode field, then display error message and send exception telemetry event', async () => {
+        spyLLMService.callLLMReturnValue = '{"useless":3}';
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+        expect(display.displayErrorCallHistory).toHaveLength(1);
+        expect(display.displayErrorCallHistory[0].msg).toContain(`Response from LLM is missing the 'fixedCode' property.`);
+
+        expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+        expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
+            `Response from LLM is missing the 'fixedCode' property.`);
+        expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
+            'sfdx__eGPT_suggest_failure');
+        expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
+            A4DFixAction.COMMAND);
+    });
+
+    it('When llm response is not valid JSON, then display error message and send exception telemetry event', async () => {
+        spyLLMService.callLLMReturnValue = 'oops - not json';
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+        expect(display.displayErrorCallHistory).toHaveLength(1);
+        expect(display.displayErrorCallHistory[0].msg).toContain(`Response from LLM is not valid JSON`);
+
+        expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+        expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
+            `Response from LLM is not valid JSON`);
+        expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
+            'sfdx__eGPT_suggest_failure');
+        expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
+            A4DFixAction.COMMAND);
     });
 
     it('When fix is suggested, then the diff is displayed, the diagnostic is cleared, and a telemetry event is sent', async () => {
-        fixSuggester.suggestFixReturnValue = sampleFixSuggestion;
-
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
 
         // Diff is displayed
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
         expect(unifiedDiffService.showDiffCallHistory[0].document).toEqual(sampleDocument);
-        expect(unifiedDiffService.showDiffCallHistory[0].newCode).toEqual('someFixedCode\nsample content');
+        // expect the first line to get replaced by the fix
+        expect(unifiedDiffService.showDiffCallHistory[0].newCode).toEqual(
+            'some code fix\n' +         // < ---expect the first line to get replaced by the fix
+            'that is multi-line\n' +
+            '  with spaces and such\n' +
+            '  within the content.');
 
         // Diagnostic is cleared
-        expect(diagnosticCollection.get(sampleUri)).toEqual([ // sampleDiagnostic1 should be removed
-            sampleDiagnostic2 // but sampleDiagnostic2 should still remain
+        expect(diagnosticCollection.get(sampleUri)).toEqual([ // sampleDiagForSingleLine should be removed
+            sampleDiagThatSpansTwoLines // but sampleDiagThatSpansTwoLines should still remain
         ]);
 
         // Telemetry event is sent
@@ -121,28 +198,27 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
             commandName: 'sfdx__eGPT_suggest',
             properties: {
-                commandSource: 'sfca.a4dFix',
+                commandSource: A4DFixAction.COMMAND,
                 completionNumLines: '1',
                 languageType: 'apex',
-                ruleName: 'ApexDoc'
+                engineName: 'pmd',
+                ruleName: 'ApexAssertionsShouldIncludeMessage'
             }
         });
     });
 
     it('When fix is suggested with an explanation, then diff is displayed and explanation is given by an info message display', async () => {
-        fixSuggester.suggestFixReturnValue = new FixSuggestion({
-            document: sampleDocument,
-            diagnostic: sampleDiagnostic2,
-            rangeToBeFixed: new vscode.Range(1, 0, 1, 17),
-            fixedCode: 'hello World'
-        }, 'This is some explanation');
+        spyLLMService.callLLMReturnValue = '{"fixedCode": "hello World", "explanation": "This is some explanation"}';
 
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic2);
+        await a4dFixAction.run(sampleDiagThatSpansTwoLines, sampleDocument);
 
         // Diff is displayed
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
         expect(unifiedDiffService.showDiffCallHistory[0].document).toEqual(sampleDocument);
-        expect(unifiedDiffService.showDiffCallHistory[0].newCode).toEqual('some\nhello World');
+        expect(unifiedDiffService.showDiffCallHistory[0].newCode).toEqual(
+            'This is some dummy content\n' +
+            'hello World\n' + // Fix replaces both lines
+            '  within the content.');
 
         expect(display.displayInfoCallHistory).toHaveLength(1);
         expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: This is some explanation');
@@ -150,9 +226,7 @@ describe('Tests for A4DFixAction', () => {
     });
 
     it('When fix is suggested, then the accept callback (when executed) sends a telemetry event', async () => {
-        fixSuggester.suggestFixReturnValue = sampleFixSuggestion;
-
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic2);
+        await a4dFixAction.run(sampleDiagThatSpansTwoLines, sampleDocument);
 
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
         await unifiedDiffService.showDiffCallHistory[0].acceptCallback();
@@ -161,18 +235,17 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendCommandEventCallHistory[1]).toEqual({
             commandName: 'sfdx__eGPT_accept',
             properties: {
-                commandSource: 'sfca.a4dFix',
+                commandSource: A4DFixAction.COMMAND,
                 completionNumLines: '1',
                 languageType: 'apex',
-                ruleName: 'ApexDoc'
+                engineName: 'pmd',
+                ruleName: 'UnusedLocalVariable'
             }
         });
     });
 
     it('When fix is suggested, then the reject callback (when executed) sends a telemetry event', async () => {
-        fixSuggester.suggestFixReturnValue = sampleFixSuggestion;
-
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
 
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
         await unifiedDiffService.showDiffCallHistory[0].rejectCallback();
@@ -181,21 +254,20 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendCommandEventCallHistory[1]).toEqual({
             commandName: 'sfdx__eGPT_clear',
             properties: {
-                commandSource: 'sfca.a4dFix',
+                commandSource: A4DFixAction.COMMAND,
                 completionNumLines: '1',
                 languageType: 'apex',
-                ruleName: 'ApexDoc'
+                engineName: 'pmd',
+                ruleName: 'ApexAssertionsShouldIncludeMessage'
             }
         });
     });
 
     it('When fix is suggested, but diff tool throws exception, then display error message, restore diagnostic, and send exception telemetry event', async () => {
         const unifiedDiffService: stubs.ThrowingUnifiedDiffService = new stubs.ThrowingUnifiedDiffService();
-        a4dFixAction = new A4DFixAction(fixSuggester, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+        a4dFixAction = new A4DFixAction(llmServiceProvider, codeAnalyzer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
 
-        fixSuggester.suggestFixReturnValue = sampleFixSuggestion;
-
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
 
         expect(display.displayErrorCallHistory).toHaveLength(1);
         expect(display.displayErrorCallHistory[0].msg).toContain('Error thrown from: showDiff');
@@ -206,23 +278,18 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
             'sfdx__eGPT_suggest_failure');
         expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
-            'sfca.a4dFix');
+            A4DFixAction.COMMAND);
 
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
     });
 
     it('When fix suggested is exactly the same as the original code, then show info message saying that no fix was suggested', async () => {
-        fixSuggester.suggestFixReturnValue = new FixSuggestion({
-            document: sampleDocument,
-            diagnostic: sampleDiagnostic1,
-            rangeToBeFixed: new vscode.Range(0, 0, 0, 4),
-            fixedCode: 'some' // same as before
-        });;
-
-        await a4dFixAction.run(sampleDocument, sampleDiagnostic1);
+        // this fixed code is exactly the same as lines 2 and 3 - which sampleDiagThatSpansTwoLines's range gets extended to
+        spyLLMService.callLLMReturnValue = '{"fixedCode": "that is multi-line\\n  with spaces and such"}';
+        await a4dFixAction.run(sampleDiagThatSpansTwoLines, sampleDocument);
 
         expect(display.displayInfoCallHistory).toHaveLength(1);
-        expect(display.displayInfoCallHistory[0].msg).toEqual(messages.agentforce.noFixSuggested);
+        expect(display.displayInfoCallHistory[0].msg).toEqual(messages.fixer.noFixSuggested);
         expect(unifiedDiffService.showDiffCallHistory).toHaveLength(0);
         expect(diagnosticCollection.get(sampleUri)).toHaveLength(2); // Should still be 2
 
@@ -231,9 +298,104 @@ describe('Tests for A4DFixAction', () => {
         expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
             commandName: 'sfdx__codeanalyzer_qf_no_fix_suggested',
             properties: {
-                commandSource: 'sfca.a4dFix',
+                commandSource: A4DFixAction.COMMAND,
                 languageType: 'apex',
                 reason: 'same_code'
+            }
+        });
+    });
+
+    it('When codeAnalyzer returns description, then it is forwarded to the LLMService', async () => {
+        codeAnalyzer.getRuleDescriptionForReturnValue = 'some rule description';
+        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+        expect(spyLLMService.callLLMCallHistory).toHaveLength(1);
+        expect(spyLLMService.callLLMCallHistory[0].prompt).toContain('"ruleDescription": "some rule description"');
+    });
+
+    it('When a rule should be sending in the full method context, confirm the context gets sent and the full method gets replaced', async () => {
+        const fileContent: string =
+            'public class SomeClass {\n' +
+            '    public void someMethod() {\n' +
+            '        Blob hardCodedIV = Blob.valueOf(\'Hardcoded IV 123\');\n' +
+            '        Blob hardCodedKey = Blob.valueOf(\'0000000000000000\');\n' +
+            '        Blob data = Blob.valueOf(\'Data to be encrypted\');\n' +
+            '        Blob encrypted = Crypto.encrypt(\'AES128\', hardCodedKey, hardCodedIV, data);\n' +
+            '    }\n' +
+            '}';
+        const document: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), fileContent, 'apex');
+        const diagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
+            new vscode.Range(5, 50, 5, 62), 'ApexBadCrypto'); // Uses MethodScope
+
+        spyLLMService.callLLMReturnValue = '{"fixedCode": "some replacement\\ncode here"}';
+
+        await a4dFixAction.run(diagnostic, document);
+
+        expect(spyLLMService.callLLMCallHistory[0].prompt).toContain('"codeContext": "    public void someMethod() {');
+
+        // Diff is displayed
+        expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+        expect(unifiedDiffService.showDiffCallHistory[0].document).toEqual(document);
+        // expect the first line to get replaced by the fix
+        expect(unifiedDiffService.showDiffCallHistory[0].newCode).toEqual(
+            'public class SomeClass {\n' +
+            '    some replacement\n' + // < --- fix replaced entire method block
+            '    code here\n' +        // <-- And notice the proper indenting!
+            '}');
+
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__eGPT_suggest',
+            properties: {
+                commandSource: A4DFixAction.COMMAND,
+                completionNumLines: '2',
+                languageType: 'apex',
+                engineName: 'pmd',
+                ruleName: 'ApexBadCrypto'
+            }
+        });
+    })
+
+    it('When a rule should be sending in the full class context, confirm the context gets sent and the full class gets replaced', async () => {
+        const fileContent: string =
+            '// This is some comment\n' +
+            'public class FieldDeclarationsShouldBeAtStart {\n' +
+            '    public Integer instanceProperty { get; set; }\n' +
+            '\n' +
+            '    public void someMethod() {\n' +
+            '    }\n' +
+            '\n' + 
+            '    public Integer anotherField; // bad\n' + 
+            '}';
+        const document: vscode.TextDocument = createTextDocument(vscode.Uri.file('dummy.cls'), fileContent, 'apex');
+        const diagnostic: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(vscode.Uri.file('dummy.cls'),
+            new vscode.Range(7, 4, 7, 31), 'FieldDeclarationsShouldBeAtStart'); // Uses ClassScope
+
+        spyLLMService.callLLMReturnValue = '{"fixedCode": "some replacement\\ncode here"}';
+
+        await a4dFixAction.run(diagnostic, document);
+
+        expect(spyLLMService.callLLMCallHistory[0].prompt).toContain('"codeContext": "public class FieldDeclarationsShouldBeAtStart');
+
+        // Diff is displayed
+        expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+        expect(unifiedDiffService.showDiffCallHistory[0].document).toEqual(document);
+        // expect the first line to get replaced by the fix
+        expect(unifiedDiffService.showDiffCallHistory[0].newCode).toEqual(
+            '// This is some comment\n' +
+            'some replacement\n' + // < --- fix replaced entire class block
+            'code here');
+
+        // Telemetry event is sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0]).toEqual({
+            commandName: 'sfdx__eGPT_suggest',
+            properties: {
+                commandSource: A4DFixAction.COMMAND,
+                completionNumLines: '2',
+                languageType: 'apex',
+                engineName: 'pmd',
+                ruleName: 'FieldDeclarationsShouldBeAtStart'
             }
         });
     });
