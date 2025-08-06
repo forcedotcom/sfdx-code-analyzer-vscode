@@ -134,13 +134,6 @@ suite('Extension Test Suite', function () {
                 });
             });
 
-            suite('One folder selected', () => {
-
-                test('Adds proper diagnostics', async function() {
-                    // TODO: WRITE THIS TEST
-                });
-            });
-
             suite('Multiple files selected', () => {
                 // Get the URIs for two separate files.
                 const targetUri1: vscode.Uri = vscode.Uri.file(path.join(codeFixturesPath, 'folder a', 'MyClassA1.cls'));
