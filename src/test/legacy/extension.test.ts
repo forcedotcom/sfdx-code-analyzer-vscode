@@ -33,7 +33,8 @@ import {
 } from "../unit/stubs";
 import {Workspace} from "../../lib/workspace";
 
-suite('Extension Test Suite', () => {
+suite('Extension Test Suite', function () {
+    this.timeout(60000); // Global timeout for all tests in this suite
     vscode.window.showInformationMessage('Start all tests.');
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
@@ -181,7 +182,7 @@ suite('Extension Test Suite', () => {
 
     });
 
-    suite('#_runAndDisplay()', () => {
+    suite('#_runAndDisplay()', function () {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let stubTelemetryService: StubTelemetryService;
         let codeAnalyzerRunAction: CodeAnalyzerRunAction;
