@@ -46,7 +46,7 @@ describe('Tests for the SettingsManagerImpl class ', () => {
 
     });
 
-    describe('v5 Settings', () => {
+    describe('Configuration Settings', () => {
         it('should get configFile', () => {
             getMock.mockReturnValue('path/to/config');
             expect(settingsManager.getCodeAnalyzerConfigFile()).toBe('path/to/config');
@@ -57,62 +57,6 @@ describe('Tests for the SettingsManagerImpl class ', () => {
             getMock.mockReturnValue('rules');
             expect(settingsManager.getCodeAnalyzerRuleSelectors()).toBe('rules');
             expect(getMock).toHaveBeenCalledWith('ruleSelectors');
-        });
-    });
-
-    describe('v4 Settings (Deprecated)', () => {
-        it('should get PMD custom config file', () => {
-            getMock.mockReturnValue('custom-config.xml');
-            expect(settingsManager.getPmdCustomConfigFile()).toBe('custom-config.xml');
-            expect(getMock).toHaveBeenCalledWith('customConfigFile');
-        });
-
-        it('should get disableWarningViolations', () => {
-            getMock.mockReturnValue(true);
-            expect(settingsManager.getGraphEngineDisableWarningViolations()).toBe(true);
-            expect(getMock).toHaveBeenCalledWith('disableWarningViolations');
-        });
-
-        it('should get threadTimeout', () => {
-            getMock.mockReturnValue(1234);
-            expect(settingsManager.getGraphEngineThreadTimeout()).toBe(1234);
-            expect(getMock).toHaveBeenCalledWith('threadTimeout');
-        });
-
-        it('should get pathExpansionLimit', () => {
-            getMock.mockReturnValue(25);
-            expect(settingsManager.getGraphEnginePathExpansionLimit()).toBe(25);
-            expect(getMock).toHaveBeenCalledWith('pathExpansionLimit');
-        });
-
-        it('should get jvmArgs', () => {
-            getMock.mockReturnValue('-Xmx1024m');
-            expect(settingsManager.getGraphEngineJvmArgs()).toBe('-Xmx1024m');
-            expect(getMock).toHaveBeenCalledWith('jvmArgs');
-        });
-
-        it('should get enginesToRun', () => {
-            getMock.mockReturnValue('engine1,engine2');
-            expect(settingsManager.getEnginesToRun()).toBe('engine1,engine2');
-            expect(getMock).toHaveBeenCalledWith('engines');
-        });
-
-        it('should get normalizeSeverityEnabled', () => {
-            getMock.mockReturnValue(true);
-            expect(settingsManager.getNormalizeSeverityEnabled()).toBe(true);
-            expect(getMock).toHaveBeenCalledWith('enabled');
-        });
-
-        it('should get rulesCategory', () => {
-            getMock.mockReturnValue('Best Practices');
-            expect(settingsManager.getRulesCategory()).toBe('Best Practices');
-            expect(getMock).toHaveBeenCalledWith('category');
-        });
-
-        it('should get partialSfgeRunsEnabled', () => {
-            getMock.mockReturnValue(true);
-            expect(settingsManager.getSfgePartialSfgeRunsEnabled()).toBe(true);
-            expect(getMock).toHaveBeenCalledWith('enabled');
         });
     });
 

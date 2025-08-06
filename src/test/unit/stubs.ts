@@ -153,7 +153,7 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
 
     getScannerNameReturnValue: string = 'dummyScannerName';
 
-    getScannerName(): Promise<string> {
+    getVersion(): Promise<string> {
         return Promise.resolve(this.getScannerNameReturnValue);
     }
 
@@ -173,7 +173,7 @@ export class ThrowingCodeAnalyzer implements CodeAnalyzer {
         throw new Error("Error from scan");
     }
 
-    getScannerName(): Promise<string> {
+    getVersion(): Promise<string> {
         return Promise.resolve('someScannerName');
     }
 
@@ -255,7 +255,7 @@ export class StubSettingsManager implements SettingsManager {
     }
 
     // =================================================================================================================
-    // ==== v5 Settings
+    // ==== Configuration Settings
     // =================================================================================================================
     getCodeAnalyzerConfigFileReturnValue: string = '';
 
@@ -267,45 +267,6 @@ export class StubSettingsManager implements SettingsManager {
 
     getCodeAnalyzerRuleSelectors(): string {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
-    }
-
-    // =================================================================================================================
-    // ==== v4 Settings (Deprecated)
-    // =================================================================================================================
-    getPmdCustomConfigFile(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEngineDisableWarningViolations(): boolean {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEngineThreadTimeout(): number {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEnginePathExpansionLimit(): number {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEngineJvmArgs(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getEnginesToRun(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getNormalizeSeverityEnabled(): boolean {
-        throw new Error("Method not implemented.");
-    }
-
-    getRulesCategory(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getSfgePartialSfgeRunsEnabled(): boolean {
-        throw new Error("Method not implemented.");
     }
 
     // =================================================================================================================

@@ -10,25 +10,19 @@ on:
 
 jobs:
   # Step 1: Build the tarballs so they can be installed locally.
-  build-v4-tarball:
-    name: 'Build v4 scanner tarball'
-    uses: ./.github/workflows/build-tarball.yml
-    with:
-      target-branch: 'dev-4'
-  build-v5-tarball:
-    name: 'Build v5 code analyzer tarball'
+  build-code-analyzer-tarball:
+    name: 'Build code analyzer tarball'
     uses: ./.github/workflows/build-tarball.yml
     with:
       target-branch: 'dev'
   # Step 2: Actually run the tests.
   smoke-test:
     name: 'Run smoke tests'
-    needs: [build-v4-tarball, build-v5-tarball]
+    needs: [build-code-analyzer-tarball]
     uses: ./.github/workflows/run-tests.yml
     with:
       use-tarballs: true
-      v4-tarball-suffix: 'dev-4'
-      v5-tarball-suffix: 'dev'
+      tarball-suffix: 'dev'
     secrets: inherit
   # Step 3: Build a VSIX artifact for use if needed.
   create-vsix-artifact:
@@ -39,7 +33,7 @@ jobs:
   report-problems:
     name: 'Report problems'
     runs-on: ubuntu-latest
-    needs: [build-v4-tarball, build-v5-tarball, smoke-test, create-vsix-artifact]
+    needs: [build-code-analyzer-tarball, smoke-test, create-vsix-artifact]
     if: ${{ failure() || cancelled() }}
     steps:
       - name: Report problems

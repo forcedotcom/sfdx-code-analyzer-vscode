@@ -23,8 +23,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         codeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
     });
 
-    describe('v5 tests', () => {
-        describe('v5 tests for the validateEnvironment method', () => {
+    describe('Code Analyzer Tests', () => {
+        describe('tests for the validateEnvironment method', () => {
             it('When the Salesforce CLI is not installed, then error', async () => {
                 cliCommandExecutor.isSfInstalledReturnValue = false;
                 await expect(codeAnalyzer.validateEnvironment()).rejects.toThrow(messages.error.sfMissing);
@@ -60,20 +60,26 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
             });
         });
 
-        describe('v5 tests for the getScannerName method', () => {
-            it('Sanity check that getScannerName first calls validateEnvironment', async () => {
+        describe('tests for the getVersion method', () => {
+            it('When the Salesforce CLI is not installed, then error', async () => {
                 cliCommandExecutor.isSfInstalledReturnValue = false;
-                await expect(codeAnalyzer.getScannerName()).rejects.toThrow(messages.error.sfMissing);
+                await expect(codeAnalyzer.getVersion()).rejects.toThrow(messages.error.sfMissing);
             });
 
-            it('The name reflects the currently set v5 version', async () => {
+            it('When installed with at least the minimum recommended version, then no error and no warning', async () => {
                 cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
-                const scannerName: string = await codeAnalyzer.getScannerName();
-                expect(scannerName).toEqual('code-analyzer@5.0.0-beta.3 via CLI');
+                const version: string = await codeAnalyzer.getVersion();
+                expect(version).toEqual('5.0.0-beta.3');
+            });
+
+            it('When installed with a version greater than the minimum recommended version, then no error and no warning', async () => {
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.3.0');
+                const version: string = await codeAnalyzer.getVersion();
+                expect(version).toEqual('5.3.0');
             });
         });
 
-        describe('v5 tests for the scan method', () => {
+        describe('tests for the scan method', () => {
             const vscodeWorkspace: stubs.StubVscodeWorkspace = new stubs.StubVscodeWorkspace();
 
             const expectedViolation1: Violation = {
@@ -124,7 +130,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 await expect(codeAnalyzer.scan(workspace)).rejects.toThrow(messages.error.sfMissing);
             });
 
-            it('When running a scan with a beta version of v5, then confirm we call the cli and process the results correctly using only --workspace', async () => {
+            it('When running a scan with a beta version code-analyzer, then confirm we call the cli and process the results correctly using only --workspace', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
                 cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
 
@@ -218,7 +224,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
             //   when JSON file doesn't parse, etc
         });
 
-        describe('v5 tests for the getRuleDescriptionFor method', () => {
+        describe('tests for the getRuleDescriptionFor method', () => {
             const prePopulatedRuleDescriptionJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-rules-output.json');
 
             it('Sanity check that getRuleDescriptionFor first calls validateEnvironment', async () => {

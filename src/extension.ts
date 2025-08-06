@@ -18,7 +18,6 @@ import * as ApexGuruFunctions from './lib/apexguru/apex-guru-service';
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
-import {DfaRunner} from "./lib/dfa-runner";
 import {CodeAnalyzerRunAction} from "./lib/code-analyzer-run-action";
 import {A4DFixActionProvider} from "./lib/agentforce/a4d-fix-action-provider";
 import {ScanManager} from './lib/scan-manager';
@@ -95,8 +94,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl(logger);
     const fileHandler: FileHandler = new FileHandlerImpl();
     const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
-    const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, telemetryService, logger); // This thing is really old and clunky. It'll go away when we remove v4 stuff. But if we don't want to wait we could move all this into the v4-scanner.ts file
-    context.subscriptions.push(dfaRunner);
 
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display, windowManager);
 
@@ -154,7 +151,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
     });
 
-    // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
+    // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always.
     registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
         const selection: vscode.Uri[] = (multiSelection && multiSelection.length > 0) ? multiSelection : [singleSelection];
         const workspace: Workspace = await Workspace.fromTargetPaths(selection.map(uri => uri.fsPath), vscodeWorkspace, fileHandler);
@@ -295,15 +292,15 @@ export async function deactivate(): Promise<void> {
 
 // TODO: We either need to give the user control over which files the auto-scan on open/save feature works for...
 //       ... or we need to somehow determine dynamically if the file is relevant for scanning using the
-//       ... --workspace option on Code Analyzer v5 or something. I think that regex has situations that work on all
-//       ....files. So We might not be able to get this perfect. Need to discuss this soon.
+//       ... --workspace option. I think that regex has situations that work on all
+//       ....files. So we might not be able to get this perfect. Need to discuss this soon.
 export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
     const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
     return allowedFileTypes.includes(path.extname(documentUri.fsPath));
 }
 
 // Inside our package.json you'll see things like:
-//     "when": "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
+//     "when": "sfca.apexGuruEnabled"
 // which helps determine when certain commands and menus are available.
 // To make these "context variables" set and stay updated when settings change, use this helper function:
 async function establishVariableInContext(varUsedInPackageJson: string, getValueFcn: () => Promise<boolean>): Promise<void> {
@@ -330,7 +327,7 @@ async function getActiveDocument(): Promise<vscode.TextDocument | null> {
 async function performValidationAndCaching(codeAnalyzer: CodeAnalyzer, display: Display): Promise<void> {
     try {
         await codeAnalyzer.validateEnvironment();
-        // Note: We might consider adding in additional things here like for v5 getting the rule descriptions, etc.
+        // Note: We might consider adding in additional things here like for getting the rule descriptions, etc.
     } catch (err) {
         display.displayError(getErrorMessage(err));
     }

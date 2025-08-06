@@ -98,7 +98,7 @@ suite('Extension Test Suite', () => {
                 }
             }
 
-            test('Adds proper diagnostics when running with v5', async function() {
+            test('Adds proper diagnostics', async function() {
                 this.timeout(90000);
                 await runTest();
             });
@@ -130,7 +130,7 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                test('Adds proper diagnostics when running with v5', async function() {
+                test('Adds proper diagnostics', async function() {
                     this.timeout(90000);
                     await runTest();
                 });
@@ -138,7 +138,7 @@ suite('Extension Test Suite', () => {
 
             suite('One folder selected', () => {
 
-                test('Adds proper diagnostics when running with v5', async function() {
+                test('Adds proper diagnostics', async function() {
                     // TODO: WRITE THIS TEST
                 });
             });
@@ -172,7 +172,7 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                test('Adds proper diagnostics when running with v5', async function() {
+                test('Adds proper diagnostics', async function() {
                     this.timeout(90000);
                     await runTest();
                 });

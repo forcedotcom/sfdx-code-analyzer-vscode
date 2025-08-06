@@ -7,13 +7,8 @@ on:
         required: false
         type: boolean
         default: false
-      v4-tarball-suffix:
-        description: 'The suffix attached to the name of the v4 tarball'
-        required: false
-        type: string
-        default: 'dev-4'
-      v5-tarball-suffix:
-        description: 'The suffix attached to the name of the v5 tarball'
+      tarball-suffix:
+        description: 'The suffix attached to the name of the code-analyzer tarball'
         required: false
         type: string
         default: 'dev'
@@ -57,60 +52,32 @@ jobs:
       # of the tests are integration tests.
       # NOTE: SFCA can come from a tarball built in a previous step,
       #       or be installed as the currently-latest version.
-      - name: Download v4 Scanner Tarball
+      - name: Download Code Analyzer Tarball
         if: ${{ inputs.use-tarballs == true }}
-        id: download-v4
+        id: download-tarball
         uses: actions/download-artifact@v4
         with:
-          name: tarball-${{ inputs.v4-tarball-suffix}}
+          name: tarball-${{ inputs.tarball-suffix }}
           # Download the tarball to a subdirectory of HOME, so it's guaranteed
           # to be somewhere the installation command can see.
-          path: ~/downloads/tarball-v4
-      - name: Install v4 Scanner Tarball
+          path: ~/downloads/tarball
+      - name: Install Code Analyzer Tarball
         if: ${{ inputs.use-tarballs == true }}
         shell: bash
         run: |
           # Determine the tarball's name.
-          TARBALL_NAME=$(ls ~/downloads/tarball-v4/code-analyzer | grep salesforce-.*\\.tgz)
+          TARBALL_NAME=$(ls ~/downloads/tarball/code-analyzer | grep salesforce-.*\\.tgz)
           echo $TARBALL_NAME
           # Figure out where the tarball was downloaded to.
           # To allow compatibility with Windows, replace backslashes with forward slashes
           # and rip off a leading `C:` if present.
-          DOWNLOAD_PATH=`echo '${{ steps.download-v4.outputs.download-path }}' | tr '\\' '/'`
+          DOWNLOAD_PATH=`echo '${{ steps.download-tarball.outputs.download-path }}' | tr '\\' '/'`
           echo $DOWNLOAD_PATH
           DOWNLOAD_PATH=`[[ $DOWNLOAD_PATH = C* ]] && echo $DOWNLOAD_PATH | cut -d':' -f 2 || echo $DOWNLOAD_PATH`
           echo $DOWNLOAD_PATH
           # Pipe in a `y` to simulate agreeing to install an unsigned package. Use a URI of the file's full path.
           echo y | sf plugins install "file://${DOWNLOAD_PATH}/code-analyzer/${TARBALL_NAME}"
-      - name: Download v5 Code Analyzer Tarball
-        if: ${{ inputs.use-tarballs == true }}
-        id: download-v5
-        uses: actions/download-artifact@v4
-        with:
-          name: tarball-${{ inputs.v5-tarball-suffix }}
-          # Download the tarball to a subdirectory of HOME, so it's guaranteed
-          # to be somewhere the installation command can see.
-          path: ~/downloads/tarball-v5
-      - name: Install v5 Code Analyzer Tarball
-        if: ${{ inputs.use-tarballs == true }}
-        shell: bash
-        run: |
-          # Determine the tarball's name.
-          TARBALL_NAME=$(ls ~/downloads/tarball-v5/code-analyzer | grep salesforce-.*\\.tgz)
-          echo $TARBALL_NAME
-          # Figure out where the tarball was downloaded to.
-          # To allow compatibility with Windows, replace backslashes with forward slashes
-          # and rip off a leading `C:` if present.
-          DOWNLOAD_PATH=`echo '${{ steps.download-v5.outputs.download-path }}' | tr '\\' '/'`
-          echo $DOWNLOAD_PATH
-          DOWNLOAD_PATH=`[[ $DOWNLOAD_PATH = C* ]] && echo $DOWNLOAD_PATH | cut -d':' -f 2 || echo $DOWNLOAD_PATH`
-          echo $DOWNLOAD_PATH
-          # Pipe in a `y` to simulate agreeing to install an unsigned package. Use a URI of the file's full path.
-          echo y | sf plugins install "file://${DOWNLOAD_PATH}/code-analyzer/${TARBALL_NAME}"
-      - name: Install Production scanner v4
-        if: ${{ inputs.use-tarballs == false }}
-        run: sf plugins install @salesforce/sfdx-scanner
-      - name: Install Production code-analyzer v5
+      - name: Install Production code-analyzer
         if: ${{ inputs.use-tarballs == false }}
         run: sf plugins install code-analyzer
       # Run the tests. (Linux and non-Linux need slightly different commands.)
