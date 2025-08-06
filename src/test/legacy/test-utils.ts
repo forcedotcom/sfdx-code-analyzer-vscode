@@ -53,7 +53,7 @@ export class StubTelemetryService implements TelemetryService {
 
     private exceptionCalls: TelemetryExceptionData[] = [];
 
-    public sendExtensionActivationEvent(_hrStart: [number, number]): void {
+    public sendExtensionActivationEvent(_hrStart: number): void {
         // NO-OP
     }
 

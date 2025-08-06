@@ -55,7 +55,7 @@ export type SFCAExtensionData = {
  * Registers the necessary diagnostic collections and commands.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<SFCAExtensionData> {
-    const extensionHrStart: [number, number] = process.hrtime();
+    const highResStartTime: number = globalThis.performance.now();
 
     // Helpers to keep the below code clean and so that we don't forget to push the disposables onto the context
     const registerCommand = (command: string, callback: (...args: unknown[]) => unknown): void => {
@@ -276,7 +276,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // ==  Finalize activation
     // =================================================================================================================
 
-    telemetryService.sendExtensionActivationEvent(extensionHrStart);
+    telemetryService.sendExtensionActivationEvent(highResStartTime);
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
     logger.log('Extension sfdx-code-analyzer-vscode activated.');
     return {
