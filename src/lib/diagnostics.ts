@@ -143,6 +143,7 @@ export interface DiagnosticManager extends vscode.Disposable {
     clearDiagnostic(diag: CodeAnalyzerDiagnostic): void
     clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void
     clearDiagnosticsForFiles(uris: vscode.Uri[]): void
+    getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
     handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void
 }
 
@@ -156,7 +157,7 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
     public addDiagnostics(diags: CodeAnalyzerDiagnostic[]) {
         const uriToDiagsMap: Map<vscode.Uri, CodeAnalyzerDiagnostic[]> = groupByUri(diags);
         for (const [uri, diags] of uriToDiagsMap) {
-            this.addDiagnosticsForUri(uri, diags);
+            this.addDiagnosticsForFile(uri, diags);
         }
     }
 
@@ -166,9 +167,9 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
 
     public clearDiagnostic(diagnostic: CodeAnalyzerDiagnostic): void {
         const uri: vscode.Uri = diagnostic.uri;
-        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForUri(uri);
+        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
         const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(diag => diag !== diagnostic);
-        this.setDiagnosticsForUri(uri, updatedDiagnostics);
+        this.setDiagnosticsForFile(uri, updatedDiagnostics);
     }
 
     public dispose(): void {
@@ -182,14 +183,18 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
     }
 
     public clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void {
-        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForUri(uri);
+        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
         // Only keep the diagnostics that aren't within the specified range
         const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(diagnostic => !range.contains(diagnostic.range));
-        this.setDiagnosticsForUri(uri, updatedDiagnostics);
+        this.setDiagnosticsForFile(uri, updatedDiagnostics);
+    }
+
+    public getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[] {
+        return (this.diagnosticCollection.get(uri) || []) as readonly CodeAnalyzerDiagnostic[];
     }
 
     public handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void {
-        const diags: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForUri(event.document.uri);
+        const diags: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(event.document.uri);
         if (diags.length === 0) {
             return;
         }
@@ -202,20 +207,16 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
             const updatedDiagnostics: CodeAnalyzerDiagnostic[] = diags
                 .map(diag => adjustDiagnosticToChange(diag, change, replacementLines))
                 .filter(d => d !== null); // Removes the diagnostics that were marked for removal via null
-            this.setDiagnosticsForUri(event.document.uri, updatedDiagnostics);
+            this.setDiagnosticsForFile(event.document.uri, updatedDiagnostics);
         }
     }
 
-    private addDiagnosticsForUri(uri: vscode.Uri, newDiags: CodeAnalyzerDiagnostic[]): void {
-        const currentDiags: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForUri(uri);
-        this.setDiagnosticsForUri(uri, [...currentDiags, ...newDiags]);
+    private addDiagnosticsForFile(uri: vscode.Uri, newDiags: CodeAnalyzerDiagnostic[]): void {
+        const currentDiags: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
+        this.setDiagnosticsForFile(uri, [...currentDiags, ...newDiags]);
     }
 
-    private getDiagnosticsForUri(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[] {
-        return (this.diagnosticCollection.get(uri) || []) as readonly CodeAnalyzerDiagnostic[];
-    }
-
-    private setDiagnosticsForUri(uri: vscode.Uri, diags: CodeAnalyzerDiagnostic[]): void {
+    private setDiagnosticsForFile(uri: vscode.Uri, diags: CodeAnalyzerDiagnostic[]): void {
         this.diagnosticCollection.set(uri, diags);
     }
 }

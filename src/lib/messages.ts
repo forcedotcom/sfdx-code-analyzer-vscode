@@ -31,6 +31,9 @@ export const messages = {
         scanningWith: (version: string) => `Scanning with code-analyzer@${version} via CLI`,
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
     },
+    suggestions: {
+        suggestionFor: "Suggestion for",
+    },
     fixer: {
         suppressPMDViolationsOnLine: "Suppress all 'pmd' violations on this line",
         suppressPmdViolationsOnClass: (ruleName: string) => `Suppress 'pmd.${ruleName}' on this class`,

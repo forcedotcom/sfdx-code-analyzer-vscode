@@ -192,7 +192,7 @@ suite('Apex Guru Test Suite', () => {
                   startLine: 10,
                   startColumn: 1
                 },
-                message: `ApexGuru Suggestion:\n    ${expectedSuggestedCode}\n`
+                message: expectedSuggestedCode
               }]
           });
       });

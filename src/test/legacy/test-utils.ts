@@ -99,6 +99,10 @@ export class StubDiagnosticManager implements DiagnosticManager {
         // NO-OP
     }
 
+    getDiagnosticsForFile(_uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[] {
+        return []; // NO-OP
+    }
+
     handleTextDocumentChangeEvent(_event: vscode.TextDocumentChangeEvent): void {
         // NO-OP
     }
