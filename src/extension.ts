@@ -261,7 +261,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const a4dFixAction: A4DFixAction = new A4DFixAction(externalServiceProvider, codeAnalyzer, unifiedDiffService, 
         diagnosticManager, telemetryService, logger, display);
     const a4dFixActionProvider: A4DFixActionProvider = new A4DFixActionProvider(externalServiceProvider, logger);
-    registerCommand(A4DFixAction.COMMAND, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
+    registerCommand(A4DFixAction.COMMAND, async (diagnostic: CodeAnalyzerDiagnostic, document: vscode.TextDocument) => {
         await a4dFixAction.run(diagnostic, document);
     });
     // Invoked by the "quick fix" buttons on A4D enabled diagnostics
