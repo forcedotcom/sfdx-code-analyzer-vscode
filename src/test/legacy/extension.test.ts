@@ -33,7 +33,8 @@ import {
 } from "../unit/stubs";
 import {Workspace} from "../../lib/workspace";
 
-suite('Extension Test Suite', () => {
+suite('Extension Test Suite', function () {
+    this.timeout(60000); // Global timeout for all tests in this suite
     vscode.window.showInformationMessage('Start all tests.');
     // Note: Because this is a mocha test, __dirname here is actually the location of the js file in the out/test folder.
     const codeFixturesPath: string = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'code-fixtures');
@@ -51,9 +52,6 @@ suite('Extension Test Suite', () => {
             for (const [uri, diagnostics] of diagnosticsArrays) {
                 expect(diagnostics, `${uri.toString()} should start without diagnostics`).to.be.empty;
             }
-            // Set custom settings
-            const configuration = vscode.workspace.getConfiguration();
-            configuration.update('codeAnalyzer.scanner.engines', 'pmd,retire-js,eslint-lwc', vscode.ConfigurationTarget.Global);
         });
 
         teardown(async () => {
@@ -98,7 +96,7 @@ suite('Extension Test Suite', () => {
                 }
             }
 
-            test('Adds proper diagnostics when running with v5', async function() {
+            test('Adds proper diagnostics', async function() {
                 this.timeout(90000);
                 await runTest();
             });
@@ -130,16 +128,9 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                test('Adds proper diagnostics when running with v5', async function() {
+                test('Adds proper diagnostics', async function() {
                     this.timeout(90000);
                     await runTest();
-                });
-            });
-
-            suite('One folder selected', () => {
-
-                test('Adds proper diagnostics when running with v5', async function() {
-                    // TODO: WRITE THIS TEST
                 });
             });
 
@@ -172,7 +163,7 @@ suite('Extension Test Suite', () => {
                     }
                 }
 
-                test('Adds proper diagnostics when running with v5', async function() {
+                test('Adds proper diagnostics', async function() {
                     this.timeout(90000);
                     await runTest();
                 });
@@ -181,7 +172,7 @@ suite('Extension Test Suite', () => {
 
     });
 
-    suite('#_runAndDisplay()', () => {
+    suite('#_runAndDisplay()', function () {
         const ext: vscode.Extension<SFCAExtensionData> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
         let stubTelemetryService: StubTelemetryService;
         let codeAnalyzerRunAction: CodeAnalyzerRunAction;

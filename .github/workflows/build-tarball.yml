@@ -32,13 +32,8 @@ jobs:
           git clone -b ${{ inputs.target-branch }} https://github.com/forcedotcom/code-analyzer.git code-analyzer
           cd code-analyzer
           # Install and build dependencies.
-          if [[ "${{ inputs.target-branch}}" == "dev-4" ]]; then
-            yarn
-            yarn build
-          else
-            npm install
-            npm run build
-          fi
+          npm install
+          npm run build
           # Create the tarball.
           npm pack
       # Upload the tarball as an artifact so it's usable elsewhere.

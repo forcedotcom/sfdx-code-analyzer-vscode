@@ -12,20 +12,9 @@ export interface SettingsManager {
     getAnalyzeOnSave(): boolean;
     getApexGuruEnabled(): boolean;
 
-    // v5 Settings
+    // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
     getCodeAnalyzerRuleSelectors(): string;
-
-    // v4 Settings (Deprecated)
-    getPmdCustomConfigFile(): string;
-    getGraphEngineDisableWarningViolations(): boolean;
-    getGraphEngineThreadTimeout(): number;
-    getGraphEnginePathExpansionLimit(): number;
-    getGraphEngineJvmArgs(): string;
-    getEnginesToRun(): string;
-    getNormalizeSeverityEnabled(): boolean;
-    getRulesCategory(): string;
-    getSfgePartialSfgeRunsEnabled(): boolean;
 
     // Other Settings that we may depend on
     getEditorCodeLensEnabled(): boolean;
@@ -56,47 +45,6 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getCodeAnalyzerRuleSelectors(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
-    }
-
-
-    // =================================================================================================================
-    // ==== v4 Settings (Deprecated)
-    // =================================================================================================================
-    public getPmdCustomConfigFile(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer.pMD').get('customConfigFile');
-    }
-
-    public getGraphEngineDisableWarningViolations(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('disableWarningViolations');
-    }
-
-
-    public getGraphEngineThreadTimeout(): number {
-        return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('threadTimeout');
-    }
-
-    public getGraphEnginePathExpansionLimit(): number {
-        return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('pathExpansionLimit');
-    }
-
-    public getGraphEngineJvmArgs(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer.graphEngine').get('jvmArgs');
-    }
-
-    public getEnginesToRun(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer.scanner').get('engines');
-    }
-
-    public getNormalizeSeverityEnabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.normalizeSeverity').get('enabled');
-    }
-
-    public getRulesCategory(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer.rules').get('category');
-    }
-
-    public getSfgePartialSfgeRunsEnabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.partialGraphEngineScans').get('enabled');
     }
 
     // =================================================================================================================
