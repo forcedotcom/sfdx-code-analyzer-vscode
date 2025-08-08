@@ -1,0 +1,20 @@
+# This workflow is used in order to retry a failed workflow run.
+name: Retry workflow
+on:
+  workflow_dispatch:
+    inputs:
+      github_run_id:
+        required: true
+        description: "The ID of the workflow run to retry"
+jobs:
+  Retry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retry Github Action ${{ inputs.github_run_id }}
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+          GH_DEBUG: api # Used for verbose output
+        run: |
+          gh run watch ${{ inputs.github_run_id }} > /dev/null 2>&1
+          gh run rerun ${{ inputs.github_run_id }} --failed
