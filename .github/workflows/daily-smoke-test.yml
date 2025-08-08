@@ -11,30 +11,43 @@ on:
 jobs:
   # Step 1: Build the tarballs so they can be installed locally.
   build-code-analyzer-tarball:
-    name: 'Build code analyzer tarball'
+    name: Build code analyzer tarball
     uses: ./.github/workflows/build-tarball.yml
     with:
       target-branch: 'dev'
   # Step 2: Actually run the tests.
   smoke-test:
-    name: 'Run smoke tests'
+    name: Run smoke tests
     needs: [build-code-analyzer-tarball]
     uses: ./.github/workflows/run-tests.yml
     with:
       use-tarballs: true
       tarball-suffix: 'dev'
     secrets: inherit
-  # Step 3: Build a VSIX artifact for use if needed.
+  # Step 3: Retry on failure after install timeout or flaky tests
+  retry-on-failure:
+    name: Retry on failure
+    runs-on: ubuntu-latest
+    needs: [build-code-analyzer-tarball, smoke-test]
+    if: failure() && fromJSON(github.run_attempt) < 3
+    steps:
+      - name: Trigger retry workflow
+        env:
+          GH_REPO: ${{ github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run retry.yml -F github_run_id=${{ github.run_id }}
+  # Step 4: Build a VSIX artifact for use if needed.
   create-vsix-artifact:
     name: 'Upload VSIX as artifact'
     uses: ./.github/workflows/create-vsix-artifact.yml
     secrets: inherit
-  # Step 4: Report any problems
+  # Step 5: Report any problems
   report-problems:
-    name: 'Report problems'
+    name: Report problems
     runs-on: ubuntu-latest
     needs: [build-code-analyzer-tarball, smoke-test, create-vsix-artifact]
-    if: ${{ failure() || cancelled() }}
+    if: failure() && fromJSON(github.run_attempt) >= 3
     steps:
       - name: Report problems
         shell: bash
@@ -42,7 +55,7 @@ jobs:
           RUN_LINK: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           ALERT_SEV="info"
-          ALERT_SUMMARY="Daily smoke test failed on ${{ runner.os }}"
+          ALERT_SUMMARY="Daily smoke test failed after 3 attempts on ${{ runner.os }}"
 
           generate_post_data() {
             cat <<EOF
