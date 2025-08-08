@@ -232,7 +232,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     registerCommand(Constants.COMMAND_COPY_SUGGESTION, async (text: string) => {
         await vscode.env.clipboard.writeText(text);
-        vscode.window.showInformationMessage('Suggestion copied to clipboard!');
+        vscode.window.showInformationMessage(messages.suggestions.suggestionCopiedToClipboard);
     });
     const violationSuggestionsHolverProvider: ViolationSuggestionsHoverProvider = new ViolationSuggestionsHoverProvider(
         diagnosticManager);
