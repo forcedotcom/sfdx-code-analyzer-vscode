@@ -10,10 +10,9 @@ import * as fspromises from 'fs/promises';
 import {Connection, CoreExtensionService} from '../core-extension-service';
 import * as Constants from '../constants';
 import {messages} from '../messages';
-import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, toRange, Violation} from '../diagnostics';
+import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, Violation} from '../diagnostics';
 import {TelemetryService} from "../external-services/telemetry-service";
 import {Logger} from "../logger";
-import { indent } from '../utils';
 
 export async function isApexGuruEnabledInOrg(logger: Logger): Promise<boolean> {
     try {
@@ -66,8 +65,7 @@ export async function runApexGuruOnFile(uri: vscode.Uri, commandName: string, di
 }
 
 function getDiagnosticsWithSuggestions(diagnostics: CodeAnalyzerDiagnostic[]): CodeAnalyzerDiagnostic[] {
-    // If the diagnostic has relatedInformation, then it must have suggestions.
-    return diagnostics.filter(d => d.relatedInformation && d.relatedInformation.length > 0)
+    return diagnostics.filter(d => d.violation.suggestions.length > 0)
 }
 
 export async function pollAndGetApexGuruResponse(connection: Connection, requestId: string, maxWaitTimeInSeconds: number, retryIntervalInMillis: number): Promise<ApexGuruQueryResponse> {
@@ -175,27 +173,11 @@ function reportToDiagnostic(file: string, parsed: ApexGuruReport): CodeAnalyzerD
             {
                 location: violationLocation,
                 // This message is temporary and will be improved as we get a better response back and unify the suggestions experience
-                message: `ApexGuru Suggestion:\n${indent(suggestedCode)}\n`
+                message: suggestedCode
             }
         ]
     }
-
-    const diagnostic: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
-
-
-    // TODO: This is temporary until we address the unification of suggestions (which will have a better way of showing suggestions on the vscode editor window)
-    if (violation.suggestions?.length > 0) {
-        diagnostic.relatedInformation = [
-            new vscode.DiagnosticRelatedInformation(
-                new vscode.Location(
-                    vscode.Uri.parse(violation.suggestions[0].location.file), // When we have a better way of displaying these, we'll need a loop instead of assuming just 1 suggestion
-                    toRange(violation.suggestions[0].location)),
-                violation.suggestions[0].message
-            )
-        ];
-    }
-
-    return diagnostic;
+    return CodeAnalyzerDiagnostic.fromViolation(violation);
 }
 
 export type ApexGuruAuthResponse = {

@@ -34,6 +34,7 @@ import {Workspace} from "./lib/workspace";
 import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-action-provider';
 import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
 import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
+import { ViolationSuggestionsHoverProvider } from './lib/violation-suggestions-hover-provider';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -62,6 +63,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     };
     const registerCodeActionsProvider = (selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider, metadata?: vscode.CodeActionProviderMetadata): void => {
         context.subscriptions.push(vscode.languages.registerCodeActionsProvider(selector, provider, metadata));
+    }
+    const registerHoverProvider = (selector: vscode.DocumentSelector, provider: vscode.HoverProvider): void => {
+        context.subscriptions.push(vscode.languages.registerHoverProvider(selector, provider));
     }
     const onDidSaveTextDocument = (listener: (e: unknown) => unknown): void => {
         context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(listener));
@@ -222,6 +226,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     registerCodeActionsProvider({pattern: '**/**'}, applyViolationFixesActionProvider,
         {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
+
+    // =================================================================================================================
+    // ==  Violation Suggestions Functionality
+    // =================================================================================================================
+    registerCommand(Constants.COMMAND_COPY_SUGGESTION, async (engineName: string, ruleName: string, suggestionMessage: string) => {
+        await vscode.env.clipboard.writeText(suggestionMessage);
+        vscode.window.showInformationMessage(messages.suggestions.suggestionCopiedToClipboard(engineName, ruleName));
+        telemetryService.sendCommandEvent(Constants.TELEM_COPY_SUGGESTION_CLICKED, {
+            commandSource: Constants.COMMAND_COPY_SUGGESTION,
+            engineName: engineName,
+            ruleName: ruleName
+        });
+    });
+    const violationSuggestionsHolverProvider: ViolationSuggestionsHoverProvider = new ViolationSuggestionsHoverProvider(
+        diagnosticManager);
+    registerHoverProvider({pattern: '**/**'}, violationSuggestionsHolverProvider);
 
     // =================================================================================================================
     // ==  Apex Guru Integration Functionality

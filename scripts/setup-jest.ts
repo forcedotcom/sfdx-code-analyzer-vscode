@@ -6,7 +6,21 @@
 import * as jestMockVscode from 'jest-mock-vscode';
 
 function getMockVSCode() {
-    // Using a 3rd party library to help create the mocks instead of creating them all manually
-    return jestMockVscode.createVSCodeMock(jest);
+    return {
+        // Using a 3rd party library to help create the mocks instead of creating them all manually
+        ... jestMockVscode.createVSCodeMock(jest),
+
+
+        // Defining Hover since it is missing from jest-mock-vscode
+        "Hover": class Hover {
+            public readonly contents: any[];
+            public readonly range?: any;
+
+            constructor(contents: any | any[], range?: any) {
+                this.contents = Array.isArray(contents) ? contents : [contents];
+                this.range = range;
+            }
+        }
+    };
 }
 jest.mock('vscode', getMockVSCode, {virtual: true})

@@ -19,6 +19,9 @@ export const COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE = 'sfca.removeDiagnosti
 export const COMMAND_RUN_APEX_GURU_ON_FILE = 'sfca.runApexGuruAnalysisOnSelectedFile';
 export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnCurrentFile';
 
+// other command names (which do not have to be in the package.json):
+export const COMMAND_COPY_SUGGESTION = 'sfca.copySuggestion';
+
 // commands that are only invoked by quick fixes (which do not need to be declared in package.json since they can be registered dynamically)
 export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
 export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
@@ -31,6 +34,7 @@ export const VSCODE_COMMAND_OPEN_URL = 'vscode.open';
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
+export const TELEM_COPY_SUGGESTION_CLICKED = 'sfdx__codeanalyzer_copy_suggestion_clicked';
 
 // telemetry keys used by eGPT (A4D)
 export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
