@@ -33,7 +33,7 @@ export const messages = {
     },
     suggestions: {
         suggestionFor: "Suggestion for",
-        suggestionCopiedToClipboard: "Suggestion copied to clipboard."
+        suggestionCopiedToClipboard: (engineName: string, ruleName: string) =>  `Suggestion for '${engineName}.${ruleName}' copied to clipboard.`
     },
     fixer: {
         suppressPMDViolationsOnLine: "Suppress all 'pmd' violations on this line",

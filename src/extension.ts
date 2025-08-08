@@ -230,9 +230,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Violation Suggestions Functionality
     // =================================================================================================================
-    registerCommand(Constants.COMMAND_COPY_SUGGESTION, async (text: string) => {
-        await vscode.env.clipboard.writeText(text);
-        vscode.window.showInformationMessage(messages.suggestions.suggestionCopiedToClipboard);
+    registerCommand(Constants.COMMAND_COPY_SUGGESTION, async (engineName: string, ruleName: string, suggestionMessage: string) => {
+        await vscode.env.clipboard.writeText(suggestionMessage);
+        vscode.window.showInformationMessage(messages.suggestions.suggestionCopiedToClipboard(engineName, ruleName));
+        telemetryService.sendCommandEvent(Constants.TELEM_COPY_SUGGESTION_CLICKED, {
+            commandSource: Constants.COMMAND_COPY_SUGGESTION,
+            engineName: engineName,
+            ruleName: ruleName
+        });
     });
     const violationSuggestionsHolverProvider: ViolationSuggestionsHoverProvider = new ViolationSuggestionsHoverProvider(
         diagnosticManager);

@@ -34,6 +34,7 @@ export const VSCODE_COMMAND_OPEN_URL = 'vscode.open';
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
+export const TELEM_COPY_SUGGESTION_CLICKED = 'sfdx__codeanalyzer_copy_suggestion_clicked';
 
 // telemetry keys used by eGPT (A4D)
 export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';

@@ -47,7 +47,7 @@ export class ViolationSuggestionsHoverProvider implements vscode.HoverProvider {
 }
 
 function createMarkdownString(engineName: string, ruleName: string, suggestionMessage): vscode.MarkdownString {
-    const copyTextCmdArgsAsString: string = encodeURIComponent(JSON.stringify(suggestionMessage))
+    const copyTextCmdArgsAsString: string = encodeURIComponent(JSON.stringify([engineName, ruleName, suggestionMessage]))
     // Using a table so that we can have a good placement and spacing for the copy button. Note we have no ability
     // to use most style based tags. See the following for what tags/attributes are supported:
     //   https://github.com/microsoft/vscode/blob/6d2920473c6f13759c978dd89104c4270a83422d/src/vs/base/browser/markdownRenderer.ts#L296
