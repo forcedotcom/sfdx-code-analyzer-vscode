@@ -11,10 +11,8 @@ import {SettingsManager, SettingsManagerImpl} from './lib/settings';
 import * as targeting from './lib/targeting'
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
 import {messages} from './lib/messages';
-import {CoreExtensionService} from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 import * as path from 'path';
-import * as ApexGuruFunctions from './lib/apexguru/apex-guru-service';
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
@@ -34,7 +32,10 @@ import {Workspace} from "./lib/workspace";
 import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-action-provider';
 import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
 import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
-import { ViolationSuggestionsHoverProvider } from './lib/violation-suggestions-hover-provider';
+import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hover-provider';
+import {ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
+import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
+import {OrgCommunicationService} from './lib/external-services/org-communication-service';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -83,6 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const settingsManager = new SettingsManagerImpl();
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
+    const orgCommunicationService: OrgCommunicationService = await externalServiceProvider.getOrgCommunicationService();
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
@@ -103,10 +105,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     // For performance reasons, it's best to kick this off in the background instead of await the promise.
     void performValidationAndCaching(codeAnalyzer, display);
-
-    // We need to do this first in case any other services need access to those provided by the core extension.
-    // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
-    await CoreExtensionService.loadDependencies(outputChannel);
 
 
     // =================================================================================================================
@@ -246,20 +244,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Apex Guru Integration Functionality
     // =================================================================================================================
-    const isApexGuruEnabled: () => Promise<boolean> =
-        async () => settingsManager.getApexGuruEnabled() &&
+    const apexGuruService: ApexGuruService = new LiveApexGuruService(orgCommunicationService, fileHandler, logger);
+    const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
+
+    // TODO: This is temporary and will change soon when we remove pilot flag and instead add a watch to org auth changes
+    const isApexGuruEnabled: () => Promise<boolean> = async () => settingsManager.getApexGuruEnabled() &&
             // Currently we don't watch for changes here when a user has apex guru enabled already. That is,
             // if the user logs into an org post activation of this extension, it won't show the command until they
             // refresh or toggle the "ApexGuru enabled" setting off and back on. At some point we might want to see
             // if it is possible to monitor changes to the users org so we can re-trigger this check.
-            await ApexGuruFunctions.isApexGuruEnabledInOrg(logger);
-
+            await apexGuruService.isApexGuruAvailable();
     await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
 
     // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
-        await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection,
-            Constants.COMMAND_RUN_APEX_GURU_ON_FILE, diagnosticManager, telemetryService, logger));
+        await apexGuruRunAction.run(Constants.COMMAND_RUN_APEX_GURU_ON_FILE,
+            multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection)); // TODO: We should somehow restrict multi-select here. We only use the first file right now
 
     // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
@@ -268,12 +268,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             vscode.window.showWarningMessage(messages.noActiveEditor);
             return;
         }
-        return await ApexGuruFunctions.runApexGuruOnFile(document.uri,
-            Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
+        return await apexGuruRunAction.run(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, document.uri);
     });
-
-    // Note the apex guru services also uses Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE (registered above) but soon this will not be the case
-
+    
 
     // =================================================================================================================
     // ==  Agentforce for Developers Integration
@@ -319,6 +316,8 @@ export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
     return allowedFileTypes.includes(path.extname(documentUri.fsPath));
 }
 
+// TODO: This is only used by apex guru right now and is tied to the pilot setting. Soon we will be removing the pilot
+// setting and instead we should be adding a watch to the onOrgChange event of the OrgCommunicationService instead.
 // Inside our package.json you'll see things like:
 //     "when": "sfca.apexGuruEnabled"
 // which helps determine when certain commands and menus are available.

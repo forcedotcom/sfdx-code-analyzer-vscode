@@ -11,7 +11,7 @@ export const messages = {
         verifyingCodeAnalyzerIsInstalled: "Verifying Code Analyzer CLI plugin is installed.",
         identifyingTargets: "Code Analyzer is identifying targets.",
         analyzingTargets: "Code Analyzer is analyzing targets.",
-        processingResults: "Code Analyzer is processing results."
+        processingResults: "Code Analyzer is processing results." // Shared with ApexGuru and CodeAnalyzer
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
@@ -22,9 +22,7 @@ export const messages = {
         editorCodeLensMustBeEnabled: "This action requires the 'Editor: Code Lens' setting to be enabled."
     },
     apexGuru: {
-        progress: {
-            message: "Code Analyzer is running ApexGuru analysis."
-        },
+        runningAnalysis: "Code Analyzer is running ApexGuru analysis.",
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
     },
     info: {
@@ -61,7 +59,7 @@ export const messages = {
         installLatestVersion: 'Install the latest `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.',
     },
     error: {
-        analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,
+        analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,  // Shared with ApexGuru and CodeAnalyzer
         engineUninstantiable: (engine: string) => `Error: Couldn't initialize engine "${engine}" due to a setup error. Analysis continued without this engine. Click "Show error" to see the error message. Click "Ignore error" to ignore the error for this session. Click "Learn more" to view the system requirements for this engine, and general instructions on how to set up Code Analyzer.`,
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use the Salesforce Code Analyzer extension, first install Salesforce CLI.",

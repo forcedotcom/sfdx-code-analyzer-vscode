@@ -91,6 +91,10 @@ export class StubDiagnosticManager implements DiagnosticManager {
         // NO-OP
     }
 
+    clearDiagnostics(_diags: CodeAnalyzerDiagnostic[]): void {
+        // NO-OP
+    }
+
     clearDiagnosticsInRange(_uri: vscode.Uri, _range: vscode.Range): void {
         // NO-OP
     }

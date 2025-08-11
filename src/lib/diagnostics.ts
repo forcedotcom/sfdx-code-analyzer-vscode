@@ -141,6 +141,7 @@ export interface DiagnosticManager extends vscode.Disposable {
     addDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
     clearAllDiagnostics(): void
     clearDiagnostic(diag: CodeAnalyzerDiagnostic): void
+    clearDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
     clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void
     clearDiagnosticsForFiles(uris: vscode.Uri[]): void
     getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
@@ -170,6 +171,10 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
         const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
         const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(diag => diag !== diagnostic);
         this.setDiagnosticsForFile(uri, updatedDiagnostics);
+    }
+
+    public clearDiagnostics(diags: CodeAnalyzerDiagnostic[]): void {
+        diags.map(d => this.clearDiagnostic(d));
     }
 
     public dispose(): void {
