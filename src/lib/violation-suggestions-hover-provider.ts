@@ -48,20 +48,12 @@ export class ViolationSuggestionsHoverProvider implements vscode.HoverProvider {
 
 function createMarkdownString(engineName: string, ruleName: string, suggestionMessage): vscode.MarkdownString {
     const copyTextCmdArgsAsString: string = encodeURIComponent(JSON.stringify([engineName, ruleName, suggestionMessage]))
-    // Using a table so that we can have a good placement and spacing for the copy button. Note we have no ability
-    // to use most style based tags. See the following for what tags/attributes are supported:
+    // Note we have no ability to use most style based tags. See the following for what tags/attributes are supported:
     //   https://github.com/microsoft/vscode/blob/6d2920473c6f13759c978dd89104c4270a83422d/src/vs/base/browser/markdownRenderer.ts#L296
     const markdown: vscode.MarkdownString = new vscode.MarkdownString(
-        `<table><tr>\n` +
-        `  <th align="left"><strong>${messages.suggestions.suggestionFor}</strong> <code>${engineName}.${ruleName}</code>:</th>\n` +
-        `  <th align="left">&nbsp;</th>\n` +
-        `  <th align="right"><a href="command:${Constants.COMMAND_COPY_SUGGESTION}?${copyTextCmdArgsAsString}">$(copy) Copy</a></th>\n` + 
-        `</tr>\n` +
-        `<tr>\n` + 
-        `  <td align="left"><blockquote><pre>${suggestionMessage}</pre></blockquote></td>\n` + 
-        `  <td></td>\n` +
-        `  <td></td>\n` + 
-        `</tr></table>`);
+        `<strong>${messages.suggestions.suggestionFor}</strong> <code>${engineName}.${ruleName}</code>: &nbsp;` +
+        `<a href="command:${Constants.COMMAND_COPY_SUGGESTION}?${copyTextCmdArgsAsString}">$(copy) Copy</a>\n` + 
+        `<blockquote><pre>${suggestionMessage}</pre></blockquote>`);
     markdown.supportHtml = true; // Using the limited html gives us a tiny bit more control that using straight-up markdown
     markdown.supportThemeIcons = true; // Allows for the copy icon
     markdown.isTrusted = true; // Allows the "copy" link to execute our sfca.copySuggestion command
