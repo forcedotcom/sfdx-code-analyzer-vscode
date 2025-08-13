@@ -155,7 +155,7 @@ describe("Tests for LiveApexGuruService", () => {
                 `ApexGuru returned an unexpected error: Expected response to contain 'status' field with a string value.`);
         });
 
-        it('When ApexGuru response has a report string that is not valid json encoded as base64', async () => {
+        it('When ApexGuru response has a report string that is not valid json encoded as base64, then error', async () => {
             orgCommunicationService.requestReturnValuesForPollingRequests = [
                 {status: "success", report: Buffer.from("[oops").toString('base64')}
             ];
