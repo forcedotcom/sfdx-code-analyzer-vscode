@@ -1,47 +1,47 @@
 import * as Constants from "../../../../lib/constants";
 import { ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
-import { HttpRequest, OrgCommunicationService } from "../../../../lib/external-services/org-communication-service";
+import { HttpRequest, OrgConnectionService } from "../../../../lib/external-services/org-connection-service";
 import * as stubs from "../../stubs";
 import { Violation } from "../../../../lib/diagnostics";
 
 describe("Tests for LiveApexGuruService", () => {
-    let orgCommunicationService: StubOrgCommunicationServiceForApexGuru;
+    let orgConnectionService: StubOrgConnectionServiceForApexGuru;
     let fileHandler: stubs.StubFileHandler;
     let logger: stubs.SpyLogger;
     let apexGuruService: ApexGuruService;
 
     beforeEach(() => {
-        orgCommunicationService = new StubOrgCommunicationServiceForApexGuru();
+        orgConnectionService = new StubOrgConnectionServiceForApexGuru();
         fileHandler = new stubs.StubFileHandler();
         fileHandler.readFileReturnValue = 'dummyContent';
         logger = new stubs.SpyLogger();
         const maxTimeOutSecs: number = 3; // Defaulting to 3 seconds for worse case scenario, but the below tests shouldn't depend on it
         const retryIntervalMillis: number = 5; // Reducing to keep polling based tests fast
-        apexGuruService = new LiveApexGuruService(orgCommunicationService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
+        apexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
     });
 
     describe("Tests for isApexGuruAvailable", () => {
         it("When no org is authed, then return false", async () => {
-            orgCommunicationService.isAuthedReturnValue = false;
+            orgConnectionService.isAuthedReturnValue = false;
             expect(await apexGuruService.isApexGuruAvailable()).toEqual(false);
         });
 
         it('When the ApexGuru validate endpoint does not return success, then return false', async () => {
-            orgCommunicationService.requestReturnValueForAuthValidation = {
+            orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "failed"
             };
             expect(await apexGuruService.isApexGuruAvailable()).toEqual(false);
         });
 
         it('When the ApexGuru validate endpoint returns success, then return true', async () => {
-            orgCommunicationService.requestReturnValueForAuthValidation = {
+            orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "SUccesS" // Also testing that we check with case insensitivity to be more robust
             };
             expect(await apexGuruService.isApexGuruAvailable()).toEqual(true);
 
             // Sanity check that the right endpoint was used
-            expect(orgCommunicationService.requestCallHistory).toHaveLength(1);
-            expect(orgCommunicationService.requestCallHistory[0].requestOptions).toEqual({
+            expect(orgConnectionService.requestCallHistory).toHaveLength(1);
+            expect(orgConnectionService.requestCallHistory[0].requestOptions).toEqual({
                 method: "GET",
                 url: "/services/data/v62.0/apexguru/validate"
             });
@@ -50,28 +50,28 @@ describe("Tests for LiveApexGuruService", () => {
 
     describe("Tests for scan", () => {
         it('When initial ApexGuru request does not respond with new status, then error', async () => {
-            orgCommunicationService.requestReturnValueForInitialRequest = {
+            orgConnectionService.requestReturnValueForInitialRequest = {
                 status: "failed",
                 requestId: "someRequestId"
             }
             
             await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
                 'ApexGuru returned an unexpected response:\n'
-                    + JSON.stringify(orgCommunicationService.requestReturnValueForInitialRequest, null, 2));
+                    + JSON.stringify(orgConnectionService.requestReturnValueForInitialRequest, null, 2));
         });
 
         it('When initial ApexGuru request does not respond with requestId, then error', async () => {
-            orgCommunicationService.requestReturnValueForInitialRequest = {
+            orgConnectionService.requestReturnValueForInitialRequest = {
                 status: "success",
             }
             
             await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
                 'ApexGuru returned an unexpected response:\n'
-                    + JSON.stringify(orgCommunicationService.requestReturnValueForInitialRequest, null, 2));
+                    + JSON.stringify(orgConnectionService.requestReturnValueForInitialRequest, null, 2));
         });
 
         it('When ApexGuru polling request responds on first attempt with success, then violations are returned', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "succeSs", report: Buffer.from("[]").toString('base64')}
             ];
 
@@ -83,7 +83,7 @@ describe("Tests for LiveApexGuruService", () => {
         });
 
         it('When ApexGuru polling request fails on first attempt, then throw error', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "failed", report: 'notUsed' }
             ];
 
@@ -92,7 +92,7 @@ describe("Tests for LiveApexGuruService", () => {
         });
 
         it('When ApexGuru polling request errors on second attempt, then throw error', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "new", report: 'notUsed'},
                 {status: "error", report: 'notUsed', message: 'Some error message here'},
             ];
@@ -101,11 +101,11 @@ describe("Tests for LiveApexGuruService", () => {
                 'ApexGuru returned an unexpected error: Some error message here');
 
             // Sanity check:
-            expect(orgCommunicationService.requestCallHistory).toHaveLength(3); // Initial request + 2 polling attempts
+            expect(orgConnectionService.requestCallHistory).toHaveLength(3); // Initial request + 2 polling attempts
         });
 
         it('When ApexGuru polling request succeeds on third attempt, then violations are returned', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "new", report: 'notUsed'},
                 {status: "new", report: 'notUsed'},
                 {status: "success", report: Buffer.from("[]").toString('base64')},
@@ -117,11 +117,11 @@ describe("Tests for LiveApexGuruService", () => {
             expect(violations).toEqual([]);
 
             // Sanity check:
-            expect(orgCommunicationService.requestCallHistory).toHaveLength(4); // Initial request + 3 polling attempts
+            expect(orgConnectionService.requestCallHistory).toHaveLength(4); // Initial request + 3 polling attempts
         });
 
         it('When ApexGuru polilng request reaches timeout withot succeeding, then throw error', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "new", report: 'notUsed'},
                 {status: "new", report: 'notUsed'},
                 {status: "new", report: 'notUsed'},
@@ -130,7 +130,7 @@ describe("Tests for LiveApexGuruService", () => {
 
             const maxTimeOutSecs: number = 0.1; // Timeout after one tenth of a second
             const retryIntervalMillis: number = 50; // Only retry every 50 milliseconds and thus should only have 2 to 3 max attempts
-            apexGuruService = new LiveApexGuruService(orgCommunicationService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
+            apexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
 
             
             await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
@@ -138,25 +138,25 @@ describe("Tests for LiveApexGuruService", () => {
         });
 
         it('When ApexGuru response does not contain a status field, then error', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {oops: 3},
             ];
 
             await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
-                `ApexGuru returned an unexpected error: Expected response to contain 'status' field with a string value.`);
+                `ApexGuru returned an unexpected error: ApexGuru returned a response without a 'status' field containing a string value.`);
         });
 
         it('When ApexGuru response has a status field that is not a string, then error', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: 1},
             ];
 
             await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
-                `ApexGuru returned an unexpected error: Expected response to contain 'status' field with a string value.`);
+                `ApexGuru returned an unexpected error: ApexGuru returned a response without a 'status' field containing a string value.`);
         });
 
         it('When ApexGuru response has a report string that is not valid json encoded as base64, then error', async () => {
-            orgCommunicationService.requestReturnValuesForPollingRequests = [
+            orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "success", report: Buffer.from("[oops").toString('base64')}
             ];
 
@@ -167,7 +167,7 @@ describe("Tests for LiveApexGuruService", () => {
 });
 
 
-export class StubOrgCommunicationServiceForApexGuru implements OrgCommunicationService {
+export class StubOrgConnectionServiceForApexGuru implements OrgConnectionService {
     isAuthedReturnValue: boolean = true;
     isAuthed(): boolean {
         return this.isAuthedReturnValue;

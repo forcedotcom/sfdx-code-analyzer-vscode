@@ -1,17 +1,17 @@
 import * as vscode from "vscode";
 
-export interface OrgCommunicationService {
+export interface OrgConnectionService {
     isAuthed(): boolean;
     onOrgChange(callback: () => void): void;
     request<T>(requestOptions: HttpRequest): Promise<T>;
 }
 
-export interface OrgCommunicationServiceProvider {
-    isOrgCommunicationServiceAvailable(): Promise<boolean>
-    getOrgCommunicationService(): Promise<OrgCommunicationService>
+export interface OrgConnectionServiceProvider {
+    isOrgConnectionServiceAvailable(): Promise<boolean>
+    getOrgConnectionService(): Promise<OrgConnectionService>
 }
 
-export class NoOpOrgCommunicationService implements OrgCommunicationService {
+export class NoOpOrgConnectionService implements OrgConnectionService {
     isAuthed(): boolean {
         return false;
     }
@@ -23,7 +23,7 @@ export class NoOpOrgCommunicationService implements OrgCommunicationService {
     }
 }
 
-export class LiveOrgCommunicationService implements OrgCommunicationService {
+export class LiveOrgConnectionService implements OrgConnectionService {
     private readonly workpaceContext: WorkspaceContext;
 
     constructor(workspaceContext: WorkspaceContext) {

@@ -23,7 +23,18 @@ export const messages = {
     },
     apexGuru: {
         runningAnalysis: "Code Analyzer is running ApexGuru analysis.",
-        finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`
+        finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`,
+        errors: {
+            unableToAnalyzeFile: 'ApexGuru was unable to analyze the file.',
+            returnedUnexpectedResponse: (responseStr: string) => 
+                `ApexGuru returned an unexpected response:\n${responseStr}`,
+            returnedUnexpectedError: (errMsg: string) => `ApexGuru returned an unexpected error: ${errMsg}`,
+            failedToGetResponseBeforeTimeout: (maxSeconds: number, lastResponse: string) => 
+                `Failed to get a successful response from ApexGuru after ${maxSeconds} seconds.\n` + 
+                `Last response:\n${lastResponse}`,
+            expectedResponseToContainStatusField: (responseStr: string) => 
+                `ApexGuru returned a response without a 'status' field containing a string value. Instead received:\n${responseStr}`
+        }
     },
     info: {
         scanningWith: (version: string) => `Scanning with code-analyzer@${version} via CLI`,

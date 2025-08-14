@@ -9,8 +9,9 @@ import * as Constants from '../constants';
 import {CodeLocation, Violation} from '../diagnostics';
 import {Logger} from "../logger";
 import {getErrorMessage, indent} from '../utils';
-import {HttpMethods, HttpRequest, OrgCommunicationService} from '../external-services/org-communication-service';
+import {HttpMethods, HttpRequest, OrgConnectionService} from '../external-services/org-connection-service';
 import {FileHandler} from '../fs-utils';
+import { messages } from '../messages';
 
 export const APEX_GURU_ENGINE_NAME: string = 'apexguru';
 
@@ -27,18 +28,18 @@ export interface ApexGuruService {
 }
 
 export class LiveApexGuruService implements ApexGuruService {
-    private readonly orgCommunicationService: OrgCommunicationService;
+    private readonly orgConnectionService: OrgConnectionService;
     private readonly fileHandler: FileHandler;
     private readonly logger: Logger;
     private readonly maxTimeoutSeconds: number;
     private readonly retryIntervalMillis: number;
     constructor(
-                orgCommunicationService: OrgCommunicationService,
+                orgConnectionService: OrgConnectionService,
                 fileHandler: FileHandler,
                 logger: Logger,
                 maxTimeoutSeconds: number = Constants.APEX_GURU_MAX_TIMEOUT_SECONDS,
                 retryIntervalMillis: number = Constants.APEX_GURU_RETRY_INTERVAL_MILLIS) {
-        this.orgCommunicationService = orgCommunicationService;
+        this.orgConnectionService = orgConnectionService;
         this.fileHandler = fileHandler;
         this.logger = logger;
         this.maxTimeoutSeconds = maxTimeoutSeconds;
@@ -46,7 +47,7 @@ export class LiveApexGuruService implements ApexGuruService {
     }
 
     async isApexGuruAvailable(): Promise<boolean> {
-        if (!this.orgCommunicationService.isAuthed()) {
+        if (!this.orgConnectionService.isAuthed()) {
             return false;
         }
         const response: ApexGuruResponse = await this.request('GET', Constants.APEX_GURU_VALIDATE_ENDPOINT);
@@ -68,7 +69,7 @@ export class LiveApexGuruService implements ApexGuruService {
         const response: ApexGuruInitialResponse = await this.request('POST', Constants.APEX_GURU_REQUEST_ENDPOINT,
             JSON.stringify({classContent: base64EncodedContent}));
         if (!response.requestId || response.status != RESPONSE_STATUS.NEW) {
-            throw Error(`ApexGuru returned an unexpected response:\n${JSON.stringify(response, null, 2)}`);
+            throw Error(messages.apexGuru.errors.returnedUnexpectedResponse(JSON.stringify(response, null, 2)));
         }
         return response.requestId;
     }
@@ -84,13 +85,13 @@ export class LiveApexGuruService implements ApexGuruService {
             if (queryResponse.status === RESPONSE_STATUS.SUCCESS && queryResponse.report) {
                 return queryResponse;
             } else if (queryResponse.status === RESPONSE_STATUS.FAILED) { // TODO: I would love a failure message - but the response's report just gives back the file content and nothing else.
-                throw new Error(`ApexGuru was unable to analyze the file.`);
+                throw new Error(messages.apexGuru.errors.unableToAnalyzeFile);
             } else if (queryResponse.status === RESPONSE_STATUS.ERROR && queryResponse.message) {
-                throw new Error(`ApexGuru returned an unexpected error: ${queryResponse.message}`);
+                throw new Error(messages.apexGuru.errors.returnedUnexpectedError(queryResponse.message));
             }
         }
-        throw new Error(`Failed to get a successful response from ApexGuru after ${this.maxTimeoutSeconds} seconds.\n` + 
-            `Last response:\n${JSON.stringify(queryResponse, null, 2)}`);
+        throw new Error(messages.apexGuru.errors.failedToGetResponseBeforeTimeout(this.maxTimeoutSeconds, 
+            JSON.stringify(queryResponse, null, 2)));
     }
 
     private async request<T extends ApexGuruResponse>(method: HttpMethods, endpointUrl: string, body?: string): Promise<T>  {
@@ -102,11 +103,11 @@ export class LiveApexGuruService implements ApexGuruService {
 
         try {
             this.logger.trace(`Sending request to ApexGuru:\n${JSON.stringify(requestObj, null, 2)}`);
-            const responseObj: T = await this.orgCommunicationService.request(requestObj);
+            const responseObj: T = await this.orgConnectionService.request(requestObj);
             this.logger.trace(`Received response from ApexGuru:\n${JSON.stringify(responseObj, null, 2)}`);
             if (typeof(responseObj.status) !== "string") {
-                throw new Error("Expected response to contain 'status' field with a string value. Instead received:\n" + 
-                    JSON.stringify(responseObj, null, 2));
+                throw new Error(messages.apexGuru.errors.expectedResponseToContainStatusField(
+                    JSON.stringify(responseObj, null, 2)));
             }
             // This helps things map to the RESPONSE_STATUS constants with case insensitivity
             responseObj.status = responseObj.status.toLowerCase();

@@ -35,7 +35,7 @@ import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
 import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hover-provider';
 import {ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
 import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
-import {OrgCommunicationService} from './lib/external-services/org-communication-service';
+import {OrgConnectionService} from './lib/external-services/org-connection-service';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -84,7 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const settingsManager = new SettingsManagerImpl();
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
-    const orgCommunicationService: OrgCommunicationService = await externalServiceProvider.getOrgCommunicationService();
+    const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
@@ -244,7 +244,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     // ==  Apex Guru Integration Functionality
     // =================================================================================================================
-    const apexGuruService: ApexGuruService = new LiveApexGuruService(orgCommunicationService, fileHandler, logger);
+    const apexGuruService: ApexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger);
     const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
 
     // TODO: This is temporary and will change soon when we remove pilot flag and instead add a watch to org auth changes
@@ -317,7 +317,7 @@ export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
 }
 
 // TODO: This is only used by apex guru right now and is tied to the pilot setting. Soon we will be removing the pilot
-// setting and instead we should be adding a watch to the onOrgChange event of the OrgCommunicationService instead.
+// setting and instead we should be adding a watch to the onOrgChange event of the OrgConnectionService instead.
 // Inside our package.json you'll see things like:
 //     "when": "sfca.apexGuruEnabled"
 // which helps determine when certain commands and menus are available.

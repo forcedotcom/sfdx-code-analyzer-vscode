@@ -16,12 +16,12 @@ import {
 import {Logger} from "../logger";
 import {LiveLLMService, LLMService, LLMServiceProvider} from "./llm-service";
 import {
-    LiveOrgCommunicationService,
-    NoOpOrgCommunicationService,
-    OrgCommunicationService,
-    OrgCommunicationServiceProvider,
+    LiveOrgConnectionService,
+    NoOpOrgConnectionService,
+    OrgConnectionService,
+    OrgConnectionServiceProvider,
     WorkspaceContext
-} from "./org-communication-service";
+} from "./org-connection-service";
 import { getErrorMessageWithStack } from "../utils";
 
 
@@ -33,13 +33,13 @@ const EXTENSION_THAT_SUPPLIES_WORKSPACE_CONTEXT = Constants.CORE_EXTENSION_ID;
 /**
  * Provides and caches a number of external services that we use like the LLM service, telemetry service, etc.
  */
-export class ExternalServiceProvider implements LLMServiceProvider, TelemetryServiceProvider, OrgCommunicationServiceProvider {
+export class ExternalServiceProvider implements LLMServiceProvider, TelemetryServiceProvider, OrgConnectionServiceProvider {
     private readonly logger: Logger;
     private readonly extensionContext: vscode.ExtensionContext;
 
     private cachedLLMService?: LLMService;
     private cachedTelemetryService?: TelemetryService;
-    private cachedOrgCommunicationService?: OrgCommunicationService;
+    private cachedOrgConnectionService?: OrgConnectionService;
 
     constructor(logger: Logger, extensionContext: vscode.ExtensionContext) {
         this.logger = logger;
@@ -111,9 +111,9 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
 
 
     // =================================================================================================================
-    // === OrgCommunicationServiceProvider implementation
+    // === OrgConnectionServiceProvider implementation
     // =================================================================================================================
-    async isOrgCommunicationServiceAvailable(): Promise<boolean> {
+    async isOrgConnectionServiceAvailable(): Promise<boolean> {
         const coreExtension: vscode.Extension<CoreExtensionApi> = await this.waitForExtensionToBeActivatedIfItExists(EXTENSION_THAT_SUPPLIES_WORKSPACE_CONTEXT);
         if (!coreExtension) {
             return false;
@@ -126,28 +126,28 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
         return true;
     }
 
-    async getOrgCommunicationService(): Promise<OrgCommunicationService> {
-        if (!this.cachedOrgCommunicationService) {
-            this.cachedOrgCommunicationService = await this.initializeOrgCommunicationService();
+    async getOrgConnectionService(): Promise<OrgConnectionService> {
+        if (!this.cachedOrgConnectionService) {
+            this.cachedOrgConnectionService = await this.initializeOrgConnectionService();
         }
-        return this.cachedOrgCommunicationService;
+        return this.cachedOrgConnectionService;
     }
 
-    private async initializeOrgCommunicationService(): Promise<OrgCommunicationService> {
-        if (!(await this.isOrgCommunicationServiceAvailable())) {
-            this.logger.debug('Could not establish the live org communication service since it is not available. ' +
+    private async initializeOrgConnectionService(): Promise<OrgConnectionService> {
+        if (!(await this.isOrgConnectionServiceAvailable())) {
+            this.logger.debug('Could not establish the live org connection service since it is not available. ' +
                 'Most likely you do not have the "Salesforce CLI Integration" Core Extension installed in VS Code.');
-            return new NoOpOrgCommunicationService();
+            return new NoOpOrgConnectionService();
         }
         try {
             // Ideally we would get the WorkspaceContext from the ServiceProvider but it is not on the ServiceProvider.
             // So instead, we get it off of the core extension's returned api.
             const coreExtension: vscode.Extension<CoreExtensionApi> = vscode.extensions.getExtension(EXTENSION_THAT_SUPPLIES_WORKSPACE_CONTEXT);
             const workspaceContext: WorkspaceContext = coreExtension.exports.services.WorkspaceContext.getInstance();
-            return new LiveOrgCommunicationService(workspaceContext);
+            return new LiveOrgConnectionService(workspaceContext);
 
         } catch (err) {
-            this.logger.error(`Could not establish Org Communication service due to unexpected error:\n${getErrorMessageWithStack(err)}`);
+            this.logger.error(`Could not establish Org Connection service due to unexpected error:\n${getErrorMessageWithStack(err)}`);
             throw err;
         }
     }
@@ -163,7 +163,7 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
     private async waitForExtensionToBeActivatedIfItExists<T>(extensionName: string): Promise<vscode.Extension<T> | undefined> {
         const extension: vscode.Extension<T> = vscode.extensions.getExtension(extensionName);
         if (!extension) {
-            this.logger.debug(`The extension '${extensionName}' was not found. Some functionality that depends on this extension will not be available.`);
+            this.logger.warn(`The extension '${extensionName}' was not found. Some functionality that depends on this extension will not be available.`);
             return undefined;
         } else if (extension.isActive) {
             return extension;

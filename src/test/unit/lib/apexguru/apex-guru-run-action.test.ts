@@ -87,11 +87,11 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendCommandEventCallHistory[0].properties.violationCount).toEqual("0");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.violationsWithSuggestedCodeCount).toEqual("0"); // TODO: This will change soon
 
-        // Also validate that we removed the old apexguru diagnostic(s) but kept the other(s)
+        // Also validate that we removed the old apexguru diagnostic(s) but kept the old non-apexguru diagnostic(s)
         expect(diagnosticManager.getDiagnosticsForFile(sampleUri)).toEqual([samplePmdDiag]);
     });
 
-    it("When ApexGuru scan results in zero violations, then display this information, send telemetry event, and update diagnostics", async () => {
+    it("When ApexGuru scan results in multiple violations, then display this information, send telemetry event, and update diagnostics", async () => {
         const violation1: Violation = {
             rule: "SomeRule1",
             engine: "apexguru",
