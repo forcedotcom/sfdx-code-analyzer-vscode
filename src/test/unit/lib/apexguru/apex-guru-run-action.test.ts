@@ -84,8 +84,9 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
         expect(telemetryService.sendCommandEventCallHistory[0].commandName).toEqual("sfdx__apexguru_file_run_complete");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.executedCommand).toEqual("SomeCommandName");
-        expect(telemetryService.sendCommandEventCallHistory[0].properties.violationCount).toEqual("0");
-        expect(telemetryService.sendCommandEventCallHistory[0].properties.violationsWithSuggestedCodeCount).toEqual("0"); // TODO: This will change soon
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolations).toEqual("0");
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithSuggestions).toEqual("0");
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithFixes).toEqual("0");
 
         // Also validate that we removed the old apexguru diagnostic(s) but kept the old non-apexguru diagnostic(s)
         expect(diagnosticManager.getDiagnosticsForFile(sampleUri)).toEqual([samplePmdDiag]);
@@ -103,7 +104,16 @@ describe("Tests for ApexGuruRunAction", () => {
             }],
             primaryLocationIndex: 0,
             tags: [],
-            resources: ["https://www.example1.com"]
+            resources: ["https://www.example1.com"],
+            suggestions: [
+                {
+                    message: "sample suggestion",
+                    location: {
+                        file: sampleUri.fsPath,
+                        startLine: 5
+                    }
+                }
+            ]
         };
         const violation2: Violation = {
             rule: "SomeRule2",
@@ -119,7 +129,46 @@ describe("Tests for ApexGuruRunAction", () => {
             tags: [],
             resources: ["https://www.example2.com"]
         }
-        apexGuruService.scanReturnValue = [violation1, violation2];
+        const violation3: Violation = {
+            rule: "SomeRule3",
+            engine: "apexguru",
+            message: "dummy message 3",
+            severity: 4,
+            locations: [{
+                file: sampleUri.fsPath,
+                startLine: 7,
+                endLine: 9
+            }],
+            primaryLocationIndex: 0,
+            tags: [],
+            resources: ["https://www.example3.com"],
+            suggestions: [
+                {
+                    message: "sample suggestion 1",
+                    location: {
+                        file: sampleUri.fsPath,
+                        startLine: 7
+                    }
+                },
+                {
+                    message: "sample suggestion 2",
+                    location: {
+                        file: sampleUri.fsPath,
+                        startLine: 8
+                    }
+                },
+            ],
+            fixes: [
+                {
+                    fixedCode: "SomeFixedCode",
+                    location: {
+                        file: sampleUri.fsPath,
+                        startLine: 9
+                    }
+                }
+            ]
+        }
+        apexGuruService.scanReturnValue = [violation1, violation2, violation3];
 
         await apexGuruRunAction.run('SomeCommandName', sampleUri);
 
@@ -137,23 +186,22 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(display.displayErrorCallHistory).toHaveLength(0); // Sanity check no errors
         expect(display.displayWarningCallHistory).toHaveLength(0); // Sanity check no warnings
         expect(display.displayInfoCallHistory).toHaveLength(1);
-        expect(display.displayInfoCallHistory[0].msg).toEqual('Scan complete. 2 violations found.');
+        expect(display.displayInfoCallHistory[0].msg).toEqual('Scan complete. 3 violations found.');
 
         // Then telemetry should have been sent
         expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
         expect(telemetryService.sendCommandEventCallHistory[0].commandName).toEqual("sfdx__apexguru_file_run_complete");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.executedCommand).toEqual("SomeCommandName");
-        expect(telemetryService.sendCommandEventCallHistory[0].properties.violationCount).toEqual("2");
-        expect(telemetryService.sendCommandEventCallHistory[0].properties.violationsWithSuggestedCodeCount).toEqual("0"); // TODO: This will change soon
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolations).toEqual("3");
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithSuggestions).toEqual("2");
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithFixes).toEqual("1");
 
         // Also validate that we removed the old apexguru diagnostic(s) but kept the other(s)
         const actDiags: readonly CodeAnalyzerDiagnostic[] = diagnosticManager.getDiagnosticsForFile(sampleUri);
         const expDiags: CodeAnalyzerDiagnostic[] = [samplePmdDiag, CodeAnalyzerDiagnostic.fromViolation(violation1),
-            CodeAnalyzerDiagnostic.fromViolation(violation2)];
+            CodeAnalyzerDiagnostic.fromViolation(violation2), CodeAnalyzerDiagnostic.fromViolation(violation3)];
         expectEquivalentDiagnostics(actDiags, expDiags);
     });
-
-    // TODO: Soon (once we update the response handling) we'll be adding in tests for suggestions and fixes
 });
 
 function expectEquivalentDiagnostics(actDiags: readonly vscode.Diagnostic[], expDiags: readonly vscode.Diagnostic[]): void {
