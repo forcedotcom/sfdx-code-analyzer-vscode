@@ -6,8 +6,8 @@
  */
 
 // extension names
+export const EXTENSION_ID_WITHOUT_NAMESPACE = 'sfdx-code-analyzer-vscode';
 export const EXTENSION_ID = 'salesforce.sfdx-code-analyzer-vscode';
-export const EXTENSION_BASE_ID = 'sfdx-code-analyzer-vscode';
 export const CORE_EXTENSION_ID = 'salesforce.salesforcedx-vscode-core';
 export const EXTENSION_PACK_ID = 'salesforce.salesforcedx-vscode';
 
@@ -34,6 +34,7 @@ export const VSCODE_COMMAND_OPEN_URL = 'vscode.open';
 export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_complete';
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
+export const TELEM_FAILED_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_failed';
 export const TELEM_COPY_SUGGESTION_CLICKED = 'sfdx__codeanalyzer_copy_suggestion_clicked';
 
 // telemetry keys used by eGPT (A4D)
@@ -55,8 +56,8 @@ export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.
 export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
 
 // apex guru APIS
-export const APEX_GURU_AUTH_ENDPOINT = '/services/data/v62.0/apexguru/validate'
-export const APEX_GURU_REQUEST = '/services/data/v62.0/apexguru/request'
+export const APEX_GURU_VALIDATE_ENDPOINT = '/services/data/v62.0/apexguru/validate'
+export const APEX_GURU_REQUEST_ENDPOINT = '/services/data/v62.0/apexguru/request'
 export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
 export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
 
