@@ -24,6 +24,10 @@ export const messages = {
     apexGuru: {
         runningAnalysis: "Code Analyzer is running ApexGuru analysis.",
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`,
+        warnings: {
+            canOnlyScanOneFile: (file: string) => 
+                `ApexGuru can only scan one file at a time. Ignoring the other files in your multi-selection and only scanning the file: ${file}`
+        },
         errors: {
             unableToAnalyzeFile: 'ApexGuru was unable to analyze the file.',
             returnedUnexpectedResponse: (responseStr: string) => 
