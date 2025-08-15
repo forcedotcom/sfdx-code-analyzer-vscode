@@ -256,10 +256,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             await apexGuruService.isApexGuruAvailable();
     await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
 
-    // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
-    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
-        await apexGuruRunAction.run(Constants.COMMAND_RUN_APEX_GURU_ON_FILE,
-            multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection)); // TODO: We should somehow restrict multi-select here. We only use the first file right now
+    // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
+        if (multiSelect?.length > 1) {
+            display.displayWarning(messages.apexGuru.warnings.canOnlyScanOneFile(selection.fsPath));
+        }
+        await apexGuruRunAction.run(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, selection);
+    });
 
     // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {

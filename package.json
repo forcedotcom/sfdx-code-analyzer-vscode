@@ -214,7 +214,7 @@
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
         },
