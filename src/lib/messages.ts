@@ -26,7 +26,7 @@ export const messages = {
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`,
         warnings: {
             canOnlyScanOneFile: (file: string) => 
-                `ApexGuru can only scan one file at a time. Ignoring the other files in your multi-selection and only scanning the file: ${file}`
+                `ApexGuru can scan only one file at a time. Ignoring the other files in your multi-selection and scanning only this file: ${file}.`
         },
         errors: {
             unableToAnalyzeFile: 'ApexGuru was unable to analyze the file.',
