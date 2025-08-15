@@ -5,8 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 
-import * as Constants from '../constants';
-import {CodeLocation, Violation} from '../diagnostics';
+import {CodeLocation, Fix, Suggestion, Violation} from '../diagnostics';
 import {Logger} from "../logger";
 import {getErrorMessage, indent} from '../utils';
 import {HttpMethods, HttpRequest, OrgConnectionService} from '../external-services/org-connection-service';
@@ -14,6 +13,8 @@ import {FileHandler} from '../fs-utils';
 import { messages } from '../messages';
 
 export const APEX_GURU_ENGINE_NAME: string = 'apexguru';
+const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
+const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
 
 const RESPONSE_STATUS = {
     NEW: "new",
@@ -37,8 +38,8 @@ export class LiveApexGuruService implements ApexGuruService {
                 orgConnectionService: OrgConnectionService,
                 fileHandler: FileHandler,
                 logger: Logger,
-                maxTimeoutSeconds: number = Constants.APEX_GURU_MAX_TIMEOUT_SECONDS,
-                retryIntervalMillis: number = Constants.APEX_GURU_RETRY_INTERVAL_MILLIS) {
+                maxTimeoutSeconds: number = APEX_GURU_MAX_TIMEOUT_SECONDS,
+                retryIntervalMillis: number = APEX_GURU_RETRY_INTERVAL_MILLIS) {
         this.orgConnectionService = orgConnectionService;
         this.fileHandler = fileHandler;
         this.logger = logger;
@@ -50,7 +51,7 @@ export class LiveApexGuruService implements ApexGuruService {
         if (!this.orgConnectionService.isAuthed()) {
             return false;
         }
-        const response: ApexGuruResponse = await this.request('GET', Constants.APEX_GURU_VALIDATE_ENDPOINT);
+        const response: ApexGuruResponse = await this.request('GET', await this.getValidateEndpoint());
         return response.status === RESPONSE_STATUS.SUCCESS;
     }
 
@@ -59,16 +60,22 @@ export class LiveApexGuruService implements ApexGuruService {
         const requestId = await this.initiateRequest(fileContent);
         this.logger.debug(`Initialized ApexGuru Analysis with Request Id: ${requestId}`);
         const queryResponse: ApexGuruQueryResponse = await this.waitForResponse(requestId);
-        this.logger.debug(`ApexGuru Analysis completed for Request Id: ${requestId}`);
-        const reports: ApexGuruReport[] = toReportArray(queryResponse);
-        return reports.map(r => toViolation(r, absFileToScan));
+        const payloadStr: string = decodeFromBase64(queryResponse.report);
+        this.logger.debug(`ApexGuru Analysis completed for Request Id: ${requestId}\n\nDecoded Response Payload:\n${payloadStr}`);
+        const apexGuruViolations: ApexGuruViolation[] = parsePayload(payloadStr);
+        return apexGuruViolations.map(v => toViolation(v, absFileToScan));
     }
 
     private async initiateRequest(fileContent: string): Promise<string> {
-        const base64EncodedContent = Buffer.from(fileContent).toString('base64');
-        const response: ApexGuruInitialResponse = await this.request('POST', Constants.APEX_GURU_REQUEST_ENDPOINT,
-            JSON.stringify({classContent: base64EncodedContent}));
-        if (!response.requestId || response.status != RESPONSE_STATUS.NEW) {
+        const requestBody: ApexGuruRequestBody = {
+            classContent: encodeToBase64(fileContent)
+        };
+        const response: ApexGuruInitialResponse = await this.request('POST', await this.getRequestEndpoint(),
+            JSON.stringify(requestBody));
+        
+        if (response.status == RESPONSE_STATUS.FAILED) {
+            throw new Error(messages.apexGuru.errors.unableToAnalyzeFile(response.message ?? ''));
+        } else if (!response.requestId || response.status != RESPONSE_STATUS.NEW) {
             throw Error(messages.apexGuru.errors.returnedUnexpectedResponse(JSON.stringify(response, null, 2)));
         }
         return response.requestId;
@@ -81,11 +88,11 @@ export class LiveApexGuruService implements ApexGuruService {
             if (queryResponse) { // After the first attempt, we pause each time between requests
                 await new Promise(resolve => setTimeout(resolve, this.retryIntervalMillis));
             }
-            queryResponse = await this.request('GET', `${Constants.APEX_GURU_REQUEST_ENDPOINT}/${requestId}`);
+            queryResponse = await this.request('GET', await this.getRequestEndpoint(requestId));
             if (queryResponse.status === RESPONSE_STATUS.SUCCESS && queryResponse.report) {
                 return queryResponse;
-            } else if (queryResponse.status === RESPONSE_STATUS.FAILED) { // TODO: I would love a failure message - but the response's report just gives back the file content and nothing else.
-                throw new Error(messages.apexGuru.errors.unableToAnalyzeFile);
+            } else if (queryResponse.status === RESPONSE_STATUS.FAILED) {
+                throw new Error(messages.apexGuru.errors.unableToAnalyzeFile(queryResponse.message ?? ''));
             } else if (queryResponse.status === RESPONSE_STATUS.ERROR && queryResponse.message) {
                 throw new Error(messages.apexGuru.errors.returnedUnexpectedError(queryResponse.message));
             }
@@ -117,73 +124,73 @@ export class LiveApexGuruService implements ApexGuruService {
             this.logger.trace('Call to ApexGuru Service failed:' + getErrorMessage(err));
             return {
                 status: RESPONSE_STATUS.ERROR,
-                message: getErrorMessage(err)
+                message: getErrorMessage(err),
             } as T;
         }
     }
+
+    private async getValidateEndpoint(): Promise<string> {
+        const apiVersion: string = await this.orgConnectionService.getApiVersion();
+        return `/services/data/v${apiVersion}/apexguru/validate`;
+    }
+
+    private async getRequestEndpoint(requestId?: string): Promise<string> {
+        const apiVersion: string = await this.orgConnectionService.getApiVersion();
+        return `/services/data/v${apiVersion}/apexguru/request` + (requestId ? `/${requestId}` : '');
+    }
 }
 
 
-export function toReportArray(response: ApexGuruQueryResponse): ApexGuruReport[] {
-    // TODO: This will change soon enough - once we receive the actual response
-    const report: string = Buffer.from(response.report, 'base64').toString('utf-8');
+export function parsePayload(payloadStr: string): ApexGuruViolation[] {
     try {
-        return JSON.parse(report) as ApexGuruReport[];
+        return JSON.parse(payloadStr) as ApexGuruViolation[];
     } catch (err) {
-        throw new Error(`Unable to parse response from ApexGuru.\n\n` + 
-            `Error:\n${indent(getErrorMessage(err))}\n\nDecoded report:\n${indent(report)}`);
+        throw new Error(messages.apexGuru.errors.unableToParsePayload(indent(getErrorMessage(err))));
     }
 }
 
-function toViolation(parsed: ApexGuruReport, file: string): Violation {
-    // IMPORTANT: AS OF 08/13/2024 THIS ALL FAILS IN PRODUCTION BECAUSE THE NEW ApexGuru Service NOW HAS A NEW
-    //            RESPONSE. TODO: W-19053527
-    const encodedCodeAfter = parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'code_after')?.value
-        ?? parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'class_after')?.value
-        ?? '';
-    const suggestedCode: string = Buffer.from(encodedCodeAfter, 'base64').toString('utf8');
-
-    const lineNumber = parseInt(parsed.properties.find((prop: ApexGuruProperty) => prop.name === 'line_number')?.value);
-
-    const violationLocation: CodeLocation = {
-        file: file,
-        startLine: lineNumber,
-        startColumn: 1
-    };
-
-    const violation: Violation = {
-        rule: parsed.type,
+function toViolation(apexGuruViolation: ApexGuruViolation, file: string): Violation {
+    const codeAnalyzerViolation: Violation = {
+        rule: apexGuruViolation.rule,
         engine: APEX_GURU_ENGINE_NAME,
-        message: parsed.value,
-        severity: 1, // TODO: Should this really be critical level violation? This seems off.
-        locations: [violationLocation],
-        primaryLocationIndex: 0,
-        tags: [],
-        resources: [
-            'https://help.salesforce.com/s/articleView?id=sf.apexguru_antipatterns.htm&type=5'
-        ]
+        message: apexGuruViolation.message,
+        severity: apexGuruViolation.severity,
+        locations: apexGuruViolation.locations.map(l => addFile(l, file)),
+        primaryLocationIndex: apexGuruViolation.primaryLocationIndex,
+        tags: [], // Currently not used
+        resources: apexGuruViolation.resources ?? [],
+        suggestions: apexGuruViolation.suggestions?.map(s => {
+            s.location = addFile(s.location, file);
+            return s;
+        }),
+        fixes: apexGuruViolation.fixes?.map(f => {
+            f.location = addFile(f.location, file);
+            return f;
+        })
     };
-
-    // TODO: Soon we'll be receiving a different looking payload which will help us differentiate between fixes and suggestions.
-    //       For now, we are going to treat suggestedCode as a fix and a suggestion (as the current pilot code does)
-    if (suggestedCode.length > 0) {
-        violation.fixes = [
-            {
-                location: violationLocation,
-                fixedCode: `/*\n//ApexGuru Suggestions: \n${suggestedCode}\n*/`
-            }
-        ]
-        violation.suggestions = [
-            {
-                location: violationLocation,
-                // This message is temporary and will be improved as we get a better response back and unify the suggestions experience
-                message: suggestedCode
-            }
-        ]
-    }
-    return violation;
+    return codeAnalyzerViolation;
 }
 
+function addFile(apexGuruLocation: CodeLocation, filePath: string): CodeLocation {
+    return {
+        ...apexGuruLocation,
+        file: filePath
+    };
+}
+
+function encodeToBase64(value: string): string {
+    return Buffer.from(value).toString('base64');
+}
+
+function decodeFromBase64(value: string): string {
+    return Buffer.from(value, 'base64').toString('utf-8');
+}
+
+
+type ApexGuruRequestBody = {
+    // Must be base64 encoded
+    classContent: string
+}
 
 type ApexGuruResponse = {
     status: string;
@@ -195,17 +202,21 @@ type ApexGuruInitialResponse = ApexGuruResponse & {
 }
 
 type ApexGuruQueryResponse = ApexGuruResponse & {
+    // Is returned with base64 encoding
     report: string;
 }
 
-type ApexGuruProperty = {
-    name: string;
-    value: string;
-};
+type ApexGuruViolation = {
+    rule: string;
+    message: string;
 
-type ApexGuruReport = {
-    id: string;
-    type: string;
-    value: string;
-    properties: ApexGuruProperty[];
+    // Note that none of these location objects from ApexGuru will have a "file" field on it
+    locations: CodeLocation[];
+    primaryLocationIndex: number;
+    severity: number;
+    resources: string[];
+
+    // Note that each suggestion and fix location from ApexGuru will not have a "file" field on it
+    suggestions?: Suggestion[];
+    fixes?: Fix[];
 }

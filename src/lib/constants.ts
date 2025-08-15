@@ -55,12 +55,6 @@ export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
 export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0';
 export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
 
-// apex guru APIS
-export const APEX_GURU_VALIDATE_ENDPOINT = '/services/data/v62.0/apexguru/validate'
-export const APEX_GURU_REQUEST_ENDPOINT = '/services/data/v62.0/apexguru/request'
-export const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
-export const APEX_GURU_RETRY_INTERVAL_MILLIS = 1000;
-
 // Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
 export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
 export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';

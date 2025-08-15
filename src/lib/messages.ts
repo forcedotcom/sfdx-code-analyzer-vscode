@@ -29,7 +29,7 @@ export const messages = {
                 `ApexGuru can scan only one file at a time. Ignoring the other files in your multi-selection and scanning only this file: ${file}.`
         },
         errors: {
-            unableToAnalyzeFile: 'ApexGuru was unable to analyze the file.',
+            unableToAnalyzeFile: (reason: string) => `ApexGuru was unable to analyze the file. ${reason}`,
             returnedUnexpectedResponse: (responseStr: string) => 
                 `ApexGuru returned an unexpected response:\n${responseStr}`,
             returnedUnexpectedError: (errMsg: string) => `ApexGuru returned an unexpected error: ${errMsg}`,
@@ -37,7 +37,9 @@ export const messages = {
                 `Failed to get a successful response from ApexGuru after ${maxSeconds} seconds.\n` + 
                 `Last response:\n${lastResponse}`,
             expectedResponseToContainStatusField: (responseStr: string) => 
-                `ApexGuru returned a response without a 'status' field containing a string value. Instead received:\n${responseStr}`
+                `ApexGuru returned a response without a 'status' field containing a string value. Instead received:\n${responseStr}`,
+            unableToParsePayload: (errMsg: string) =>
+                `Unable to parse the payload from the response from ApexGuru. Error:\n${errMsg}`
         }
     },
     info: {

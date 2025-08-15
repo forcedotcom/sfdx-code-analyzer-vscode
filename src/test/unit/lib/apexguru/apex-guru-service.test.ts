@@ -1,10 +1,123 @@
-import * as Constants from "../../../../lib/constants";
 import { ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
 import { HttpRequest, OrgConnectionService } from "../../../../lib/external-services/org-connection-service";
 import * as stubs from "../../stubs";
 import { Violation } from "../../../../lib/diagnostics";
 
 describe("Tests for LiveApexGuruService", () => {
+    const sampleFile: string = '/some/file.cls';
+
+    const sampleApexGuruPayload = [
+        {
+            "rule": "SchemaGetGlobalDescribeNotEfficient",
+            "message": "Avoid using Schema.getGlobalDescribe() in Apex. This method causes unnecessary overhead, decreases performance, and increases the latency of the associated entry point.",
+            "locations": [
+                {
+                    "startLine": 4,
+                    "comment": "api_class.processAccountsAndContacts"
+                }
+            ],
+            "primaryLocationIndex": 0,
+            "resources": [
+                "https://help.salesforce.com/s/articleView?id=xcloud.apexguru_antipattern_schema_getglobaldescribe_not_efficient.htm&type=5"
+            ],
+            "severity": 2,
+            "fixes": [
+                {
+                    "location": {
+                        "startLine": 4,
+                        "startColumn": 8,
+                        "comment": "api_class.processAccountsAndContacts"
+                    },
+                    "fixedCode": "Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe();",
+                }
+            ]
+        },
+        {
+            "rule": "SoqlInALoop",
+            "message": "You're calling an expensive SOQL in a loop, which can cause performance issues. Optimize your SOQL to call once and reuse the return value.",
+            "locations": [
+                {
+                    "startLine": 7,
+                    "comment": "api_class.processAccountsAndContacts"
+                }
+            ],
+            "primaryLocationIndex": 0,
+            "resources": [
+                "https://help.salesforce.com/s/articleView?id=xcloud.apexguru_antipattern_soql_in_loop.htm&type=5"
+            ],
+            "severity": 3,
+            "suggestions": [
+                {
+                    "location": {
+                        "startLine": 7,
+                        "comment": "api_class.processAccountsAndContacts"
+                    },
+                    "message": "Sample suggestion message",
+                }
+            ]
+        }
+    ];
+
+    const expectedViolations: Violation[] = [
+        {
+            rule: "SchemaGetGlobalDescribeNotEfficient",
+            engine: "apexguru",
+            message: "Avoid using Schema.getGlobalDescribe() in Apex. This method causes unnecessary overhead, decreases performance, and increases the latency of the associated entry point.",
+            severity: 2,
+            locations: [
+                {
+                    file: sampleFile,
+                    startLine: 4,
+                    comment: "api_class.processAccountsAndContacts",
+                }
+            ],
+            primaryLocationIndex: 0,
+            tags: [],
+            resources: [
+                "https://help.salesforce.com/s/articleView?id=xcloud.apexguru_antipattern_schema_getglobaldescribe_not_efficient.htm&type=5"
+            ],
+            fixes: [
+                {
+                    location: {
+                        file: sampleFile,
+                        startLine: 4,
+                        startColumn: 8,
+                        comment: "api_class.processAccountsAndContacts",
+                    },
+                    fixedCode: "Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe();",
+                }
+            ]
+        },
+        {
+            rule: "SoqlInALoop",
+            engine: "apexguru",
+            message: "You're calling an expensive SOQL in a loop, which can cause performance issues. Optimize your SOQL to call once and reuse the return value.",
+            severity: 3,
+            locations: [
+                {
+                    file: sampleFile,
+                    startLine: 7,
+                    comment: "api_class.processAccountsAndContacts"
+                }
+            ],
+            primaryLocationIndex: 0,
+            tags: [],
+            resources: [
+                "https://help.salesforce.com/s/articleView?id=xcloud.apexguru_antipattern_soql_in_loop.htm&type=5"
+            ],
+            suggestions: [
+                {
+                    location: {
+                        file: sampleFile,
+                        startLine: 7,
+                        comment: "api_class.processAccountsAndContacts",
+                    },
+                    message: "Sample suggestion message",
+                }
+            ]
+        }
+    ];
+
     let orgConnectionService: StubOrgConnectionServiceForApexGuru;
     let fileHandler: stubs.StubFileHandler;
     let logger: stubs.SpyLogger;
@@ -43,19 +156,29 @@ describe("Tests for LiveApexGuruService", () => {
             expect(orgConnectionService.requestCallHistory).toHaveLength(1);
             expect(orgConnectionService.requestCallHistory[0].requestOptions).toEqual({
                 method: "GET",
-                url: "/services/data/v62.0/apexguru/validate"
+                url: "/services/data/v64.0/apexguru/validate"
             });
         });
     });
 
     describe("Tests for scan", () => {
-        it('When initial ApexGuru request does not respond with new status, then error', async () => {
+        it('When ApexGuru responds to initial with failed status, then error', async () => {
             orgConnectionService.requestReturnValueForInitialRequest = {
                 status: "failed",
+                message: "Some Failure Message"
+            }
+            
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
+                'ApexGuru was unable to analyze the file. Some Failure Message');
+        });
+
+        it('When ApexGuru responds to initial without a new or failed status, then error', async () => {
+            orgConnectionService.requestReturnValueForInitialRequest = {
+                status: "other",
                 requestId: "someRequestId"
             }
             
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 'ApexGuru returned an unexpected response:\n'
                     + JSON.stringify(orgConnectionService.requestReturnValueForInitialRequest, null, 2));
         });
@@ -65,21 +188,20 @@ describe("Tests for LiveApexGuruService", () => {
                 status: "success",
             }
             
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 'ApexGuru returned an unexpected response:\n'
                     + JSON.stringify(orgConnectionService.requestReturnValueForInitialRequest, null, 2));
         });
 
         it('When ApexGuru polling request responds on first attempt with success, then violations are returned', async () => {
+
             orgConnectionService.requestReturnValuesForPollingRequests = [
-                {status: "succeSs", report: Buffer.from("[]").toString('base64')}
+                {status: "succeSs", report: Buffer.from(JSON.stringify(sampleApexGuruPayload)).toString('base64')}
             ];
 
-            const violations: Violation[] = await apexGuruService.scan('/some/file.cls');
+            const violations: Violation[] = await apexGuruService.scan(sampleFile);
 
-            // TODO: Currently we are waiting on the new response schema before we finish implementing this unit test
-            // and at that time we should modify this test to return a few violations
-            expect(violations).toEqual([]);
+            expect(violations).toEqual(expectedViolations);
         });
 
         it('When ApexGuru polling request fails on first attempt, then throw error', async () => {
@@ -87,7 +209,7 @@ describe("Tests for LiveApexGuruService", () => {
                 {status: "failed", report: 'notUsed' }
             ];
 
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 'ApexGuru was unable to analyze the file.');
         });
 
@@ -97,23 +219,37 @@ describe("Tests for LiveApexGuruService", () => {
                 {status: "error", report: 'notUsed', message: 'Some error message here'},
             ];
 
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 'ApexGuru returned an unexpected error: Some error message here');
 
             // Sanity check:
             expect(orgConnectionService.requestCallHistory).toHaveLength(3); // Initial request + 2 polling attempts
         });
 
-        it('When ApexGuru polling request succeeds on third attempt, then violations are returned', async () => {
+        it('When ApexGuru polling request succeeds on third attempt with violations, then violations are returned', async () => {
+            orgConnectionService.requestReturnValuesForPollingRequests = [
+                {status: "new", report: 'notUsed'},
+                {status: "new", report: 'notUsed'},
+                {status: "success", report: Buffer.from(JSON.stringify(sampleApexGuruPayload)).toString('base64')},
+            ];
+
+            const violations: Violation[] = await apexGuruService.scan(sampleFile);
+
+            expect(violations).toEqual(expectedViolations);
+
+            // Sanity check:
+            expect(orgConnectionService.requestCallHistory).toHaveLength(4); // Initial request + 3 polling attempts
+        });
+
+        it('When ApexGuru polling request succeeds on third attempt with zero violations, then zero violations are returned', async () => {
             orgConnectionService.requestReturnValuesForPollingRequests = [
                 {status: "new", report: 'notUsed'},
                 {status: "new", report: 'notUsed'},
                 {status: "success", report: Buffer.from("[]").toString('base64')},
             ];
 
-            const violations: Violation[] = await apexGuruService.scan('/some/file.cls');
+            const violations: Violation[] = await apexGuruService.scan(sampleFile);
 
-            // TODO: Currently we are waiting on the new response schema before we finish implementing this unit test
             expect(violations).toEqual([]);
 
             // Sanity check:
@@ -133,7 +269,7 @@ describe("Tests for LiveApexGuruService", () => {
             apexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
 
             
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 'Failed to get a successful response from ApexGuru after 0.1 seconds.');
         });
 
@@ -142,7 +278,7 @@ describe("Tests for LiveApexGuruService", () => {
                 {oops: 3},
             ];
 
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 `ApexGuru returned an unexpected error: ApexGuru returned a response without a 'status' field containing a string value.`);
         });
 
@@ -151,7 +287,7 @@ describe("Tests for LiveApexGuruService", () => {
                 {status: 1},
             ];
 
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
                 `ApexGuru returned an unexpected error: ApexGuru returned a response without a 'status' field containing a string value.`);
         });
 
@@ -160,8 +296,8 @@ describe("Tests for LiveApexGuruService", () => {
                 {status: "success", report: Buffer.from("[oops").toString('base64')}
             ];
 
-            await expect(apexGuruService.scan('/some/file.cls')).rejects.toThrow(
-                `Unable to parse response from ApexGuru.\n\nError:`);
+            await expect(apexGuruService.scan(sampleFile)).rejects.toThrow(
+                `Unable to parse the payload from the response from ApexGuru. Error:\n    Unexpected token`);
         });
     });
 });
@@ -178,19 +314,23 @@ export class StubOrgConnectionServiceForApexGuru implements OrgConnectionService
         this.onOrgChangeCallHistory.push({callback});
     }
 
+    getApiVersion(): Promise<string> {
+        return Promise.resolve('64.0');
+    }
+
     requestReturnValueForAuthValidation: unknown = {status: "success"};
     requestReturnValueForInitialRequest: unknown = {status: "new", requestId: "someRequestId"};
     requestReturnValuesForPollingRequests: unknown[] = [];
     requestCallHistory: {requestOptions: HttpRequest}[] = [];
     request<T>(requestOptions: HttpRequest): Promise<T> {
         this.requestCallHistory.push({requestOptions});
-        if (requestOptions.url === Constants.APEX_GURU_VALIDATE_ENDPOINT) {
+        if (requestOptions.url.endsWith('/apexguru/validate')) {
             return Promise.resolve(this.requestReturnValueForAuthValidation as T);
-        } else if (requestOptions.url === Constants.APEX_GURU_REQUEST_ENDPOINT && requestOptions.method === 'POST') {
+        } else if (requestOptions.url.endsWith('/apexguru/request') && requestOptions.method === 'POST') {
             return Promise.resolve(this.requestReturnValueForInitialRequest as T);
-        } else if (requestOptions.url.startsWith(Constants.APEX_GURU_REQUEST_ENDPOINT) && requestOptions.method === 'GET') {
+        } else if (requestOptions.url.includes('/apexguru/request/') && requestOptions.method === 'GET') {
             return Promise.resolve((this.requestReturnValuesForPollingRequests as T[]).shift());
         }
-        return undefined;
+        throw new Error(`Unhandled request: ${JSON.stringify(requestOptions)}`);
     }
 }

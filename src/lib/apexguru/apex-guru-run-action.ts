@@ -55,9 +55,9 @@ export class ApexGuruRunAction {
                 this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
                     executedCommand: commandName,
                     duration: (Date.now() - startTime).toString(),
-                    violationCount: violations.length.toString(),
-                    // TODO: This telemetry might change in the near future so that we can track the number of suggestions and fixes
-                    violationsWithSuggestedCodeCount: violations.filter(v => v.suggestions?.length > 0).length.toString()
+                    numViolations: violations.length.toString(),
+                    numViolationsWithSuggestions: violations.filter(v => v.suggestions?.length > 0).length.toString(),
+                    numViolationsWithFixes: violations.filter(v => v.fixes?.length > 0).length.toString()
                 });
             } catch (err) {
                 this.display.displayError(messages.error.analysisFailedGenerator(getErrorMessage(err)));

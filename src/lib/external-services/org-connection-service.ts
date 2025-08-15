@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 
 export interface OrgConnectionService {
     isAuthed(): boolean;
+    getApiVersion(): Promise<string>;
     onOrgChange(callback: () => void): void;
     request<T>(requestOptions: HttpRequest): Promise<T>;
 }
@@ -15,9 +16,15 @@ export class NoOpOrgConnectionService implements OrgConnectionService {
     isAuthed(): boolean {
         return false;
     }
+
+    getApiVersion(): Promise<string> {
+        throw new Error(`Cannot get the api verison because no org is authed.`);
+    }
+
     onOrgChange(_callback: () => void): void {
         // No-op
     }
+
     request<T>(requestOptions: HttpRequest): Promise<T> {
         throw new Error(`Cannot make the following request because no org is authed:\n${JSON.stringify(requestOptions, null, 2)}`);
     }
@@ -33,6 +40,15 @@ export class LiveOrgConnectionService implements OrgConnectionService {
     isAuthed(): boolean {
         return this.workpaceContext.orgId?.length > 0;
     }
+
+    async getApiVersion(): Promise<string> {
+        if (!this.isAuthed()) {
+            throw new Error(`Cannot get the api verison because no org is authed.`);
+        }
+        const connection: Connection = await this.workpaceContext.getConnection();
+        return connection.getApiVersion();
+    }
+
 
     onOrgChange(callback: (event: OrgUserInfo) => void): void {
         this.workpaceContext.onOrgChange(callback);
