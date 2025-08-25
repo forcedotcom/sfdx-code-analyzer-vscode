@@ -65,15 +65,16 @@ export const A4D_SUPPORTED_RULES: Map<string, ViolationContextScope> = new Map([
     // ==== Rules from rule selector: 'pmd:ErrorProne:Apex'
     // =======================================================================
     ['AvoidDirectAccessTriggerMap', ViolationContextScope.MethodScope],
+    ['AvoidStatefulDatabaseResult', ViolationContextScope.ClassScope],
     ['InaccessibleAuraEnabledGetter', ViolationContextScope.MethodScope],
     ['MethodWithSameNameAsEnclosingClass', ViolationContextScope.MethodScope],
     ['OverrideBothEqualsAndHashcode', ViolationContextScope.ViolationScope],
     ['TestMethodsMustBeInTestClasses', ViolationContextScope.ClassScope],
+    ['TypeShadowsBuiltInNamespace', ViolationContextScope.ViolationScope],
     // NOTE: We have decided that the following `ErrorProne` rules either do not get any value from A4D Quick Fix
     // suggestions or that the model currently gives back poor suggestions:
     //   AvoidHardcodingId, AvoidNonExistentAnnotations, EmptyCatchBlock, EmptyIfStmt, EmptyStatementBlock,
     //   EmptyTryOrFinallyBlock, EmptyWhileStmt
-    // NOTE: New rules like AvoidStatefulDatabaseResult and TypeShadowsBuiltInNamespace have yet to be evaluated.
 
 
     // =======================================================================
@@ -83,7 +84,7 @@ export const A4D_SUPPORTED_RULES: Map<string, ViolationContextScope> = new Map([
 
 
     // =======================================================================
-    // ==== Rules from rule selector: 'pmd:Security:Apex'
+    // ==== Rules from rule selector: 'pmd:Security:Apex'  (except AppExchange rules)
     // =======================================================================
     ['ApexBadCrypto', ViolationContextScope.MethodScope],
     ['ApexCRUDViolation', ViolationContextScope.MethodScope],
@@ -94,9 +95,30 @@ export const A4D_SUPPORTED_RULES: Map<string, ViolationContextScope> = new Map([
     ['ApexSOQLInjection', ViolationContextScope.MethodScope],
     ['ApexSuggestUsingNamedCred', ViolationContextScope.MethodScope],
     ['ApexXSSFromEscapeFalse', ViolationContextScope.MethodScope],
-    ['ApexXSSFromURLParam', ViolationContextScope.ViolationScope]
+    ['ApexXSSFromURLParam', ViolationContextScope.ViolationScope],
     // NOTE: We have decided that the following `Security` rule(s) either do not get any value from A4D Quick Fix
     // suggestions or that the model currently gives back poor suggestions:
     //   ApexOpenRedirect
-    // NOTE: AppExchange rules have not been evaluated.
+
+    // =======================================================================
+    // ==== Rules from rule selector: 'pmd:Performance:Apex'
+    // =======================================================================
+    ['EagerlyLoadedDescribeSObjectResult', ViolationContextScope.ViolationScope],
+    ['OperationWithHighCostInLoop', ViolationContextScope.MethodScope],
+    ['OperationWithLimitsInLoop', ViolationContextScope.MethodScope],
+    // NOTE: We have decided that the following `Performance` rule(s) either do not get any value from A4D Quick Fix
+    // suggestions or that the model currently gives back poor suggestions:
+    //   AvoidDebugStatements, AvoidNonRestrictiveQueries
+
+    // =======================================================================
+    // ==== Rules from rule selector: 'pmd:AppExchange:Apex'
+    // =======================================================================
+    ['AvoidGlobalInstallUninstallHandlers', ViolationContextScope.ClassScope]
+    // NOTE: We have decided that the following `AppExchange` rule(s) either do not get any value from A4D Quick Fix
+    // suggestions or that the model currently gives back poor suggestions:
+    //   AvoidChangeProtectionUnprotected, AvoidGetInstanceWithTaint, AvoidHardcodedCredentialsInFieldDecls,
+    //   AvoidHardcodedCredentialsInHttpHeader, AvoidHardcodedCredentialsInSetPassword,
+    //   AvoidHardcodedCredentialsInVarAssign, AvoidHardcodedCredentialsInVarDecls, AvoidInvalidCrudContentDistribution,
+    //   AvoidSecurityEnforcedOldApiVersion, AvoidUnauthorizedApiSessionIdInApex, AvoidUnauthorizedGetSessionIdInApex,
+    //   AvoidUnsafePasswordManagementUse
 ]);
