@@ -116,7 +116,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             const classEdits: vscode.TextEdit[] = codeActions[1].edit.get(sampleApexUri);
             expect(classEdits).toHaveLength(1);
             expect(classEdits[0].range).toEqual(new vscode.Range(0, 0, 0, 40));
-            expect(classEdits[0].newText).toEqual("@SuppressWarnings('PMD.EmptyCatchBlock, PMD.ApexDoc')");
+            expect(classEdits[0].newText).toEqual("@SuppressWarnings('PMD.EmptyCatchBlock,PMD.ApexDoc')");
             expect(codeActions[1].command.command).toEqual("sfca.removeDiagnosticsOnSelectedFile"); // TODO: This is wrong. It should only clear the PMD diagnostics within the class instead of all diagnostics within the file
         });
 

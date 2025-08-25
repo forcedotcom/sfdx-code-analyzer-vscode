@@ -90,7 +90,7 @@ function generateClassLevelSuppression(document: vscode.TextDocument, diag: Code
         const existingSuppressionTags = suppressionMatch[1].split(',').map(rule => rule.trim());
         if (!existingSuppressionTags.includes(suppressionTag)) {
             // If the rule is not present, add it to the existing @SuppressWarnings
-            const updatedSuppressionTagsList = [...existingSuppressionTags, suppressionTag].join(', ');
+            const updatedSuppressionTagsList = [...existingSuppressionTags, suppressionTag].join(',');
             const updatedSuppression = `@SuppressWarnings('${updatedSuppressionTagsList}')`;
             const suppressionStartPosition = document.positionAt(classText.indexOf(suppressionMatch[0]));
             const suppressionEndPosition = document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
