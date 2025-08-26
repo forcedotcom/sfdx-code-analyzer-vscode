@@ -53,7 +53,7 @@ export class StubTelemetryService implements TelemetryService {
 
     private exceptionCalls: TelemetryExceptionData[] = [];
 
-    public sendExtensionActivationEvent(_hrStart: [number, number]): void {
+    public sendExtensionActivationEvent(_hrStart: number): void {
         // NO-OP
     }
 
@@ -91,12 +91,20 @@ export class StubDiagnosticManager implements DiagnosticManager {
         // NO-OP
     }
 
+    clearDiagnostics(_diags: CodeAnalyzerDiagnostic[]): void {
+        // NO-OP
+    }
+
     clearDiagnosticsInRange(_uri: vscode.Uri, _range: vscode.Range): void {
         // NO-OP
     }
 
     clearDiagnosticsForFiles(_uris: vscode.Uri[]): void {
         // NO-OP
+    }
+
+    getDiagnosticsForFile(_uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[] {
+        return []; // NO-OP
     }
 
     handleTextDocumentChangeEvent(_event: vscode.TextDocumentChangeEvent): void {

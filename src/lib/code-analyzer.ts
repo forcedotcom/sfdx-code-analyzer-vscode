@@ -1,33 +1,53 @@
 import {Violation} from "./diagnostics";
-import {CliScannerV4Strategy} from "./scanner-strategies/v4-scanner";
-import {CliScannerV5Strategy} from "./scanner-strategies/v5-scanner";
 import {SettingsManager} from "./settings";
 import {Display} from "./display";
 import {messages} from './messages';
-import {CliCommandExecutor} from "./cli-commands";
+import {CliCommandExecutor, CommandOutput} from "./cli-commands";
 import * as semver from 'semver';
 import {
     ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
     RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
 } from "./constants";
-import {CliScannerStrategy} from "./scanner-strategies/scanner-strategy";
 import {FileHandler, FileHandlerImpl} from "./fs-utils";
 import {Workspace} from "./workspace";
+import * as vscode from "vscode";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
-export interface CodeAnalyzer extends CliScannerStrategy {
+type ResultsJson = {
+    runDir: string;
+    violations: Violation[];
+};
+
+type RulesJson = {
+    rules: RuleDescription[];
+}
+
+type RuleDescription = {
+    name: string,
+    description: string,
+    engine: string,
+    severity: number,
+    tags: string[],
+    resources: string[]
+}
+
+export interface CodeAnalyzer {
     validateEnvironment(): Promise<void>;
+    scan(workspace: Workspace): Promise<Violation[]>;
+    getVersion(): Promise<string>;
+    getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string>;
 }
 
 export class CodeAnalyzerImpl implements CodeAnalyzer {
     private readonly cliCommandExecutor: CliCommandExecutor;
     private readonly settingsManager: SettingsManager;
     private readonly display: Display;
-    private readonly fileHandler: FileHandler
+    private readonly fileHandler: FileHandler;
 
     private cliIsInstalled: boolean = false;
-
-    private codeAnalyzerV4?: CliScannerV4Strategy;
-    private codeAnalyzerV5?: CliScannerV5Strategy;
+    private version?: semver.SemVer;
+    private ruleDescriptionMap?: Map<string, string>;
 
     constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
                 fileHandler: FileHandler = new FileHandlerImpl()) {
@@ -44,32 +64,11 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             }
             this.cliIsInstalled = true;
         }
-        if (this.settingsManager.getCodeAnalyzerUseV4Deprecated()) {
-            await this.validateV4Plugin();
-        } else {
-            await this.validateV5Plugin();
-        }
+        await this.validatePlugin();
     }
 
-    private async getDelegate(): Promise<CliScannerStrategy> {
-        await this.validateEnvironment();
-        return this.settingsManager.getCodeAnalyzerUseV4Deprecated() ? this.codeAnalyzerV4 : this.codeAnalyzerV5;
-    }
-
-    private async validateV4Plugin(): Promise<void> {
-        if (this.codeAnalyzerV4 !== undefined) {
-            return; // Already validated
-        }
-        // Even though v4 is a JIT plugin... in the future it might not be. So we validate for future proofing.
-        const installedVersion: semver.SemVer | undefined = await this.cliCommandExecutor.getSfCliPluginVersion('@salesforce/sfdx-scanner');
-        if (!installedVersion) {
-            throw new Error(messages.error.sfdxScannerMissing);
-        }
-        this.codeAnalyzerV4 = new CliScannerV4Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.fileHandler);
-    }
-
-    private async validateV5Plugin(): Promise<void> {
-        if (this.codeAnalyzerV5 !== undefined) {
+    private async validatePlugin(): Promise<void> {
+        if (this.version !== undefined) {
             return; // Already validated
         }
         const absMinVersion: semver.SemVer = new semver.SemVer(ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION);
@@ -85,18 +84,94 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             this.display.displayWarning(messages.codeAnalyzer.usingOlderVersion(installedVersion.toString(), recommendedMinVersion.toString()) + '\n'
                 + messages.codeAnalyzer.installLatestVersion);
         }
-        this.codeAnalyzerV5 = new CliScannerV5Strategy(installedVersion, this.cliCommandExecutor, this.settingsManager, this.fileHandler);
+        this.version = installedVersion;
     }
 
-    async scan(workspace: Workspace): Promise<Violation[]> {
-        return (await this.getDelegate()).scan(workspace);
+    public async getVersion(): Promise<string> {
+        await this.validateEnvironment();
+        return this.version?.toString() || 'unknown';
     }
 
-    async getScannerName(): Promise<string> {
-        return (await this.getDelegate()).getScannerName();
+    public async getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string> {
+        await this.validateEnvironment();
+        return (await this.getRuleDescriptionMap()).get(`${engineName}:${ruleName}`) || '';
     }
 
-    async getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string> {
-        return (await this.getDelegate()).getRuleDescriptionFor(engineName, ruleName);
+    private async getRuleDescriptionMap(): Promise<Map<string, string>> {
+        if (this.ruleDescriptionMap === undefined) {
+            if (this.version && semver.gte(this.version, '5.0.0-beta.3')) {
+                this.ruleDescriptionMap = await this.createRuleDescriptionMap();
+            } else {
+                this.ruleDescriptionMap = new Map();
+            }
+        }
+        return this.ruleDescriptionMap;
+    }
+
+    public async scan(workspace: Workspace): Promise<Violation[]> {
+        await this.validateEnvironment();
+        
+        const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
+        const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
+
+        const args: string[] = ['code-analyzer', 'run'];
+
+        if (this.version && semver.gte(this.version, '5.0.0')) {
+            workspace.getRawWorkspacePaths().forEach(p => args.push('-w', p));
+            workspace.getRawTargetPaths().forEach(p => args.push('-t', p));
+        } else {
+            // Before 5.0.0 the --target flag did not exist, so we just make the workspace equal to the target paths
+            workspace.getRawTargetPaths().forEach(p => args.push('-w', p));
+        }
+
+        if (ruleSelector) {
+            args.push('-r', ruleSelector);
+        }
+        if (configFile) {
+            args.push('-c', configFile);
+        }
+
+        const outputFile: string = await this.fileHandler.createTempFile('.json');
+        args.push('-f', outputFile);
+
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', args, {logLevel: vscode.LogLevel.Debug});
+        if (commandOutput.exitCode !== 0) {
+            throw new Error(commandOutput.stderr);
+        }
+
+        const resultsJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+        const resultsJson: ResultsJson = JSON.parse(resultsJsonStr) as ResultsJson;
+        return this.processResults(resultsJson);
+    }
+
+    private processResults(resultsJson: ResultsJson): Violation[] {
+        const processedViolations: Violation[] = [];
+        for (const violation of resultsJson.violations) {
+            for (const location of violation.locations) {
+                // If the path isn't already absolute, it needs to be made absolute.
+                if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+                    // Relative paths are relative to the RunDir results property.
+                    location.file = path.join(resultsJson.runDir, location.file);
+                }
+            }
+            processedViolations.push(violation);
+        }
+        return processedViolations;
+    }
+
+    private async createRuleDescriptionMap(): Promise<Map<string, string>> {
+        const outputFile: string = await this.fileHandler.createTempFile('.json');
+        const commandOutput: CommandOutput = await this.cliCommandExecutor.exec('sf', ['code-analyzer', 'rules', '-r', 'all', '-f', outputFile]);
+        if (commandOutput.exitCode !== 0) {
+            throw new Error(commandOutput.stderr);
+        }
+        const rulesJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
+        const rulesOutput: RulesJson = JSON.parse(rulesJsonStr) as RulesJson;
+
+        const ruleDescriptionMap: Map<string, string> = new Map();
+        for (const ruleDescription of rulesOutput.rules) {
+            ruleDescriptionMap.set(`${ruleDescription.engine}:${ruleDescription.name}`, ruleDescription.description);
+        }
+        return ruleDescriptionMap;
     }
 }

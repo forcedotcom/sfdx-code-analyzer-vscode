@@ -3,11 +3,10 @@ import * as vscode from "vscode";// The vscode module is mocked out. See: script
 import {TelemetryService} from "../../lib/external-services/telemetry-service";
 import {Logger} from "../../lib/logger";
 import {LLMService, LLMServiceProvider} from "../../lib/external-services/llm-service";
-import {CodeAnalyzerDiagnostic, Violation} from "../../lib/diagnostics";
+import {Violation} from "../../lib/diagnostics";
 import {Display, DisplayButton} from "../../lib/display";
 import {UnifiedDiffService} from "../../lib/unified-diff-service";
 import {TextDocument} from "vscode";
-import {FixSuggester, FixSuggestion} from "../../lib/fix-suggestion";
 import {SettingsManager} from "../../lib/settings";
 import {CodeAnalyzer} from "../../lib/code-analyzer";
 import {ProgressEvent, ProgressReporter, TaskWithProgress, TaskWithProgressRunner} from "../../lib/progress";
@@ -16,12 +15,13 @@ import * as semver from "semver";
 import {FileHandler} from "../../lib/fs-utils";
 import {VscodeWorkspace, WindowManager} from "../../lib/vscode-api";
 import {Workspace} from "../../lib/workspace";
+import { ApexGuruService } from "../../lib/apexguru/apex-guru-service";
 
 
 export class SpyTelemetryService implements TelemetryService {
-    sendExtensionActivationEventCallHistory: { hrStart: [number, number] }[] = [];
+    sendExtensionActivationEventCallHistory: { hrStart: number }[] = [];
 
-    sendExtensionActivationEvent(hrStart: [number, number]): void {
+    sendExtensionActivationEvent(hrStart: number): void {
         this.sendExtensionActivationEventCallHistory.push({hrStart});
     }
 
@@ -154,7 +154,7 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
 
     getScannerNameReturnValue: string = 'dummyScannerName';
 
-    getScannerName(): Promise<string> {
+    getVersion(): Promise<string> {
         return Promise.resolve(this.getScannerNameReturnValue);
     }
 
@@ -174,7 +174,7 @@ export class ThrowingCodeAnalyzer implements CodeAnalyzer {
         throw new Error("Error from scan");
     }
 
-    getScannerName(): Promise<string> {
+    getVersion(): Promise<string> {
         return Promise.resolve('someScannerName');
     }
 
@@ -232,23 +232,6 @@ export class ThrowingUnifiedDiffService implements UnifiedDiffService {
 }
 
 
-export class SpyFixSuggester implements FixSuggester {
-    suggestFixReturnValue: FixSuggestion | null = null;
-    suggestFixCallHistory: { document: TextDocument, diagnostic: CodeAnalyzerDiagnostic }[] = [];
-
-    suggestFix(document: TextDocument, diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
-        this.suggestFixCallHistory.push({document, diagnostic});
-        return Promise.resolve(this.suggestFixReturnValue);
-    }
-}
-
-export class ThrowingFixSuggester implements FixSuggester {
-    suggestFix(_document: TextDocument, _diagnostic: CodeAnalyzerDiagnostic): Promise<FixSuggestion | null> {
-        throw new Error('Error thrown from: suggestFix');
-    }
-}
-
-
 export class StubSettingsManager implements SettingsManager {
 
     // =================================================================================================================
@@ -272,18 +255,8 @@ export class StubSettingsManager implements SettingsManager {
         return this.getApexGuruEnabledReturnValue;
     }
 
-    getCodeAnalyzerUseV4DeprecatedReturnValue: boolean = false;
-
-    getCodeAnalyzerUseV4Deprecated(): boolean {
-        return this.getCodeAnalyzerUseV4DeprecatedReturnValue;
-    }
-
-    setCodeAnalyzerUseV4Deprecated(value: boolean): void {
-        this.getCodeAnalyzerUseV4DeprecatedReturnValue = value;
-    }
-
     // =================================================================================================================
-    // ==== v5 Settings
+    // ==== Configuration Settings
     // =================================================================================================================
     getCodeAnalyzerConfigFileReturnValue: string = '';
 
@@ -295,45 +268,6 @@ export class StubSettingsManager implements SettingsManager {
 
     getCodeAnalyzerRuleSelectors(): string {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
-    }
-
-    // =================================================================================================================
-    // ==== v4 Settings (Deprecated)
-    // =================================================================================================================
-    getPmdCustomConfigFile(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEngineDisableWarningViolations(): boolean {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEngineThreadTimeout(): number {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEnginePathExpansionLimit(): number {
-        throw new Error("Method not implemented.");
-    }
-
-    getGraphEngineJvmArgs(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getEnginesToRun(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getNormalizeSeverityEnabled(): boolean {
-        throw new Error("Method not implemented.");
-    }
-
-    getRulesCategory(): string {
-        throw new Error("Method not implemented.");
-    }
-
-    getSfgePartialSfgeRunsEnabled(): boolean {
-        throw new Error("Method not implemented.");
     }
 
     // =================================================================================================================
@@ -410,6 +344,11 @@ export class StubFileHandler implements FileHandler {
     createTempFile(_ext?: string): Promise<string> {
         return Promise.resolve(this.createTempFileReturnValue);
     }
+
+    readFileReturnValue: string = '';
+    readFile(_file: string): Promise<string> {
+        return Promise.resolve(this.readFileReturnValue);
+    }
 }
 
 export class SpyWindowManager implements WindowManager {
@@ -421,6 +360,27 @@ export class SpyWindowManager implements WindowManager {
     showExternalUrlCallHistory: {url:string}[] = [];
     showExternalUrl(url: string): void {
         this.showExternalUrlCallHistory.push({url});
+    }
+}
+
+export class StubApexGuruService implements ApexGuruService {
+    isApexGuruAvailableReturnValue: boolean = true;
+    isApexGuruAvailable(): Promise<boolean> {
+        return Promise.resolve(this.isApexGuruAvailableReturnValue);
+    }
+
+    scanReturnValue: Violation[] = [];
+    scan(_absFileToScan: string): Promise<Violation[]> {
+        return Promise.resolve(this.scanReturnValue);
+    }
+}
+
+export class ThrowingApexGuruService implements ApexGuruService {
+    isApexGuruAvailable(): Promise<boolean> {
+        throw new Error("Sample error message from isApexGuruAvailable method");
+    }
+    scan(_absFileToScan: string): Promise<Violation[]> {
+        throw new Error("Sample error message from scan method");
     }
 
 }

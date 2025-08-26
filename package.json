@@ -5,7 +5,7 @@
     "o11yUploadEndpoint": "https://794testsite.my.site.com/byolwr/webruntime/log/metrics",
     "enableO11y": "true",
     "bugs": {
-        "url": "https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
+        "url": "https://github.com/forcedotcom/code-analyzer/issues"
     },
     "repository": {
         "url": "https://github.com/forcedotcom/sfdx-code-analyzer-vscode"
@@ -15,7 +15,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "1.9.0",
+    "version": "1.10.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
@@ -33,17 +33,17 @@
         "SFCA"
     ],
     "dependencies": {
-        "@salesforce/vscode-service-provider": "^1.4.0",
+        "@salesforce/vscode-service-provider": "^1.5.0",
         "@types/jest": "^30.0.0",
         "@types/semver": "^7.7.0",
         "@types/tmp": "^0.2.6",
         "diff": "^5.2.0",
         "glob": "^11.0.3",
         "semver": "^7.7.2",
-        "tmp": "^0.2.3"
+        "tmp": "^0.2.4"
     },
     "devDependencies": {
-        "@eslint/js": "^9.31.0",
+        "@eslint/js": "^9.32.0",
         "@types/diff": "^5.2.3",
         "@types/chai": "^4.3.20",
         "@types/mocha": "^10.0.10",
@@ -54,19 +54,19 @@
         "@vscode/test-electron": "^2.5.2",
         "@vscode/vsce": "^3.6.0",
         "chai": "^4.5.0",
-        "esbuild": "^0.25.6",
-        "eslint": "^9.31.0",
-        "jest": "^30.0.4",
-        "jest-mock-vscode": "^4.5.0",
+        "esbuild": "^0.25.8",
+        "eslint": "^9.32.0",
+        "jest": "^30.0.5",
+        "jest-mock-vscode": "^4.6.0",
         "mocha": "^10.8.2",
         "ovsx": "^0.10.5",
         "proxyquire": "^2.1.3",
         "rimraf": "*",
         "sinon": "^15.2.0",
-        "ts-jest": "^29.4.0",
+        "ts-jest": "^29.4.1",
         "ts-node": "^10.9.2",
-        "typescript": "^5.8.3",
-        "typescript-eslint": "^8.37.0"
+        "typescript": "^5.9.2",
+        "typescript-eslint": "^8.39.0"
     },
     "extensionDependencies": [
         "salesforce.salesforcedx-vscode-core"
@@ -109,20 +109,12 @@
                 "title": "SFDX: Scan Selected Files or Folders with Code Analyzer"
             },
             {
-                "command": "sfca.runDfaOnSelectedMethod",
-                "title": "SFDX: Scan Selected Method with Graph Engine Path-Based Analysis"
-            },
-            {
                 "command": "sfca.removeDiagnosticsOnActiveFile",
                 "title": "SFDX: Clear Code Analyzer Violations from Current File"
             },
             {
                 "command": "sfca.removeDiagnosticsOnSelectedFile",
                 "title": "SFDX: Clear Code Analyzer Violations from Selected Files or Folders"
-            },
-            {
-                "command": "sfca.runDfa",
-                "title": "SFDX: Scan Project with Graph Engine Path-Based Analysis"
             },
             {
                 "command": "sfca.runApexGuruAnalysisOnSelectedFile",
@@ -151,16 +143,11 @@
                         "type": "boolean",
                         "default": false,
                         "description": "(Pilot) Discover critical problems and performance issues in your Apex code with ApexGuru, which analyzes your Apex files for you. This feature is in a closed pilot; contact your account representative to learn more."
-                    },
-                    "codeAnalyzer.Use v4 (Deprecated)": {
-                        "type": "boolean",
-                        "default": false,
-                        "markdownDescription": "Use Code Analyzer v4 (Deprecated) instead of Code Analyzer v5.\n\nWe no longer support Code Analyzer v4 and will soon remove this setting. We highly recommend that you use [Code Analyzer v5](https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/code-analyzer.html) instead. Selecting this setting ignores the Code Analyzer v5 settings and uses the v4 settings instead.\n\nIf you have having trouble switching to v5, create an [issue](https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues)."
                     }
                 }
             },
             {
-                "title": "Code Analyzer v5",
+                "title": "Configuration",
                 "properties": {
                     "codeAnalyzer.configFile": {
                         "type": "string",
@@ -170,55 +157,7 @@
                     "codeAnalyzer.ruleSelectors": {
                         "type": "string",
                         "default": "Recommended",
-                        "markdownDescription": "Selection of rules used to scan your code with Code Analyzer v5.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
-                    }
-                }
-            },
-            {
-                "title": "Code Analyzer v4 (Deprecated)",
-                "properties": {
-                    "codeAnalyzer.pMD.customConfigFile": {
-                        "type": "string",
-                        "default": "",
-                        "description": "(v4 only) Replace Code Analyzer's default PMD config file, choose a custom file."
-                    },
-                    "codeAnalyzer.graphEngine.disableWarningViolations": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "(v4 only) Suppress warning violations, such as those related to StripInaccessible READ access."
-                    },
-                    "codeAnalyzer.graphEngine.threadTimeout": {
-                        "type": "number",
-                        "default": 900000,
-                        "description": "(v4 only) After the thread timeout elapses, the path evaluation aborts. The default timeout is 900,000 milliseconds."
-                    },
-                    "codeAnalyzer.graphEngine.pathExpansionLimit": {
-                        "type": "number",
-                        "default": 0,
-                        "description": "(v4 only) An upper boundary to limit the complexity of code analyzed by Graph Engine. The default of 0 is a dynamically determined limit that's based on heap space. To learn more about heap space, see OutOfMemory errors in the Graph Engine documentation."
-                    },
-                    "codeAnalyzer.graphEngine.jvmArgs": {
-                        "type": "string",
-                        "description": "(v4 only) The Java Virtual Machine (JVM) arguments used to optimize Salesforce Graph Engine execution for your system."
-                    },
-                    "codeAnalyzer.scanner.engines": {
-                        "type": "string",
-                        "default": "pmd,retire-js,eslint-lwc",
-                        "description": "(v4 only) The engines to run. Specify multiple values as a comma-separated list. Possible values are pmd, pmd-appexchange, retire-js, eslint, eslint-lwc, and eslint-typescript."
-                    },
-                    "codeAnalyzer.normalizeSeverity.enabled": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "(v4 only) Output normalized severity (high, moderate, low) and engine-specific severity across all engines."
-                    },
-                    "codeAnalyzer.rules.category": {
-                        "type": "string",
-                        "description": "(v4 only) The categories of rules to run. Specify multiple values as a comma-separated list. Run 'sf scanner rule list -e' in the terminal for the list of categories associated with a specific engine."
-                    },
-                    "codeAnalyzer.partialGraphEngineScans.enabled": {
-                        "type": "boolean",
-                        "default": false,
-                        "description": "(v4 only) Enables partial Salesforce Graph Engine scans on only the code you've modified since the initial full scan. (Beta)"
+                        "markdownDescription": "Selection of rules used to scan your code with Code Analyzer.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
                     }
                 }
             }
@@ -232,14 +171,6 @@
                 {
                     "command": "sfca.runOnSelected",
                     "when": "false"
-                },
-                {
-                    "command": "sfca.runDfaOnSelectedMethod",
-                    "when": "false"
-                },
-                {
-                    "command": "sfca.runDfa",
-                    "when": "sfca.extensionActivated && sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
                 },
                 {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
@@ -264,10 +195,6 @@
                     "when": "sfca.extensionActivated"
                 },
                 {
-                    "command": "sfca.runDfaOnSelectedMethod",
-                    "when": "sfca.extensionActivated && sfca.codeAnalyzerV4Enabled"
-                },
-                {
                     "command": "sfca.removeDiagnosticsOnActiveFile",
                     "when": "sfca.extensionActivated"
                 },
@@ -287,7 +214,7 @@
                 },
                 {
                     "command": "sfca.runApexGuruAnalysisOnSelectedFile",
-                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+                    "when": "sfca.extensionActivated && sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
         },

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Salesforce, Inc.
+ * Copyright (c) 2025, Salesforce, Inc.
  * All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
@@ -11,18 +11,13 @@ import {SettingsManager, SettingsManagerImpl} from './lib/settings';
 import * as targeting from './lib/targeting'
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
 import {messages} from './lib/messages';
-import {Fixer} from './lib/fixer';
-import {CoreExtensionService} from './lib/core-extension-service';
 import * as Constants from './lib/constants';
 import * as path from 'path';
-import * as ApexGuruFunctions from './lib/apexguru/apex-guru-service';
-import {AgentforceViolationFixer} from './lib/agentforce/agentforce-violation-fixer'
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
-import {DfaRunner} from "./lib/dfa-runner";
 import {CodeAnalyzerRunAction} from "./lib/code-analyzer-run-action";
-import {AgentforceCodeActionProvider} from "./lib/agentforce/agentforce-code-action-provider";
+import {A4DFixActionProvider} from "./lib/agentforce/a4d-fix-action-provider";
 import {ScanManager} from './lib/scan-manager';
 import {A4DFixAction} from './lib/agentforce/a4d-fix-action';
 import {UnifiedDiffService, UnifiedDiffServiceImpl} from "./lib/unified-diff-service";
@@ -34,6 +29,13 @@ import {getErrorMessage} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 import {Workspace} from "./lib/workspace";
+import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-action-provider';
+import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
+import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
+import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hover-provider';
+import {ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
+import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
+import {OrgConnectionService} from './lib/external-services/org-connection-service';
 
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
@@ -54,7 +56,7 @@ export type SFCAExtensionData = {
  * Registers the necessary diagnostic collections and commands.
  */
 export async function activate(context: vscode.ExtensionContext): Promise<SFCAExtensionData> {
-    const extensionHrStart: [number, number] = process.hrtime();
+    const highResStartTime: number = globalThis.performance.now();
 
     // Helpers to keep the below code clean and so that we don't forget to push the disposables onto the context
     const registerCommand = (command: string, callback: (...args: unknown[]) => unknown): void => {
@@ -62,6 +64,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     };
     const registerCodeActionsProvider = (selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider, metadata?: vscode.CodeActionProviderMetadata): void => {
         context.subscriptions.push(vscode.languages.registerCodeActionsProvider(selector, provider, metadata));
+    }
+    const registerHoverProvider = (selector: vscode.DocumentSelector, provider: vscode.HoverProvider): void => {
+        context.subscriptions.push(vscode.languages.registerHoverProvider(selector, provider));
     }
     const onDidSaveTextDocument = (listener: (e: unknown) => unknown): void => {
         context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(listener));
@@ -79,6 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const settingsManager = new SettingsManagerImpl();
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
+    const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
@@ -94,34 +100,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl(logger);
     const fileHandler: FileHandler = new FileHandlerImpl();
     const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
-    const dfaRunner: DfaRunner = new DfaRunner(context, codeAnalyzer, telemetryService, logger); // This thing is really old and clunky. It'll go away when we remove v4 stuff. But if we don't want to wait we could move all this into the v4-scanner.ts file
-    context.subscriptions.push(dfaRunner);
 
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display, windowManager);
 
     // For performance reasons, it's best to kick this off in the background instead of await the promise.
     void performValidationAndCaching(codeAnalyzer, display);
 
-    // We need to do this first in case any other services need access to those provided by the core extension.
-    // TODO: Soon we should get rid of this CoreExtensionService stuff in favor of putting things inside of the ExternalServiceProvider
-    await CoreExtensionService.loadDependencies(outputChannel);
-
 
     // =================================================================================================================
     // ==  Code Analyzer Run Functionality
     // =================================================================================================================
-    await establishVariableInContext(Constants.CONTEXT_VAR_V4_ENABLED,
-        () => Promise.resolve(settingsManager.getCodeAnalyzerUseV4Deprecated()));
 
-    // Monitor the "codeAnalyzer.Use v4 (Deprecated)" setting with telemetry
-    vscode.workspace.onDidChangeConfiguration((event: vscode.ConfigurationChangeEvent) => {
-        if (event.affectsConfiguration('codeAnalyzer.Use v4 (Deprecated)')) {
-            telemetryService.sendCommandEvent(Constants.TELEM_SETTING_USEV4, {
-                value: settingsManager.getCodeAnalyzerUseV4Deprecated().toString()});
-        }
-    });
-
-    // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
+    // COMMAND_RUN_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menu always.
     registerCommand(Constants.COMMAND_RUN_ON_ACTIVE_FILE, async () => {
         const document: vscode.TextDocument = await getActiveDocument();
         if (document === null) {
@@ -163,7 +153,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
     });
 
-    // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always. Uses v4 instead of v5 when 'sfca.codeAnalyzerV4Enabled'.
+    // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always.
     registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
         const selection: vscode.Uri[] = (multiSelection && multiSelection.length > 0) ? multiSelection : [singleSelection];
         const workspace: Workspace = await Workspace.fromTargetPaths(selection.map(uri => uri.fsPath), vscodeWorkspace, fileHandler);
@@ -202,81 +192,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
 
     // =================================================================================================================
-    // ==  Code Analyzer Basic Quick-Fix Functionality
+    // ==  Code Analyzer PMD Quick-Fix Functionality for Line or Class Level Suppressions
     // =================================================================================================================
-    registerCodeActionsProvider({pattern: '**/**'}, new Fixer(), // TODO: We should separate the apex guru quick fix from this Fixer class into its own
-        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+    const pmdSuppressionsCodeActionProvider: PMDSupressionsCodeActionProvider = new PMDSupressionsCodeActionProvider();
+    registerCodeActionsProvider({language: 'apex'}, pmdSuppressionsCodeActionProvider,
+            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
     // QF_COMMAND_DIAGNOSTICS_IN_RANGE: Invoked by a Quick Fix button that appears on diagnostics
+    // TODO: We need to fix this - because we should be just removing the relevant diagnostics - not all in a specific range
     registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
         diagnosticManager.clearDiagnosticsInRange(uri, range));
-
-
-    // =================================================================================================================
-    // ==  DFA Run Functionality
-    // =================================================================================================================
-
-    // It is possible that the cache was not cleared when VS Code exited the last time. Just to be on the safe side, we clear the DFA process cache at activation.
-    void context.workspaceState.update(Constants.WORKSPACE_DFA_PROCESS, undefined);
-    await establishVariableInContext(Constants.CONTEXT_VAR_PARTIAL_RUNS_ENABLED,
-        () => Promise.resolve(settingsManager.getSfgePartialSfgeRunsEnabled()));
-
-    // COMMAND_RUN_DFA_ON_SELECTED_METHOD: Invokable by 'editor/context' only when "sfca.codeAnalyzerV4Enabled"
-    registerCommand(Constants.COMMAND_RUN_DFA_ON_SELECTED_METHOD, async () => {
-        if (await dfaRunner.shouldProceedWithDfaRun()) {
-            const methodLevelTarget: string[] = [await targeting.getSelectedMethod()];
-            await dfaRunner.runMethodLevelDfa(methodLevelTarget);
-        }
-    });
-
-    // COMMAND_RUN_DFA: Invokable by 'commandPalette' only when "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
-    registerCommand(Constants.COMMAND_RUN_DFA, async () => {
-        await dfaRunner.runDfa();
-        dfaRunner.clearSavedFilesCache();
-    });
-
-    onDidSaveTextDocument((document: vscode.TextDocument) => dfaRunner.addSavedFileToCache(document.fileName));
-
-
-    // =================================================================================================================
-    // ==  Apex Guru Integration Functionality
-    // =================================================================================================================
-    const isApexGuruEnabled: () => Promise<boolean> =
-        async () => settingsManager.getApexGuruEnabled() &&
-            // Currently we don't watch for changes here when a user has apex guru enabled already. That is,
-            // if the user logs into an org post activation of this extension, it won't show the command until they
-            // refresh or toggle the "ApexGuru enabled" setting off and back on. At some point we might want to see
-            // if it is possible to monitor changes to the users org so we can re-trigger this check.
-            await ApexGuruFunctions.isApexGuruEnabledInOrg(logger);
-
-    await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
-
-    // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
-    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) =>
-        await ApexGuruFunctions.runApexGuruOnFile(multiSelect && multiSelect.length > 0 ? multiSelect[0] : selection,
-            Constants.COMMAND_RUN_APEX_GURU_ON_FILE, diagnosticManager, telemetryService, logger));
-
-    // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
-    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
-        const document: vscode.TextDocument = await getActiveDocument();
-        if (document === null) {
-            vscode.window.showWarningMessage(messages.noActiveEditor);
-            return;
-        }
-        return await ApexGuruFunctions.runApexGuruOnFile(document.uri,
-            Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, diagnosticManager, telemetryService, logger);
-    });
-
-    // QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS: Invoked by a Quick Fix button that appears on diagnostics that have an "apexguru" engine name.
-    registerCommand(Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS, async (document: vscode.TextDocument, position: vscode.Position, suggestedCode: string) => {
-        const edit = new vscode.WorkspaceEdit();
-        edit.insert(document.uri, position, suggestedCode);
-        await vscode.workspace.applyEdit(edit);
-        telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS, {
-            executedCommand: Constants.QF_COMMAND_INCLUDE_APEX_GURU_SUGGESTIONS,
-            lines: suggestedCode.split('\n').length.toString()
-        });
-    });
 
 
     // =================================================================================================================
@@ -288,37 +213,87 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
 
     // =================================================================================================================
+    // ==  Apply Violation Fixes Functionality
+    // =================================================================================================================
+    const applyViolationFixesAction: ApplyViolationFixesAction = new ApplyViolationFixesAction(
+        unifiedDiffService, diagnosticManager, telemetryService, logger, display);
+    const applyViolationFixesActionProvider: ApplyViolationFixesActionProvider = new ApplyViolationFixesActionProvider();
+    registerCommand(ApplyViolationFixesAction.COMMAND, async (diagnostic: CodeAnalyzerDiagnostic, document: vscode.TextDocument) => {
+        await applyViolationFixesAction.run(diagnostic, document);
+    });
+    registerCodeActionsProvider({pattern: '**/**'}, applyViolationFixesActionProvider,
+        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
+
+
+    // =================================================================================================================
+    // ==  Violation Suggestions Functionality
+    // =================================================================================================================
+    registerCommand(Constants.COMMAND_COPY_SUGGESTION, async (engineName: string, ruleName: string, suggestionMessage: string) => {
+        await vscode.env.clipboard.writeText(suggestionMessage);
+        vscode.window.showInformationMessage(messages.suggestions.suggestionCopiedToClipboard(engineName, ruleName));
+        telemetryService.sendCommandEvent(Constants.TELEM_COPY_SUGGESTION_CLICKED, {
+            commandSource: Constants.COMMAND_COPY_SUGGESTION,
+            engineName: engineName,
+            ruleName: ruleName
+        });
+    });
+    const violationSuggestionsHolverProvider: ViolationSuggestionsHoverProvider = new ViolationSuggestionsHoverProvider(
+        diagnosticManager);
+    registerHoverProvider({pattern: '**/**'}, violationSuggestionsHolverProvider);
+
+    // =================================================================================================================
+    // ==  Apex Guru Integration Functionality
+    // =================================================================================================================
+    const apexGuruService: ApexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger);
+    const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
+
+    // TODO: This is temporary and will change soon when we remove pilot flag and instead add a watch to org auth changes
+    const isApexGuruEnabled: () => Promise<boolean> = async () => settingsManager.getApexGuruEnabled() &&
+            // Currently we don't watch for changes here when a user has apex guru enabled already. That is,
+            // if the user logs into an org post activation of this extension, it won't show the command until they
+            // refresh or toggle the "ApexGuru enabled" setting off and back on. At some point we might want to see
+            // if it is possible to monitor changes to the users org so we can re-trigger this check.
+            await apexGuruService.isApexGuruAvailable();
+    await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
+
+    // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
+        if (multiSelect?.length > 1) {
+            display.displayWarning(messages.apexGuru.warnings.canOnlyScanOneFile(selection.fsPath));
+        }
+        await apexGuruRunAction.run(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, selection);
+    });
+
+    // COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE: Invokable by 'commandPalette' and 'editor/context' menus only when: "sfca.apexGuruEnabled && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
+    registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, async () => {
+        const document: vscode.TextDocument = await getActiveDocument();
+        if (document === null) {
+            vscode.window.showWarningMessage(messages.noActiveEditor);
+            return;
+        }
+        return await apexGuruRunAction.run(Constants.COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE, document.uri);
+    });
+    
+
+    // =================================================================================================================
     // ==  Agentforce for Developers Integration
     // =================================================================================================================
-    const agentforceCodeActionProvider: AgentforceCodeActionProvider = new AgentforceCodeActionProvider(externalServiceProvider, logger);
-    const agentforceViolationFixer: AgentforceViolationFixer = new AgentforceViolationFixer( externalServiceProvider, codeAnalyzer, logger);
-    const a4dFixAction: A4DFixAction = new A4DFixAction(agentforceViolationFixer, unifiedDiffService, diagnosticManager, telemetryService, logger, display);
-
-    registerCodeActionsProvider({language: 'apex'}, agentforceCodeActionProvider,
-            {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
-
-    // Invoked by the "quick fix" buttons on A4D enabled diagnostics
-    registerCommand(Constants.QF_COMMAND_A4D_FIX, async (document: vscode.TextDocument, diagnostic: CodeAnalyzerDiagnostic) => {
-        await a4dFixAction.run(document, diagnostic);
+    const a4dFixAction: A4DFixAction = new A4DFixAction(externalServiceProvider, codeAnalyzer, unifiedDiffService, 
+        diagnosticManager, telemetryService, logger, display);
+    const a4dFixActionProvider: A4DFixActionProvider = new A4DFixActionProvider(externalServiceProvider, logger);
+    registerCommand(A4DFixAction.COMMAND, async (diagnostic: CodeAnalyzerDiagnostic, document: vscode.TextDocument) => {
+        await a4dFixAction.run(diagnostic, document);
     });
+    // Invoked by the "quick fix" buttons on A4D enabled diagnostics
+    registerCodeActionsProvider({language: 'apex'}, a4dFixActionProvider,
+        {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
 
     // =================================================================================================================
     // ==  Finalize activation
     // =================================================================================================================
 
-    if(settingsManager.getCodeAnalyzerUseV4Deprecated()) {
-        vscode.window.showWarningMessage(messages.stoppingV4SupportSoon, messages.buttons.startUsingV5, messages.buttons.showSettings).then(selection => {
-            if (selection === messages.buttons.startUsingV5) {
-                settingsManager.setCodeAnalyzerUseV4Deprecated(false);
-            } else if (selection === messages.buttons.showSettings) {
-                const settingUri = vscode.Uri.parse('vscode://settings/codeAnalyzer.Use v4 (Deprecated)');
-                vscode.commands.executeCommand(Constants.VSCODE_COMMAND_OPEN_URL, settingUri);
-            }
-        });
-    }
-
-    telemetryService.sendExtensionActivationEvent(extensionHrStart);
+    telemetryService.sendExtensionActivationEvent(highResStartTime);
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
     logger.log('Extension sfdx-code-analyzer-vscode activated.');
     return {
@@ -329,6 +304,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     };
 }
 
+
 // This method is called when your extension is deactivated
 export async function deactivate(): Promise<void> {
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, false);
@@ -336,15 +312,17 @@ export async function deactivate(): Promise<void> {
 
 // TODO: We either need to give the user control over which files the auto-scan on open/save feature works for...
 //       ... or we need to somehow determine dynamically if the file is relevant for scanning using the
-//       ... --workspace option on Code Analyzer v5 or something. I think that regex has situations that work on all
-//       ....files. So We might not be able to get this perfect. Need to discuss this soon.
+//       ... --workspace option. I think that regex has situations that work on all
+//       ....files. So we might not be able to get this perfect. Need to discuss this soon.
 export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
     const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
     return allowedFileTypes.includes(path.extname(documentUri.fsPath));
 }
 
+// TODO: This is only used by apex guru right now and is tied to the pilot setting. Soon we will be removing the pilot
+// setting and instead we should be adding a watch to the onOrgChange event of the OrgConnectionService instead.
 // Inside our package.json you'll see things like:
-//     "when": "sfca.partialRunsEnabled && sfca.codeAnalyzerV4Enabled"
+//     "when": "sfca.apexGuruEnabled"
 // which helps determine when certain commands and menus are available.
 // To make these "context variables" set and stay updated when settings change, use this helper function:
 async function establishVariableInContext(varUsedInPackageJson: string, getValueFcn: () => Promise<boolean>): Promise<void> {
@@ -371,7 +349,7 @@ async function getActiveDocument(): Promise<vscode.TextDocument | null> {
 async function performValidationAndCaching(codeAnalyzer: CodeAnalyzer, display: Display): Promise<void> {
     try {
         await codeAnalyzer.validateEnvironment();
-        // Note: We might consider adding in additional things here like for v5 getting the rule descriptions, etc.
+        // Note: We might consider adding in additional things here like for getting the rule descriptions, etc.
     } catch (err) {
         display.displayError(getErrorMessage(err));
     }

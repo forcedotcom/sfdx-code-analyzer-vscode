@@ -1,15 +1,14 @@
 import * as vscode from "vscode";
 import {messages} from "../messages";
-import * as Constants from "../constants";
 import {LLMServiceProvider} from "../external-services/llm-service";
 import {Logger} from "../logger";
 import {CodeAnalyzerDiagnostic} from "../diagnostics";
-import {A4D_SUPPORTED_RULES} from "./supported-rules";
+import { A4DFixAction } from "./a4d-fix-action";
 
 /**
  * Provides the A4D "Quick Fix" button on the diagnostics associated with SFCA violations for the rules we have trained the LLM on.
  */
-export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
+export class A4DFixActionProvider implements vscode.CodeActionProvider {
     // This static property serves as CodeActionProviderMetadata to help aide VS Code to know when to call this provider
     static readonly providedCodeActionKinds: vscode.CodeActionKind[] = [vscode.CodeActionKind.QuickFix];
 
@@ -22,19 +21,16 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
         this.logger = logger;
     }
 
-    async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext,
-                             _token: vscode.CancellationToken): Promise<vscode.CodeAction[]> {
-
-        const codeActions: vscode.CodeAction[] = [];
+    async provideCodeActions(document: vscode.TextDocument, range: vscode.Range, context: vscode.CodeActionContext): Promise<vscode.CodeAction[]> {
         const filteredDiagnostics: CodeAnalyzerDiagnostic[] = context.diagnostics
             .filter(d => d instanceof CodeAnalyzerDiagnostic)
-            .filter(d => !d.isStale() && A4D_SUPPORTED_RULES.has(d.violation.rule))
+            .filter(d => A4DFixAction.isRelevantDiagnostic(d))
             // Technically, I don't think VS Code sends in diagnostics that aren't overlapping with the users selection,
             // but just in case they do, then this last filter is an additional sanity check just to be safe
             .filter(d => range.intersection(d.range) != undefined);
 
         if (filteredDiagnostics.length == 0) {
-            return codeActions;
+            return [];
         }
 
         // Do not provide quick fix code actions if LLM service is not available. We warn once to let user know.
@@ -43,23 +39,21 @@ export class AgentforceCodeActionProvider implements vscode.CodeActionProvider {
                 this.logger.warn(messages.agentforce.a4dQuickFixUnavailable);
                 this.hasWarnedAboutUnavailableLLMService = true;
             }
-            return codeActions;
+            return [];
         }
 
-        for (const diagnostic of filteredDiagnostics) {
-            const fixAction: vscode.CodeAction = new vscode.CodeAction(
-                messages.agentforce.fixViolationWithA4D(diagnostic.violation.rule),
-                vscode.CodeActionKind.QuickFix
-            );
-            fixAction.diagnostics = [diagnostic] // Important: this ties the code fix action to the specific diagnostic.
-            fixAction.command = {
-                title: 'Fix Diagnostic Issue', // Doesn't actually show up anywhere
-                command: Constants.QF_COMMAND_A4D_FIX,
-                arguments: [document, diagnostic] // The arguments passed to the run function of the AgentforceViolationFixAction
-            };
-            codeActions.push(fixAction);
-        }
-
-        return codeActions;
+        return filteredDiagnostics.map(diag => createCodeAction(diag, document));
     }
+}
+
+function createCodeAction(diag: CodeAnalyzerDiagnostic, document: vscode.TextDocument): vscode.CodeAction {
+    const fixMsg: string = messages.fixer.applyFix(diag.violation.engine, diag.violation.rule);
+    const action = new vscode.CodeAction(fixMsg, vscode.CodeActionKind.QuickFix);
+    action.diagnostics = [diag]; // Important: this ties the code fix action to the specific diagnostic.
+    action.command = {
+        title: fixMsg, // Doesn't seem to actually show up anywhere, so just reusing the fix msg
+        command: A4DFixAction.COMMAND,
+        arguments: [diag, document]
+    }
+    return action;
 }
