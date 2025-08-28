@@ -11,5 +11,6 @@
         "type:security": "BUG P0",
         "type:feedback": "",
         "type:duplicate": ""
-    }
+    },
+    "statusWhenClosed": "CLOSED"
 }
