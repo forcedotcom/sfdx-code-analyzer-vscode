@@ -15,7 +15,7 @@ import * as semver from "semver";
 import {FileHandler} from "../../lib/fs-utils";
 import {VscodeWorkspace, WindowManager} from "../../lib/vscode-api";
 import {Workspace} from "../../lib/workspace";
-import { ApexGuruService } from "../../lib/apexguru/apex-guru-service";
+import { ApexGuruAccess, ApexGuruAvailability, ApexGuruService } from "../../lib/apexguru/apex-guru-service";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -364,9 +364,9 @@ export class SpyWindowManager implements WindowManager {
 }
 
 export class StubApexGuruService implements ApexGuruService {
-    isApexGuruAvailableReturnValue: boolean = true;
-    isApexGuruAvailable(): Promise<boolean> {
-        return Promise.resolve(this.isApexGuruAvailableReturnValue);
+    getAvailabilityReturnValue: ApexGuruAvailability = { access: ApexGuruAccess.ENABLED };
+    getAvailability(): Promise<ApexGuruAvailability> {
+        return Promise.resolve(this.getAvailabilityReturnValue);
     }
 
     scanReturnValue: Violation[] = [];
@@ -375,12 +375,8 @@ export class StubApexGuruService implements ApexGuruService {
     }
 }
 
-export class ThrowingApexGuruService implements ApexGuruService {
-    isApexGuruAvailable(): Promise<boolean> {
-        throw new Error("Sample error message from isApexGuruAvailable method");
-    }
+export class ThrowingScanApexGuruService extends StubApexGuruService {
     scan(_absFileToScan: string): Promise<Violation[]> {
         throw new Error("Sample error message from scan method");
     }
-
 }

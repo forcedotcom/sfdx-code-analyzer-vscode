@@ -35,6 +35,7 @@ export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_c
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
 export const TELEM_FAILED_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_failed';
+export const TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED = 'sfdx__apexguru_file_run_not_enabled';
 export const TELEM_COPY_SUGGESTION_CLICKED = 'sfdx__codeanalyzer_copy_suggestion_clicked';
 
 // telemetry keys used by eGPT (A4D)

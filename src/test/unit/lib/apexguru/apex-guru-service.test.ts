@@ -1,4 +1,4 @@
-import { ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
+import { ApexGuruAccess, ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
 import { HttpRequest, OrgConnectionService } from "../../../../lib/external-services/org-connection-service";
 import * as stubs from "../../stubs";
 import { Violation } from "../../../../lib/diagnostics";
@@ -133,24 +133,44 @@ describe("Tests for LiveApexGuruService", () => {
         apexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
     });
 
-    describe("Tests for isApexGuruAvailable", () => {
-        it("When no org is authed, then return false", async () => {
+    describe("Tests for getAvailability", () => {
+        it('When no org is authed, then return NOT_AUTHED availability', async () => {
             orgConnectionService.isAuthedReturnValue = false;
-            expect(await apexGuruService.isApexGuruAvailable()).toEqual(false);
+            expect(await apexGuruService.getAvailability()).toEqual({
+                access: ApexGuruAccess.NOT_AUTHED,
+                message: "No org is authed."
+            });
         });
 
-        it('When the ApexGuru validate endpoint does not return success, then return false', async () => {
+        it('When the ApexGuru validate endpoint returns an error status, then return INELIGIBLE availability', async () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
-                status: "failed"
+                status: "error",
+                message: "some error message"
             };
-            expect(await apexGuruService.isApexGuruAvailable()).toEqual(false);
+            expect(await apexGuruService.getAvailability()).toEqual({
+                access: ApexGuruAccess.INELIGIBLE,
+                message: "some error message"
+            });
         });
 
-        it('When the ApexGuru validate endpoint returns success, then return true', async () => {
+        it('When the ApexGuru validate endpoint returns a failed status, then return ELIGIBLE availability', async () => {
+            orgConnectionService.requestReturnValueForAuthValidation = {
+                status: "failed",
+                message: "some instruction on how to enable ApexGuru"
+            };
+            expect(await apexGuruService.getAvailability()).toEqual({
+                access: ApexGuruAccess.ELIGIBLE,
+                message: "some instruction on how to enable ApexGuru"
+            });
+        });
+
+        it('When the ApexGuru validate endpoint returns success, then return ENABLED availability', async () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "SUccesS" // Also testing that we check with case insensitivity to be more robust
             };
-            expect(await apexGuruService.isApexGuruAvailable()).toEqual(true);
+            expect(await apexGuruService.getAvailability()).toEqual({
+                access: ApexGuruAccess.ENABLED
+            });
 
             // Sanity check that the right endpoint was used
             expect(orgConnectionService.requestCallHistory).toHaveLength(1);
