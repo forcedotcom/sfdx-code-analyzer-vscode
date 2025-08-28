@@ -153,6 +153,18 @@ describe("Tests for LiveApexGuruService", () => {
             });
         });
 
+        it('When the ApexGuru validate endpoint returns an failed status without a message, then we fill in with our own message', async () => {
+            // In production this should never happen. Just testing this case to make sure things don't blow up and we 
+            // do something reasonable.
+            orgConnectionService.requestReturnValueForAuthValidation = {
+                status: "failed"
+            };
+            expect(await apexGuruService.getAvailability()).toEqual({
+                access: ApexGuruAccess.ELIGIBLE,
+                message: "ApexGuru access is not enabled. Response:  {\"status\":\"failed\"}"
+            });
+        });
+
         it('When the ApexGuru validate endpoint returns a failed status, then return ELIGIBLE availability', async () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "failed",
@@ -169,7 +181,8 @@ describe("Tests for LiveApexGuruService", () => {
                 status: "SUccesS" // Also testing that we check with case insensitivity to be more robust
             };
             expect(await apexGuruService.getAvailability()).toEqual({
-                access: ApexGuruAccess.ENABLED
+                access: ApexGuruAccess.ENABLED,
+                message: "ApexGuru access is enabled."
             });
 
             // Sanity check that the right endpoint was used

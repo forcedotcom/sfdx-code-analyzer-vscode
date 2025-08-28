@@ -60,7 +60,7 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(diagnosticManager.getDiagnosticsForFile(sampleUri)).toEqual([samplePmdDiag, sampleApexGuruDiag]);
     });
 
-    it("When user's orgo is eligible but enabled, then ApexGuru scan button results in an error window with instructions", async () => {
+    it("When user's org is eligible but not enabled, then ApexGuru scan button results in an error window with instructions", async () => {
         apexGuruService.getAvailabilityReturnValue = {
             access: ApexGuruAccess.ELIGIBLE,
             message: "Some instructions from ApexGuru"

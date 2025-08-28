@@ -364,7 +364,10 @@ export class SpyWindowManager implements WindowManager {
 }
 
 export class StubApexGuruService implements ApexGuruService {
-    getAvailabilityReturnValue: ApexGuruAvailability = { access: ApexGuruAccess.ENABLED };
+    getAvailabilityReturnValue: ApexGuruAvailability = {
+        access: ApexGuruAccess.ENABLED,
+        message: "ApexGuru access is enabled."
+    };
     getAvailability(): Promise<ApexGuruAvailability> {
         return Promise.resolve(this.getAvailabilityReturnValue);
     }

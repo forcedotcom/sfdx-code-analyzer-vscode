@@ -30,7 +30,7 @@ export interface ApexGuruService {
 
 export type ApexGuruAvailability = {
     access: ApexGuruAccess,
-    message?: string
+    message: string
 }
 
 export enum ApexGuruAccess {
@@ -89,17 +89,20 @@ export class LiveApexGuruService implements ApexGuruService {
         const response: ApexGuruResponse = await this.request('GET', await this.getValidateEndpoint());
 
         if (response.status === RESPONSE_STATUS.SUCCESS) {
-            this.availability = { access: ApexGuruAccess.ENABLED };
-        } else if (response.status === RESPONSE_STATUS.FAILED) {
-            this.availability = {
-                access: ApexGuruAccess.ELIGIBLE,
-                message: response.message
+            this.availability = { 
+                access: ApexGuruAccess.ENABLED,
+
+                // This message isn't used anywhere except for debugging purposes and it allows us to make message field
+                // a string instead of a string | undefined.
+                message: "ApexGuru access is enabled."
             };
         } else {
             this.availability = {
-                access: ApexGuruAccess.INELIGIBLE,
-                message: response.message
-            }
+                access:  response.status === RESPONSE_STATUS.FAILED ? ApexGuruAccess.ELIGIBLE : ApexGuruAccess.INELIGIBLE,
+
+                // There should always be a message on failed and error responses, but adding this here just in case
+                message: response.message ?? `ApexGuru access is not enabled. Response:  ${JSON.stringify(response)}`
+            };
         }
     }
 
