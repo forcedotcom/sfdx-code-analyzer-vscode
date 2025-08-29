@@ -50,19 +50,4 @@ suite('SettingsManager Test Suite', () => {
         expect(result).to.equal(mockAnalyzeOnOpenEnabled);
         expect(getConfigurationStub.calledOnceWith('codeAnalyzer.analyzeOnOpen')).to.equal(true);
     });
-
-    test('getApexGuruEnabled should return the apexGuru enabled setting', () => {
-        // ===== SETUP =====
-        const mockAnalyzeOnSaveEnabled = true;
-        getConfigurationStub.withArgs('codeAnalyzer.apexGuru').returns({
-            get: Sinon.stub().returns(mockAnalyzeOnSaveEnabled)
-        });
-
-        // ===== TEST =====
-        const result = new SettingsManagerImpl().getApexGuruEnabled();
-
-        // ===== ASSERTIONS =====
-        expect(result).to.equal(mockAnalyzeOnSaveEnabled);
-        expect(getConfigurationStub.calledOnceWith('codeAnalyzer.apexGuru')).to.equal(true);
-    });
 });

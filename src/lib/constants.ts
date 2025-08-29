@@ -58,7 +58,7 @@ export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0
 
 // Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
 export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
-export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';
+export const CONTEXT_VAR_SHOULD_SHOW_APEX_GURU_BUTTONS = 'sfca.shouldShowApexGuruButtons';
 
 // Documentation URLs
 export const DOCS_SETUP_LINK = 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze-vscode.html#install-and-configure-code-analyzer-vs-code-extension';
