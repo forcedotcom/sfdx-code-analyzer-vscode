@@ -33,7 +33,7 @@ import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-
 import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
 import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
 import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hover-provider';
-import {ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
+import {ApexGuruAccess, ApexGuruAvailability, ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
 import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
 import {OrgConnectionService} from './lib/external-services/org-connection-service';
 
@@ -248,12 +248,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
 
     // TODO: This is temporary and will change soon when we remove pilot flag and instead add a watch to org auth changes
-    const isApexGuruEnabled: () => Promise<boolean> = async () => settingsManager.getApexGuruEnabled() &&
-            // Currently we don't watch for changes here when a user has apex guru enabled already. That is,
-            // if the user logs into an org post activation of this extension, it won't show the command until they
-            // refresh or toggle the "ApexGuru enabled" setting off and back on. At some point we might want to see
-            // if it is possible to monitor changes to the users org so we can re-trigger this check.
-            await apexGuruService.isApexGuruAvailable();
+    const isApexGuruEnabled: () => Promise<boolean> = async () => {
+        if (!settingsManager.getApexGuruEnabled()) {
+            return false;
+        }
+        const availability: ApexGuruAvailability = await apexGuruService.getAvailability();
+        if (availability.access === ApexGuruAccess.ENABLED || availability.access === ApexGuruAccess.ELIGIBLE) {
+            return true;
+        }
+    };
     await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
 
     // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"

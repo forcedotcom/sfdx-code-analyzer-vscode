@@ -24,8 +24,28 @@ const RESPONSE_STATUS = {
 }
 
 export interface ApexGuruService {
-    isApexGuruAvailable(): Promise<boolean>;
+    getAvailability(): Promise<ApexGuruAvailability>;
     scan(absFileToScan: string): Promise<Violation[]>;
+}
+
+export type ApexGuruAvailability = {
+    access: ApexGuruAccess,
+    message: string
+}
+
+export enum ApexGuruAccess {
+    // In this case, ApexGuru scans are allowed
+    ENABLED = "enabled",
+
+    // In this case, the org is eligible to be enabled, but an admin hasn't set the permissions yet, so we should still
+    // show the scan button but then show a message with the instructions sent from the validate endpoint.
+    ELIGIBLE = "eligible-but-not-enabled",
+
+    // In this case, the org is not eligible for ApexGuru at all, so we should not show the scan button at all.
+    INELIGIBLE = "ineligible",
+
+    // In this case, the user has not authed into an org, so we should not show the scan button at all.
+    NOT_AUTHED = "not-authed"
 }
 
 export class LiveApexGuruService implements ApexGuruService {
@@ -34,6 +54,8 @@ export class LiveApexGuruService implements ApexGuruService {
     private readonly logger: Logger;
     private readonly maxTimeoutSeconds: number;
     private readonly retryIntervalMillis: number;
+    private availability?: ApexGuruAvailability;
+
     constructor(
                 orgConnectionService: OrgConnectionService,
                 fileHandler: FileHandler,
@@ -47,12 +69,41 @@ export class LiveApexGuruService implements ApexGuruService {
         this.retryIntervalMillis = retryIntervalMillis;
     }
 
-    async isApexGuruAvailable(): Promise<boolean> {
-        if (!this.orgConnectionService.isAuthed()) {
-            return false;
+    async getAvailability(): Promise<ApexGuruAvailability> {
+        if (this.availability === undefined) {
+            await this.updateAvailability();
         }
+        return this.availability;
+    }
+
+    // TODO: Soon with W-18538308 we will be using the connection.onOrgChange to wire up to this
+    private async updateAvailability(): Promise<void> {
+        if (!this.orgConnectionService.isAuthed()) {
+            this.availability = {
+                access: ApexGuruAccess.NOT_AUTHED,
+                message: messages.apexGuru.noOrgAuthed
+            };
+            return;
+        }
+
         const response: ApexGuruResponse = await this.request('GET', await this.getValidateEndpoint());
-        return response.status === RESPONSE_STATUS.SUCCESS;
+
+        if (response.status === RESPONSE_STATUS.SUCCESS) {
+            this.availability = { 
+                access: ApexGuruAccess.ENABLED,
+
+                // This message isn't used anywhere except for debugging purposes and it allows us to make message field
+                // a string instead of a string | undefined.
+                message: "ApexGuru access is enabled."
+            };
+        } else {
+            this.availability = {
+                access:  response.status === RESPONSE_STATUS.FAILED ? ApexGuruAccess.ELIGIBLE : ApexGuruAccess.INELIGIBLE,
+
+                // There should always be a message on failed and error responses, but adding this here just in case
+                message: response.message ?? `ApexGuru access is not enabled. Response:  ${JSON.stringify(response)}`
+            };
+        }
     }
 
     async scan(absFileToScan: string): Promise<Violation[]> {

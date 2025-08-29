@@ -5,6 +5,7 @@ import { CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Viola
 import { FakeDiagnosticCollection } from "../../vscode-stubs";
 import { ApexGuruRunAction } from "../../../../lib/apexguru/apex-guru-run-action";
 import { createSampleCodeAnalyzerDiagnostic } from "../../test-utils";
+import { ApexGuruAccess } from "../../../../lib/apexguru/apex-guru-service";
 
 describe("Tests for ApexGuruRunAction", () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/some/file.cls');
@@ -35,7 +36,7 @@ describe("Tests for ApexGuruRunAction", () => {
 
     it("When ApexGuru scan throws error, then display error in error window and send exception telemetry event", async () => {
         apexGuruRunAction = new ApexGuruRunAction(
-            taskWithProgressRunner, new stubs.ThrowingApexGuruService(), diagnosticManager, telemetryService, display);
+            taskWithProgressRunner, new stubs.ThrowingScanApexGuruService(), diagnosticManager, telemetryService, display);
         
         await apexGuruRunAction.run('SomeCommandName', sampleUri);
 
@@ -54,6 +55,33 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendExceptionCallHistory[0].name).toEqual('sfdx__apexguru_file_run_failed');
         expect(telemetryService.sendExceptionCallHistory[0].properties.executedCommand).toEqual('SomeCommandName');
         expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain('Error: Sample error message from scan method');
+
+        // Also validate that we didn't modify the existing diagnostics at all
+        expect(diagnosticManager.getDiagnosticsForFile(sampleUri)).toEqual([samplePmdDiag, sampleApexGuruDiag]);
+    });
+
+    it("When user's org is eligible but not enabled, then ApexGuru scan button results in an error window with instructions", async () => {
+        apexGuruService.getAvailabilityReturnValue = {
+            access: ApexGuruAccess.ELIGIBLE,
+            message: "Some instructions from ApexGuru"
+        };
+
+        await apexGuruRunAction.run('SomeCommandName', sampleUri);
+
+        // No progress bar should be shown
+        expect(taskWithProgressRunner.progressReporter.reportProgressCallHistory).toHaveLength(0);
+
+        // A error dialog should be given with the instructions that were sent from the ApexGuru service
+        expect(display.displayErrorCallHistory).toHaveLength(1);
+        expect(display.displayErrorCallHistory[0].msg).toEqual('Some instructions from ApexGuru');
+
+        // Then telemetry should have been sent
+        expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+        expect(telemetryService.sendCommandEventCallHistory[0].commandName).toEqual('sfdx__apexguru_file_run_not_enabled');
+        expect(telemetryService.sendCommandEventCallHistory[0].properties).toEqual({
+            access: 'eligible-but-not-enabled',
+            executedCommand: 'SomeCommandName'
+        });
 
         // Also validate that we didn't modify the existing diagnostics at all
         expect(diagnosticManager.getDiagnosticsForFile(sampleUri)).toEqual([samplePmdDiag, sampleApexGuruDiag]);
