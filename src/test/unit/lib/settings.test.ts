@@ -37,13 +37,6 @@ describe('Tests for the SettingsManagerImpl class ', () => {
             expect(settingsManager.getAnalyzeOnSave()).toBe(false);
             expect(getMock).toHaveBeenCalledWith('enabled');
         });
-
-        it('should get apexGuruEnabled', () => {
-            getMock.mockReturnValue(true);
-            expect(settingsManager.getApexGuruEnabled()).toBe(true);
-            expect(getMock).toHaveBeenCalledWith('enabled');
-        });
-
     });
 
     describe('Configuration Settings', () => {

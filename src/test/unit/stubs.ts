@@ -249,12 +249,6 @@ export class StubSettingsManager implements SettingsManager {
         return this.getAnalyzeOnSaveReturnValue;
     }
 
-    getApexGuruEnabledReturnValue: boolean = false;
-
-    getApexGuruEnabled(): boolean {
-        return this.getApexGuruEnabledReturnValue;
-    }
-
     // =================================================================================================================
     // ==== Configuration Settings
     // =================================================================================================================
@@ -368,8 +362,16 @@ export class StubApexGuruService implements ApexGuruService {
         access: ApexGuruAccess.ENABLED,
         message: "ApexGuru access is enabled."
     };
-    getAvailability(): Promise<ApexGuruAvailability> {
-        return Promise.resolve(this.getAvailabilityReturnValue);
+    getAvailability(): ApexGuruAvailability {
+        return this.getAvailabilityReturnValue;
+    }
+
+    updateAvailability(): Promise<void> {
+        throw new Error("This Stubbed method has not been implemented since it isn't used in testing yet.");
+    }
+
+    onAccessChange(_callback: (access: ApexGuruAccess) => void): void {
+        throw new Error("This Stubbed method has not been implemented since it isn't used in testing yet.");
     }
 
     scanReturnValue: Violation[] = [];

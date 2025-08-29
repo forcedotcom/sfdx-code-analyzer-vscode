@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 export interface OrgConnectionService {
     isAuthed(): boolean;
     getApiVersion(): Promise<string>;
-    onOrgChange(callback: () => void): void;
+    onOrgChange(callback: (orgUserInfo: OrgUserInfo) => void): void;
     request<T>(requestOptions: HttpRequest): Promise<T>;
 }
 
@@ -21,7 +21,7 @@ export class NoOpOrgConnectionService implements OrgConnectionService {
         throw new Error(`Cannot get the api verison because no org is authed.`);
     }
 
-    onOrgChange(_callback: () => void): void {
+    onOrgChange(_callback: (orgUserInfo: OrgUserInfo) => void): void {
         // No-op
     }
 
@@ -50,7 +50,7 @@ export class LiveOrgConnectionService implements OrgConnectionService {
     }
 
 
-    onOrgChange(callback: (event: OrgUserInfo) => void): void {
+    onOrgChange(callback: (orgUserInfo: OrgUserInfo) => void): void {
         this.workpaceContext.onOrgChange(callback);
     }
 

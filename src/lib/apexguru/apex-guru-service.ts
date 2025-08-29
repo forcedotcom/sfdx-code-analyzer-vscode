@@ -8,9 +8,10 @@
 import {CodeLocation, Fix, Suggestion, Violation} from '../diagnostics';
 import {Logger} from "../logger";
 import {getErrorMessage, indent} from '../utils';
-import {HttpMethods, HttpRequest, OrgConnectionService} from '../external-services/org-connection-service';
+import {HttpMethods, HttpRequest, OrgConnectionService, OrgUserInfo} from '../external-services/org-connection-service';
 import {FileHandler} from '../fs-utils';
 import { messages } from '../messages';
+import { EventEmitter } from 'node:stream';
 
 export const APEX_GURU_ENGINE_NAME: string = 'apexguru';
 const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
@@ -24,7 +25,9 @@ const RESPONSE_STATUS = {
 }
 
 export interface ApexGuruService {
-    getAvailability(): Promise<ApexGuruAvailability>;
+    getAvailability(): ApexGuruAvailability;
+    updateAvailability(): Promise<void>;
+    onAccessChange(callback: (access: ApexGuruAccess) => void): void;
     scan(absFileToScan: string): Promise<Violation[]>;
 }
 
@@ -48,12 +51,15 @@ export enum ApexGuruAccess {
     NOT_AUTHED = "not-authed"
 }
 
+const ACCESS_CHANGED_EVENT = "apexGuruAccessChanged";
+
 export class LiveApexGuruService implements ApexGuruService {
     private readonly orgConnectionService: OrgConnectionService;
     private readonly fileHandler: FileHandler;
     private readonly logger: Logger;
     private readonly maxTimeoutSeconds: number;
     private readonly retryIntervalMillis: number;
+    private readonly eventEmitter: EventEmitter = new EventEmitter();
     private availability?: ApexGuruAvailability;
 
     constructor(
@@ -67,42 +73,60 @@ export class LiveApexGuruService implements ApexGuruService {
         this.logger = logger;
         this.maxTimeoutSeconds = maxTimeoutSeconds;
         this.retryIntervalMillis = retryIntervalMillis;
+
+        // Every time an org is changed (authed or unauthed) then we recalculate the availability asyncronously
+        orgConnectionService.onOrgChange((_orgUserInfo: OrgUserInfo) => {
+            void this.updateAvailability();
+        });
     }
 
-    async getAvailability(): Promise<ApexGuruAvailability> {
+    getAvailability(): ApexGuruAvailability {
         if (this.availability === undefined) {
-            await this.updateAvailability();
+            // This should never happen in production because updateAvailability must be called prior to enabling
+            // the user to even have access to any of the ApexGuru scan buttons. If it does, we should investigate.
+            throw new Error('The getAvailability method should not be called until updateAvailability is first called');
         }
         return this.availability;
     }
 
-    // TODO: Soon with W-18538308 we will be using the connection.onOrgChange to wire up to this
-    private async updateAvailability(): Promise<void> {
+    onAccessChange(callback: (access: ApexGuruAccess) => void): void {
+        this.eventEmitter.addListener(ACCESS_CHANGED_EVENT, callback);
+    }
+
+    async updateAvailability(): Promise<void> {
         if (!this.orgConnectionService.isAuthed()) {
-            this.availability = {
+            this.setAvailability({
                 access: ApexGuruAccess.NOT_AUTHED,
                 message: messages.apexGuru.noOrgAuthed
-            };
+            });
             return;
         }
 
         const response: ApexGuruResponse = await this.request('GET', await this.getValidateEndpoint());
 
         if (response.status === RESPONSE_STATUS.SUCCESS) {
-            this.availability = { 
+            this.setAvailability({ 
                 access: ApexGuruAccess.ENABLED,
 
                 // This message isn't used anywhere except for debugging purposes and it allows us to make message field
                 // a string instead of a string | undefined.
                 message: "ApexGuru access is enabled."
-            };
+            });
         } else {
-            this.availability = {
+            this.setAvailability({
                 access:  response.status === RESPONSE_STATUS.FAILED ? ApexGuruAccess.ELIGIBLE : ApexGuruAccess.INELIGIBLE,
 
                 // There should always be a message on failed and error responses, but adding this here just in case
                 message: response.message ?? `ApexGuru access is not enabled. Response:  ${JSON.stringify(response)}`
-            };
+            });
+        }
+    }
+
+    private setAvailability(availability: ApexGuruAvailability) {
+        const oldAccess: ApexGuruAccess | undefined = this.availability?.access;
+        this.availability = availability;
+        if (availability.access !== oldAccess) {
+            this.eventEmitter.emit(ACCESS_CHANGED_EVENT, availability.access);
         }
     }
 

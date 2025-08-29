@@ -1,7 +1,8 @@
 import { ApexGuruAccess, ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
-import { HttpRequest, OrgConnectionService } from "../../../../lib/external-services/org-connection-service";
+import { HttpRequest, OrgConnectionService, OrgUserInfo } from "../../../../lib/external-services/org-connection-service";
 import * as stubs from "../../stubs";
 import { Violation } from "../../../../lib/diagnostics";
+import { expectEventuallyIsTrue } from "../../test-utils";
 
 describe("Tests for LiveApexGuruService", () => {
     const sampleFile: string = '/some/file.cls';
@@ -133,10 +134,16 @@ describe("Tests for LiveApexGuruService", () => {
         apexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
     });
 
-    describe("Tests for getAvailability", () => {
+    describe("Tests for updateAvailability and getAvailability", () => {
+        it('When getAvailability is called before updateAvailability (which should never happen in production), then error', () => {
+            expect(() => apexGuruService.getAvailability()).toThrow(
+                'The getAvailability method should not be called until updateAvailability is first called');
+        });
+
         it('When no org is authed, then return NOT_AUTHED availability', async () => {
             orgConnectionService.isAuthedReturnValue = false;
-            expect(await apexGuruService.getAvailability()).toEqual({
+            await apexGuruService.updateAvailability();
+            expect(apexGuruService.getAvailability()).toEqual({
                 access: ApexGuruAccess.NOT_AUTHED,
                 message: "No org is authed."
             });
@@ -147,7 +154,8 @@ describe("Tests for LiveApexGuruService", () => {
                 status: "error",
                 message: "some error message"
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
+            await apexGuruService.updateAvailability();
+            expect(apexGuruService.getAvailability()).toEqual({
                 access: ApexGuruAccess.INELIGIBLE,
                 message: "some error message"
             });
@@ -159,7 +167,8 @@ describe("Tests for LiveApexGuruService", () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "failed"
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
+            await apexGuruService.updateAvailability();
+            expect(apexGuruService.getAvailability()).toEqual({
                 access: ApexGuruAccess.ELIGIBLE,
                 message: "ApexGuru access is not enabled. Response:  {\"status\":\"failed\"}"
             });
@@ -170,7 +179,8 @@ describe("Tests for LiveApexGuruService", () => {
                 status: "failed",
                 message: "some instruction on how to enable ApexGuru"
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
+            await apexGuruService.updateAvailability();
+            expect(apexGuruService.getAvailability()).toEqual({
                 access: ApexGuruAccess.ELIGIBLE,
                 message: "some instruction on how to enable ApexGuru"
             });
@@ -180,7 +190,8 @@ describe("Tests for LiveApexGuruService", () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "SUccesS" // Also testing that we check with case insensitivity to be more robust
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
+            await apexGuruService.updateAvailability();
+            expect(apexGuruService.getAvailability()).toEqual({
                 access: ApexGuruAccess.ENABLED,
                 message: "ApexGuru access is enabled."
             });
@@ -191,6 +202,41 @@ describe("Tests for LiveApexGuruService", () => {
                 method: "GET",
                 url: "/services/data/v64.0/apexguru/validate"
             });
+        });
+
+        it("When an org auth change occurs, then the updateAvailability method should automatically be called", async () => {
+            expect(orgConnectionService.onOrgChangeCallHistory).toHaveLength(1);
+            const triggerOrgChangeCallback = orgConnectionService.onOrgChangeCallHistory[0].callback;
+
+            // The source code uses async behavior, so we use expectEventuallyIsTrue to help test that something evenutally happes
+            orgConnectionService.isAuthedReturnValue = false;
+            triggerOrgChangeCallback({alias: 'org1'});
+            await expectEventuallyIsTrue(() => apexGuruService.getAvailability().access === ApexGuruAccess.NOT_AUTHED);
+
+            orgConnectionService.isAuthedReturnValue = true;
+            triggerOrgChangeCallback({alias: 'org2'});
+            await expectEventuallyIsTrue(() => apexGuruService.getAvailability().access === ApexGuruAccess.ENABLED);
+        });
+
+        it("When the updateAvailability method is called and changes the access level, then the onAccessChange method is called", async () => {
+            let latestAccess: ApexGuruAccess | undefined = undefined;
+            apexGuruService.onAccessChange((access: ApexGuruAccess) => {
+                latestAccess = access;
+            });
+            await apexGuruService.updateAvailability();
+
+            expect(latestAccess).toEqual(ApexGuruAccess.ENABLED);
+        });
+
+        it("When the updateAvailability method is called but does not change the access level, then the onAccessChange method is not called", async () => {
+            let wasCalled: boolean = false;
+            await apexGuruService.updateAvailability(); // First set it
+            apexGuruService.onAccessChange((_access: ApexGuruAccess) => {
+                wasCalled = true;
+            });
+
+            await apexGuruService.updateAvailability(); // Call it again ... 
+            expect(wasCalled).toEqual(false); // ... since nothing changed this should not have been called
         });
     });
 
@@ -342,8 +388,8 @@ export class StubOrgConnectionServiceForApexGuru implements OrgConnectionService
         return this.isAuthedReturnValue;
     }
 
-    onOrgChangeCallHistory: {callback: () => void}[] = [];
-    onOrgChange(callback: () => void): void {
+    onOrgChangeCallHistory: {callback: (orgUserInfo: OrgUserInfo) => void}[] = [];
+    onOrgChange(callback: (orgUserInfo: OrgUserInfo) => void): void {
         this.onOrgChangeCallHistory.push({callback});
     }
 

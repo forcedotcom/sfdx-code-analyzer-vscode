@@ -33,7 +33,7 @@ export class ApexGuruRunAction {
             const startTime: number = Date.now();
 
             try {
-                const availability: ApexGuruAvailability = await this.apexGuruService.getAvailability();
+                const availability: ApexGuruAvailability = this.apexGuruService.getAvailability();
                 if (availability.access !== ApexGuruAccess.ENABLED) {
                     this.display.displayError(availability.message);
                     this.telemetryService.sendCommandEvent(Constants.TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED, {
