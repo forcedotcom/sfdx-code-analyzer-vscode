@@ -5,7 +5,6 @@ import { CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Viola
 import { FakeDiagnosticCollection } from "../../vscode-stubs";
 import { ApexGuruRunAction } from "../../../../lib/apexguru/apex-guru-run-action";
 import { createSampleCodeAnalyzerDiagnostic } from "../../test-utils";
-import { ApexGuruAccess } from "../../../../lib/apexguru/apex-guru-service";
 
 describe("Tests for ApexGuruRunAction", () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/some/file.cls');
@@ -61,8 +60,9 @@ describe("Tests for ApexGuruRunAction", () => {
     });
 
     it("When user's org is eligible but not enabled, then ApexGuru scan button results in an error window with instructions", async () => {
-        apexGuruService.getAvailabilityReturnValue = {
-            access: ApexGuruAccess.ELIGIBLE,
+        apexGuruService.orgStatusReturnValue = {
+            enabled: false,
+            eligible: true,
             message: "Some instructions from ApexGuru"
         };
 
@@ -79,8 +79,8 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
         expect(telemetryService.sendCommandEventCallHistory[0].commandName).toEqual('sfdx__apexguru_file_run_not_enabled');
         expect(telemetryService.sendCommandEventCallHistory[0].properties).toEqual({
-            access: 'eligible-but-not-enabled',
-            executedCommand: 'SomeCommandName'
+            executedCommand: 'SomeCommandName',
+            message: 'Some instructions from ApexGuru'
         });
 
         // Also validate that we didn't modify the existing diagnostics at all

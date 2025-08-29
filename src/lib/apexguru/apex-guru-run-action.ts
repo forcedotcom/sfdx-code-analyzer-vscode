@@ -6,7 +6,7 @@ import { TelemetryService } from "../external-services/telemetry-service";
 import { Display } from "../display";
 import { messages } from "../messages";
 import { getErrorMessage, getErrorMessageWithStack } from "../utils";
-import { APEX_GURU_ENGINE_NAME, ApexGuruAccess, ApexGuruAvailability, ApexGuruService } from "./apex-guru-service";
+import { APEX_GURU_ENGINE_NAME, ApexGuruOrgStatus, ApexGuruService } from "./apex-guru-service";
 
 export class ApexGuruRunAction {
     private readonly taskWithProgressRunner: TaskWithProgressRunner;
@@ -33,13 +33,12 @@ export class ApexGuruRunAction {
             const startTime: number = Date.now();
 
             try {
-                const availability: ApexGuruAvailability = await this.apexGuruService.getAvailability();
-                if (availability.access !== ApexGuruAccess.ENABLED) {
-                    this.display.displayError(availability.message);
-                    this.telemetryService.sendCommandEvent(Constants.TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED, {
-                        executedCommand: commandName,
-                        access: availability.access
-                    });
+                const apexGuruOrgStatus: ApexGuruOrgStatus = await this.apexGuruService.getApexGuruOrgStatus();
+                if (!apexGuruOrgStatus.enabled) {
+                    // We should only get here if the org is eligible but not enabled, but we should show the message and send telemetry regardless
+                    const message: string = apexGuruOrgStatus.message;
+                    this.display.displayError(message);
+                    this.telemetryService.sendCommandEvent(Constants.TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED, { executedCommand: commandName, message });
                     return;
                 }
 

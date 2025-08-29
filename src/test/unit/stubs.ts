@@ -15,7 +15,7 @@ import * as semver from "semver";
 import {FileHandler} from "../../lib/fs-utils";
 import {VscodeWorkspace, WindowManager} from "../../lib/vscode-api";
 import {Workspace} from "../../lib/workspace";
-import { ApexGuruAccess, ApexGuruAvailability, ApexGuruService } from "../../lib/apexguru/apex-guru-service";
+import {ApexGuruOrgStatus, ApexGuruService } from "../../lib/apexguru/apex-guru-service";
 
 
 export class SpyTelemetryService implements TelemetryService {
@@ -364,12 +364,13 @@ export class SpyWindowManager implements WindowManager {
 }
 
 export class StubApexGuruService implements ApexGuruService {
-    getAvailabilityReturnValue: ApexGuruAvailability = {
-        access: ApexGuruAccess.ENABLED,
+    orgStatusReturnValue: ApexGuruOrgStatus = {
+        enabled: true,
+        eligible: true,
         message: "ApexGuru access is enabled."
     };
-    getAvailability(): Promise<ApexGuruAvailability> {
-        return Promise.resolve(this.getAvailabilityReturnValue);
+    getApexGuruOrgStatus(): Promise<ApexGuruOrgStatus> {
+        return Promise.resolve(this.orgStatusReturnValue);
     }
 
     scanReturnValue: Violation[] = [];

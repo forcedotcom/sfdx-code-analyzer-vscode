@@ -1,4 +1,4 @@
-import { ApexGuruAccess, ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
+import { ApexGuruService, LiveApexGuruService } from "../../../../lib/apexguru/apex-guru-service";
 import { HttpRequest, OrgConnectionService } from "../../../../lib/external-services/org-connection-service";
 import * as stubs from "../../stubs";
 import { Violation } from "../../../../lib/diagnostics";
@@ -133,22 +133,24 @@ describe("Tests for LiveApexGuruService", () => {
         apexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger, maxTimeOutSecs, retryIntervalMillis);
     });
 
-    describe("Tests for getAvailability", () => {
-        it('When no org is authed, then return NOT_AUTHED availability', async () => {
+    describe("Tests for getApexGuruOrgStatus", () => {
+        it('When no org is authed, then return not enabled and not eligible', async () => {
             orgConnectionService.isAuthedReturnValue = false;
-            expect(await apexGuruService.getAvailability()).toEqual({
-                access: ApexGuruAccess.NOT_AUTHED,
+            expect(await apexGuruService.getApexGuruOrgStatus()).toEqual({
+                enabled: false,
+                eligible: false,
                 message: "No org is authed."
             });
         });
 
-        it('When the ApexGuru validate endpoint returns an error status, then return INELIGIBLE availability', async () => {
+        it('When the ApexGuru validate endpoint returns an error status, then the org is not enabled and not eligible', async () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "error",
                 message: "some error message"
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
-                access: ApexGuruAccess.INELIGIBLE,
+            expect(await apexGuruService.getApexGuruOrgStatus()).toEqual({
+                enabled: false,
+                eligible: false,
                 message: "some error message"
             });
         });
@@ -159,29 +161,32 @@ describe("Tests for LiveApexGuruService", () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "failed"
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
-                access: ApexGuruAccess.ELIGIBLE,
+            expect(await apexGuruService.getApexGuruOrgStatus()).toEqual({
+                enabled: false,
+                eligible: true,
                 message: "ApexGuru access is not enabled. Response:  {\"status\":\"failed\"}"
             });
         });
 
-        it('When the ApexGuru validate endpoint returns a failed status, then return ELIGIBLE availability', async () => {
+        it('When the ApexGuru validate endpoint returns a failed status, then the org is not enabled but eligible', async () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "failed",
                 message: "some instruction on how to enable ApexGuru"
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
-                access: ApexGuruAccess.ELIGIBLE,
+            expect(await apexGuruService.getApexGuruOrgStatus()).toEqual({
+                enabled: false,
+                eligible: true,
                 message: "some instruction on how to enable ApexGuru"
             });
         });
 
-        it('When the ApexGuru validate endpoint returns success, then return ENABLED availability', async () => {
+        it('When the ApexGuru validate endpoint returns success, then the org is enabled and eligible', async () => {
             orgConnectionService.requestReturnValueForAuthValidation = {
                 status: "SUccesS" // Also testing that we check with case insensitivity to be more robust
             };
-            expect(await apexGuruService.getAvailability()).toEqual({
-                access: ApexGuruAccess.ENABLED,
+            expect(await apexGuruService.getApexGuruOrgStatus()).toEqual({
+                enabled: true,
+                eligible: true,
                 message: "ApexGuru access is enabled."
             });
 

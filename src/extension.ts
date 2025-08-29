@@ -33,7 +33,7 @@ import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-
 import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
 import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
 import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hover-provider';
-import {ApexGuruAccess, ApexGuruAvailability, ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
+import {ApexGuruOrgStatus, ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
 import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
 import {OrgConnectionService} from './lib/external-services/org-connection-service';
 
@@ -248,16 +248,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
 
     // TODO: This is temporary and will change soon when we remove pilot flag and instead add a watch to org auth changes
-    const isApexGuruEnabled: () => Promise<boolean> = async () => {
+    const isApexGuruFeatureEnabled: () => Promise<boolean> = async () => {
         if (!settingsManager.getApexGuruEnabled()) {
             return false;
         }
-        const availability: ApexGuruAvailability = await apexGuruService.getAvailability();
-        if (availability.access === ApexGuruAccess.ENABLED || availability.access === ApexGuruAccess.ELIGIBLE) {
+        const apexGuruOrgStatus: ApexGuruOrgStatus = await apexGuruService.getApexGuruOrgStatus();
+        if (apexGuruOrgStatus.enabled || apexGuruOrgStatus.eligible) {
             return true;
         }
     };
-    await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
+    await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruFeatureEnabled);
 
     // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
