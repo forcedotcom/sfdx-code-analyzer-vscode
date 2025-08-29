@@ -31,8 +31,8 @@ export function createSampleViolation(location: CodeLocation, ruleName: string =
     };
 }
 
-// To help test asyncronous code (when we purposely do not await a promise), we can use this function to help with
-// wait for the async operation to take place. If it doesn't pass within the specified timeout then an exception is thrown.
+// To help test asyncronous code (when we purposely do not await a promise), we can use this function to help wait for
+// async operation to take place successfully. If it doesn't within the specified timeout, then an exception is thrown.
 export async function expectEventuallyIsTrue(conditionFn: () => boolean, timeout: number = 5000, interval: number = 50): Promise<void> {
     const start = Date.now();
 
