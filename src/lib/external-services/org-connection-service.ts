@@ -38,7 +38,7 @@ export class LiveOrgConnectionService implements OrgConnectionService {
     }
 
     isAuthed(): boolean {
-        return this.workpaceContext.orgId?.length > 0;
+        return this.workpaceContext.orgId?.length > 0 && (this.workpaceContext.alias?.length > 0 || this.workpaceContext.username?.length > 0);
     }
 
     async getApiVersion(): Promise<string> {
