@@ -8,12 +8,13 @@ import {
     SpyWindowManager,
     StubCodeAnalyzer, StubFileHandler, StubVscodeWorkspace
 } from "../stubs";
-import {CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
+import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {CodeAnalyzerRunAction, UNINSTANTIABLE_ENGINE_RULE} from "../../../lib/code-analyzer-run-action";
 import {messages} from "../../../lib/messages";
 import * as Constants from '../../../lib/constants';
 import {Workspace} from "../../../lib/workspace";
+import { APEX_GURU_ENGINE_NAME } from "../../../lib/apexguru/apex-guru-service";
 
 describe('Tests for CodeAnalyzerRunAction', () => {
     let sampleWorkspace: Workspace;
@@ -86,6 +87,40 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(display.displayInfoCallHistory).toEqual([
             {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'}
         ]);
+    });
+
+    it('When scan happens, it should clear old Code Analyzer diagnostics before setting new ones but keep existing ApexGuru diagnostics', async () => {
+        diagnosticManager.addDiagnostics([
+            CodeAnalyzerDiagnostic.fromViolation({
+                rule: 'dummyRule1',
+                engine: APEX_GURU_ENGINE_NAME,
+                message: 'messageFromApexGuru',
+                severity: 3,
+                locations: [{file: 'someFile.cls'}],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: []
+            }),
+            CodeAnalyzerDiagnostic.fromViolation({
+                rule: 'dummyRule1',
+                engine: 'pmd',
+                message: 'messageFromPmd',
+                severity: 3,
+                locations: [{file: 'someFile.cls'}],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: []
+            })
+        ]);
+        codeAnalyzer.scanReturnValue = [
+            createSampleViolation('New', 2, [{file: 'someFile.cls'}]), // Is sufficient to make this into a diagnostic
+        ];
+        const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+        await codeAnalyzerRunAction.run('dummyCommandName', workspace);
+
+        const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(vscode.Uri.file('someFile.cls')) as CodeAnalyzerDiagnostic[];
+        expect(resultingDiags).toHaveLength(2);
+        expect(resultingDiags.map(d => d.message)).toEqual(['Sev3: messageFromApexGuru', 'Sev2: messageNew']);
     });
 
     it('When an engine cannot be initialized and user ignores the message, then do not show that exact message again', async () => {

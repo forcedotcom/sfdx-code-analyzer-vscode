@@ -10,6 +10,7 @@ import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
 import {WindowManager} from "./vscode-api";
 import {Workspace} from "./workspace";
+import { APEX_GURU_ENGINE_NAME } from "./apexguru/apex-guru-service";
 
 export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
 
@@ -80,7 +81,16 @@ export class CodeAnalyzerRunAction {
 
                 const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation.map(v => CodeAnalyzerDiagnostic.fromViolation(v));
                 const targetedFiles: string[] = await workspace.getTargetedFiles();
-                this.diagnosticManager.clearDiagnosticsForFiles(targetedFiles.map(f => vscode.Uri.file(f)));
+                
+                // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics 
+                // except for ApexGuru based diagnostics which are handled separately.
+                for (const file of targetedFiles) {
+                    const diagsToClear: CodeAnalyzerDiagnostic[] = 
+                        this.diagnosticManager.getDiagnosticsForFile(vscode.Uri.file(file))
+                        .filter(d => d.violation.engine !== APEX_GURU_ENGINE_NAME);
+                    this.diagnosticManager.clearDiagnostics(diagsToClear);
+                }
+                
                 this.diagnosticManager.addDiagnostics(diagnostics);
                 void this.displayResults(targetedFiles.length, violationsWithFileLocation);
 
