@@ -11,6 +11,7 @@ import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
 
 describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEvent method`, () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/someFile.cls');
+    const sampleUri2: vscode.Uri = vscode.Uri.file('/someOtherFile.cls');
     const sampleLines: string[] = [
         'This is line 0.',
         'And this is line 1.',
@@ -853,7 +854,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 endLine: 7
             };
             const otherLocation: CodeLocation = {
-                file: '/someOtherFile.cls',
+                file: sampleUri2.fsPath,
                 startLine: 1,
                 startColumn: 4,
                 endLine: 1,
@@ -884,7 +885,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             expect(resultingDiags[0].violation.locations[0]).toEqual(primaryLocation);
             expect(resultingDiags[0].violation.locations[1]).toEqual(otherLocation);
             expect(resultingDiags[0].relatedInformation).toHaveLength(1);
-            expect(resultingDiags[0].relatedInformation[0].location.uri.fsPath).toEqual('/someOtherFile.cls');
+            expect(resultingDiags[0].relatedInformation[0].location.uri.fsPath).toEqual(sampleUri2.fsPath);
             expect(resultingDiags[0].relatedInformation[0].location.range).toEqual(new vscode.Range(0, 3, 0, 4));
         });
 
@@ -1052,7 +1053,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                     {
                         fixedCode: 'fix2',
                         location: { // Should not be changed because it is a fix in a different file
-                            file: '/someOtherFile.cls',
+                            file: sampleUri2.fsPath,
                             startLine: 1
                         }
                     }
@@ -1088,7 +1089,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                     {
                         message: 'suggestion2',
                         location: { // Should not be changed because it is a fix in a different file
-                            file: '/someOtherFile.cls',
+                            file: sampleUri2.fsPath,
                             startLine: 1
                         },
                     },
@@ -1127,7 +1128,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             expect(resultingDiags[0].violation.fixes[1]).toEqual({
                 fixedCode: 'fix2',
                 location: { // Should not be changed because it is a fix in a different file
-                    file: '/someOtherFile.cls',
+                    file: sampleUri2.fsPath,
                     startLine: 1
                 }
             });
@@ -1146,7 +1147,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             expect(resultingDiags[1].violation.suggestions[0]).toEqual({
                 message: 'suggestion2',
                 location: { // Should not be changed because it is a fix in a different file
-                    file: '/someOtherFile.cls',
+                    file: sampleUri2.fsPath,
                     startLine: 1
                 }
             })

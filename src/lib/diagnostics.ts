@@ -272,7 +272,7 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
     }
     const newDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
 
-    if (violationAdjustment.hasOverlap || diag.isStale()) {
+    if (violationAdjustment.overlapsWithChange || diag.isStale()) {
         diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.
         newDiag.markStale();
     }
@@ -298,13 +298,13 @@ function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDoc
 
         const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(origLocation, change, replacementLines);
         if (i === oldViolation.primaryLocationIndex) {
-            hasPrimaryLocationOverlap = locationAdjustment.hasOverlap;
+            hasPrimaryLocationOverlap = locationAdjustment.overlapsWithChange;
         }
 
         if (locationAdjustment.newValue !== null) {
             newViolationLocations.push(locationAdjustment.newValue);
         } else if (i === oldViolation.primaryLocationIndex) {
-            return { newValue: null, hasOverlap: locationAdjustment.hasOverlap }; // Indicates that the violation should be removed
+            return { newValue: null, overlapsWithChange: locationAdjustment.overlapsWithChange }; // Indicates that the violation should be removed
         } else if (i < oldViolation.primaryLocationIndex) {
             newViolation.primaryLocationIndex--; // Edge case: need to adjust primary index if deleting a location prior to the primary
         }
@@ -318,7 +318,7 @@ function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDoc
             return fix;
         }
         const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(fix.location, change, replacementLines);
-        return locationAdjustment.newValue === null || locationAdjustment.hasOverlap ?
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ?
             null : {...fix, location: locationAdjustment.newValue};
     }).filter(fix => fix !== null);
 
@@ -329,11 +329,11 @@ function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDoc
             return suggestion;
         }
         const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(suggestion.location, change, replacementLines);
-        return locationAdjustment.newValue === null || locationAdjustment.hasOverlap ? 
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ? 
             null : {...suggestion, location: locationAdjustment.newValue};
     }).filter(suggestion => suggestion !== null);
 
-    return { newValue: newViolation, hasOverlap: hasPrimaryLocationOverlap };
+    return { newValue: newViolation, overlapsWithChange: hasPrimaryLocationOverlap };
 }
 
 function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextDocumentContentChangeEvent,
@@ -341,7 +341,7 @@ function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextD
     const origRange: vscode.Range = toRange(origLocation);
     const rangeAdjustment: Adjustment<vscode.Range> = adjustRangeToChange(origRange, change, replacementLines);
     if (rangeAdjustment.newValue === null) {
-        return { newValue: null, hasOverlap: rangeAdjustment.hasOverlap };
+        return { newValue: null, overlapsWithChange: rangeAdjustment.overlapsWithChange };
     }
     return {
         newValue: {
@@ -353,7 +353,7 @@ function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextD
             endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ? 
                 undefined : rangeAdjustment.newValue.end.character + 1
         },
-        hasOverlap: rangeAdjustment.hasOverlap
+        overlapsWithChange: rangeAdjustment.overlapsWithChange
     }
 }
 
@@ -374,7 +374,7 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
     // Cases: [*]*{*}
     // If the change is after the original range, then no updates needed
     if (change.range.start.isAfterOrEqual(origRange.end)) {
-        return { newValue: origRange, hasOverlap: false };
+        return { newValue: origRange, overlapsWithChange: false };
     }
 
     // Calculate the change in the number of lines
@@ -406,15 +406,15 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
                 newEndChar = newStartChar + (origRange.end.character - origRange.start.character);
             }
         }
-        return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), hasOverlap: false };
+        return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), overlapsWithChange: false };
     }
 
-    // At this point, there must be some sort of overlap of the original range with the change, so we set hasOverlap to true
+    // At this point, there must be some sort of overlap of the original range with the change, so we set overlapsWithChange to true
 
     // Case: {*[*]*}
     // If the entire original range is contained within the change, then we can just mark the range to be removed
     if(change.range.start.isBeforeOrEqual(origRange.start) && change.range.end.isAfterOrEqual(origRange.end)) {
-        return { newValue: null, hasOverlap: true }; // Using null to mark for removal
+        return { newValue: null, overlapsWithChange: true }; // Using null to mark for removal
     }
 
     // Cases: [*{*]*}
@@ -422,7 +422,7 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
     if (change.range.end.isAfterOrEqual(origRange.end)) {
         newEndLine = change.range.start.line;
         newEndChar = change.range.start.character;
-        return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), hasOverlap: true };
+        return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), overlapsWithChange: true };
     }
 
     // Cases: {*[*}*] or [*{*}*]
@@ -454,10 +454,10 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
         }
     }
 
-    return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), hasOverlap: true };
+    return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), overlapsWithChange: true };
 }
 
 class Adjustment<T> {
     newValue: T | null; // null is a way of marking that there is no new value and thus the old should be removed
-    hasOverlap: boolean; 
+    overlapsWithChange: boolean; 
 }
