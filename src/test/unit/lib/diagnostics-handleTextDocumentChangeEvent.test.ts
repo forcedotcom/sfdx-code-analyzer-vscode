@@ -1,7 +1,7 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 import {createTextDocument} from "jest-mock-vscode";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
-import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from "../../../lib/diagnostics";
+import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../../lib/diagnostics";
 import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
 
 /*
@@ -11,6 +11,7 @@ import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
 
 describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEvent method`, () => {
     const sampleUri: vscode.Uri = vscode.Uri.file('/someFile.cls');
+    const sampleUri2: vscode.Uri = vscode.Uri.file('/someOtherFile.cls');
     const sampleLines: string[] = [
         'This is line 0.',
         'And this is line 1.',
@@ -86,7 +87,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag1, diag2]); // Same diagnostic instances
+            expect(resultingDiags.map(d => d.message)).toEqual([diag1.message, diag2.message]); // Same diagnostic messages
             expect(resultingDiags.map(d => d.range)).toEqual([range1, range2]); // Should still have same ranges
             expect(resultingDiags.map(d => d.isStale())).toEqual([false, false]); // ... that should not be stale
         });
@@ -103,7 +104,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag1, diag2]); // Same diagnostic instances
+            expect(resultingDiags.map(d => d.message)).toEqual([diag1.message, diag2.message]); // Same diagnostic messages
             expect(resultingDiags.map(d => d.range)).toEqual([  // Ranges should have changed
                 new vscode.Range(2, 1, 2, 3), new vscode.Range(2, 5, 3, 2)]);
             expect(resultingDiags.map(d => d.isStale())).toEqual([false, false]); // ... that should not be stale
@@ -121,7 +122,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag1, diag2]); // Same diagnostic instances
+            expect(resultingDiags.map(d => d.message)).toEqual([diag1.message, diag2.message]); // Same diagnostic messages
             expect(resultingDiags.map(d => d.range)).toEqual([  // Only second range should have changed
                 range1, new vscode.Range(2, 5, 3, 2)]);
             expect(resultingDiags.map(d => d.isStale())).toEqual([false, false]); // ... that should not be stale
@@ -152,7 +153,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 0, 1, 4)); // ... with same range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -167,7 +168,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 0, 2, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -182,7 +183,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 0, 1, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -197,7 +198,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 0, 2, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -212,7 +213,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 0, 3, 4)); // ... with same range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -227,7 +228,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 0, 4, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -242,7 +243,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 0, 2, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -257,7 +258,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 0, 3, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -272,7 +273,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 4, 2, 9)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -287,7 +288,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(3, 12, 3, 17)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -302,7 +303,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 12, 0, 15)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -317,7 +318,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(3, 5, 3, 8)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -332,7 +333,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 8, 4, 2)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -347,7 +348,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(5, 4, 7, 2)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -362,7 +363,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 5, 1, 5)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -377,7 +378,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 8, 2, 5)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -392,7 +393,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 13, 1, 18)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -407,7 +408,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(3, 4, 3, 9)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -422,7 +423,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 4, 0, 9)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -437,7 +438,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 5, 1, 10)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -452,7 +453,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 28, 1, 6)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -467,7 +468,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 5, 2, 9)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -482,7 +483,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 7, 3, 6)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -497,7 +498,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(5, 0, 7, 6)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -512,7 +513,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(4, 2, 4, 40)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -527,7 +528,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(4, 2, 5, 29)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -542,7 +543,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 0, 4, 35)); // ... with the same range (only because replacement text was same size as change range) ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -557,7 +558,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 1, 6, 29)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -572,7 +573,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 1, 0, 25)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -587,7 +588,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 1, 1, 33)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -602,7 +603,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 2, 2, 6)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -617,7 +618,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(2, 2, 2, 6)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -632,7 +633,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 6, 2, 0)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -647,7 +648,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 6, 2, 0)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -662,7 +663,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 6, 2, 9)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -677,7 +678,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(1, 6, 2, 9)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -692,7 +693,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 2, 0, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -707,7 +708,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 2, 0, 4)); // ... with fixed range ...
             expect(resultingDiags[0].isStale()).toEqual(true); // ... that should be stale
         });
@@ -722,7 +723,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 2, 0, 6)); // ... with same range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -737,7 +738,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 2, 0, 6)); // ... with same range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -752,7 +753,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
             diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
-            expect(resultingDiags).toEqual([diag]); // Same diagnostic instance ...
+            expect(resultingDiags.map(d => d.message)).toEqual([diag.message]); // Same diagnostic message ...
             expect(resultingDiags[0].range).toEqual(new vscode.Range(0, 2, 0, 6)); // ... with same range ...
             expect(resultingDiags[0].isStale()).toEqual(false); // ... that should not be stale
         });
@@ -781,6 +782,375 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
 
             const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
             expect(resultingDiags).toEqual([]); // Diagnostic instance should be removed
+        });
+    });
+
+    describe('Tests to ensure violation locations inside of diagnostic get updated when applicable', () => {
+        it('When diagnostic contains only a primary location, and change is after, then location remains unchanged', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0, 2, 1, 6));
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(5, 0, 4, 0), 'hello\nworld');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations[0]).toEqual({
+                file: sampleUri.fsPath,
+                startLine: 1,
+                startColumn: 3,
+                endLine: 2,
+                endColumn: 7
+            });
+        });
+
+        it('When diagnostic contains only a primary location, and change overlaps, then location updates accordingly', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0, 2, 1, 6));
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 2, 0, 3), 'hello');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations[0]).toEqual({
+                file: sampleUri.fsPath,
+                startLine: 1,
+                startColumn: 8, // Was at 3, but should increase by 5 to equal 8
+                endLine: 2,
+                endColumn: 7
+            });
+        });
+
+        it('When diagnostic contains only a primary location, and change is before, then location updates accordingly', () => {
+            const diag: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(sampleUri, new vscode.Range(0, 2, 1, 6));
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 0, 0, 1), 'hello\nworld'); // adds a new line and inserts new characters to replace first char
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations[0]).toEqual({
+                file: sampleUri.fsPath,
+                startLine: 2,
+                startColumn: 7, // Should increase by 4
+                endLine: 3, // Should increase by 1
+                endColumn: 7
+            });
+        });
+
+        it('When diagnostic contains another location but from another file, then that other location is untouched', () => {
+            const primaryLocation = {
+                file: sampleUri.fsPath,
+                startLine: 7,
+                startColumn: 1,
+                endLine: 7
+            };
+            const otherLocation: CodeLocation = {
+                file: sampleUri2.fsPath,
+                startLine: 1,
+                startColumn: 4,
+                endLine: 1,
+                endColumn: 5
+            };
+            const violation: Violation = {
+                rule: 'dummyRule',
+                engine: 'pmd',
+                message: 'Some dummy violation message',
+                severity: 3,
+                locations: [primaryLocation, otherLocation],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: [],
+                fixes: [],
+                suggestions: []
+            }
+            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 0, 0, 2), 'hello');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations).toHaveLength(2);
+            expect(resultingDiags[0].violation.locations[0]).toEqual(primaryLocation);
+            expect(resultingDiags[0].violation.locations[1]).toEqual(otherLocation);
+            expect(resultingDiags[0].relatedInformation).toHaveLength(1);
+            expect(resultingDiags[0].relatedInformation[0].location.uri.fsPath).toEqual(sampleUri2.fsPath);
+            expect(resultingDiags[0].relatedInformation[0].location.range).toEqual(new vscode.Range(0, 3, 0, 4));
+        });
+
+        it('When diagnostic contains another location from the same file, and change is after, then that location is untouched', () => {
+            const primaryLocation = {
+                file: sampleUri.fsPath,
+                startLine: 7,
+                startColumn: 1,
+                endLine: 7
+            };
+            const otherLocation: CodeLocation = {
+                file: sampleUri.fsPath,
+                startLine: 1,
+                startColumn: 1,
+                endLine: 1,
+                endColumn: 5
+            };
+            const violation: Violation = {
+                rule: 'dummyRule',
+                engine: 'pmd',
+                message: 'Some dummy violation message',
+                severity: 3,
+                locations: [primaryLocation, otherLocation],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: [],
+                fixes: [],
+                suggestions: []
+            }
+            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 7, 0, 9), 'hello');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations).toHaveLength(2);
+            expect(resultingDiags[0].violation.locations[0]).toEqual(primaryLocation);
+            expect(resultingDiags[0].violation.locations[1]).toEqual(otherLocation);
+            expect(resultingDiags[0].relatedInformation).toEqual(diag.relatedInformation);
+        });
+
+        it('When diagnostic contains another location from the same file, and change is before, then that location is updated', () => {
+            const primaryLocation = {
+                file: sampleUri.fsPath,
+                startLine: 7,
+                startColumn: 1,
+                endLine: 7
+            };
+            const otherLocation: CodeLocation = {
+                file: sampleUri.fsPath,
+                startLine: 1,
+                startColumn: 4,
+                endLine: 1,
+                endColumn: 5
+            };
+            const violation: Violation = {
+                rule: 'dummyRule',
+                engine: 'pmd',
+                message: 'Some dummy violation message',
+                severity: 3,
+                locations: [primaryLocation, otherLocation],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: [],
+                fixes: [],
+                suggestions: []
+            }
+            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 0, 0, 2), 'hello');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations).toHaveLength(2);
+            expect(resultingDiags[0].violation.locations[0]).toEqual(primaryLocation);
+            expect(resultingDiags[0].violation.locations[1]).toEqual({
+                file: sampleUri.fsPath,
+                startLine: 1,
+                startColumn: 7,
+                endLine: 1,
+                endColumn: 8
+            });
+            expect(resultingDiags[0].relatedInformation).toHaveLength(1);
+            expect(resultingDiags[0].relatedInformation[0].location.uri.fsPath).toEqual(sampleUri.fsPath);
+            expect(resultingDiags[0].relatedInformation[0].location.range).toEqual(new vscode.Range(0, 6, 0, 7));
+        });
+
+        it('When diagnostic contains another location from the same file, and change exactly overlaps location, then that location is removed', () => {
+            const otherLocation: CodeLocation = {
+                file: sampleUri.fsPath,
+                startLine: 1,
+                startColumn: 4,
+                endLine: 1,
+                endColumn: 5
+            };
+            const primaryLocation = {
+                file: sampleUri.fsPath,
+                startLine: 7,
+                startColumn: 1,
+                endLine: 7
+            };
+            const violation: Violation = {
+                rule: 'dummyRule',
+                engine: 'pmd',
+                message: 'Some dummy violation message',
+                severity: 3,
+                // Putting primary location after other location so that when it is removed we confirm primary location index is updated
+                locations: [otherLocation, primaryLocation],
+                primaryLocationIndex: 1,
+                tags: [],
+                resources: [],
+                fixes: [],
+                suggestions: []
+            }
+            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            diagnosticManager.addDiagnostics([diag]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 3, 0, 4), 'hello');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(1);
+            expect(resultingDiags[0].violation.primaryLocationIndex).toEqual(0);
+            expect(resultingDiags[0].violation.locations).toHaveLength(1);
+            expect(resultingDiags[0].violation.locations[0]).toEqual(primaryLocation);
+            expect(resultingDiags[0].relatedInformation).toBeUndefined();
+        });
+    });
+
+    describe('Tests to ensure violation fixes and suggestions have their location updated upon change', () => {
+        it('When fixes and suggestions exist, then their locations update only if impacted', () => {
+            const primaryLocation = {
+                file: sampleUri.fsPath,
+                startLine: 7,
+                startColumn: 1,
+                endLine: 7
+            };
+            const violation1: Violation = {
+                rule: 'dummyRule',
+                engine: 'pmd',
+                message: 'Some dummy violation message',
+                severity: 3,
+                locations: [primaryLocation],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: [],
+                fixes: [
+                    {
+                        fixedCode: 'fix1',
+                        location: { // Should not be changed because it is before the change
+                            file: sampleUri.fsPath,
+                            startLine: 1,
+                            startColumn: 1,
+                            endLine: 1,
+                            endColumn: 2
+                        }
+                    },
+                    {
+                        fixedCode: 'fix2',
+                        location: { // Should not be changed because it is a fix in a different file
+                            file: sampleUri2.fsPath,
+                            startLine: 1
+                        }
+                    }
+                ],
+                suggestions: [{
+                    message: 'suggestion1',
+                    location: { // Should be removed since the line has been altered
+                        file: sampleUri.fsPath,
+                        startLine: 1
+                    }
+                }]
+            };
+            const violation2: Violation = {
+                rule: 'dummyRule2',
+                engine: 'eslint',
+                message: 'Some dummy violation message 2',
+                severity: 4,
+                locations: [primaryLocation],
+                primaryLocationIndex: 0,
+                tags: [],
+                resources: [],
+                fixes: [
+                    {
+                        fixedCode: 'fix3',
+                        location: { // Should be shifted to the right
+                            file: sampleUri.fsPath,
+                            startLine: 1,
+                            startColumn: 8
+                        }
+                    }
+                ],
+                suggestions: [
+                    {
+                        message: 'suggestion2',
+                        location: { // Should not be changed because it is a fix in a different file
+                            file: sampleUri2.fsPath,
+                            startLine: 1
+                        },
+                    },
+                    {
+                        message: 'suggestion3',
+                        location: { // Should be removed because it was altered
+                            file: sampleUri.fsPath,
+                            startLine: 1,
+                            startColumn: 1,
+                            endColumn: 5
+                        },
+                    },
+                ]
+            };
+            const diag1: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation1);
+            const diag2: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation2);
+            diagnosticManager.addDiagnostics([diag1, diag2]);
+
+            const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
+                new vscode.Range(0, 3, 0, 6), 'hello');
+            diagnosticManager.handleTextDocumentChangeEvent(docChangeEvent);
+
+            const resultingDiags: CodeAnalyzerDiagnostic[] = diagnosticCollection.get(sampleUri) as CodeAnalyzerDiagnostic[];
+            expect(resultingDiags).toHaveLength(2);
+            expect(resultingDiags[0].violation.fixes).toHaveLength(2);
+            expect(resultingDiags[0].violation.fixes[0]).toEqual({
+                fixedCode: 'fix1',
+                location: { // Should not be changed because it is before the change
+                    file: sampleUri.fsPath,
+                    startLine: 1,
+                    startColumn: 1,
+                    endLine: 1,
+                    endColumn: 2
+                }
+            });
+            expect(resultingDiags[0].violation.fixes[1]).toEqual({
+                fixedCode: 'fix2',
+                location: { // Should not be changed because it is a fix in a different file
+                    file: sampleUri2.fsPath,
+                    startLine: 1
+                }
+            });
+            expect(resultingDiags[0].violation.suggestions).toHaveLength(0);
+            expect(resultingDiags[1].violation.fixes).toHaveLength(1);
+            expect(resultingDiags[1].violation.fixes[0]).toEqual({
+                fixedCode: 'fix3',
+                location: {
+                    file: sampleUri.fsPath,
+                    startLine: 1,
+                    startColumn: 10, // Correctly shifted to the right by 2
+                    endLine: 1
+                }
+            });
+            expect(resultingDiags[1].violation.suggestions).toHaveLength(1);
+            expect(resultingDiags[1].violation.suggestions[0]).toEqual({
+                message: 'suggestion2',
+                location: { // Should not be changed because it is a fix in a different file
+                    file: sampleUri2.fsPath,
+                    startLine: 1
+                }
+            })
         });
     });
 });

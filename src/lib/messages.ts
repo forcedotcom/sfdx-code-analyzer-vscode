@@ -62,7 +62,8 @@ export const messages = {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
             suffix: 'via Code Analyzer'
-        }
+        },
+        defaultAlternativeLocationMessage: 'This location is also associated with the violation.'
     },
     targeting: {
         error: {

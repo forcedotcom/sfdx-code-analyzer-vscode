@@ -126,7 +126,9 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
                 if (i !== violation.primaryLocationIndex && relatedLocation.file) {
                     const relatedRange = toRange(relatedLocation);
                     const vscodeLocation: vscode.Location = new vscode.Location(vscode.Uri.file(relatedLocation.file), relatedRange);
-                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ?? ''));
+                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ?? 
+                        messages.diagnostics.defaultAlternativeLocationMessage
+                    ));
                 }
             }
             diagnostic.relatedInformation = relatedLocations;
@@ -206,7 +208,7 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
 
         for (const change of event.contentChanges) {
 
-            // Calculating this once and passing it in instead of redoing it for each of the diagnostics
+            // Calculating this once and pass it in instead of redoing it for each of the diagnostics
             const replacementLines: string[] = change.text.split('\n');
 
             const updatedDiagnostics: CodeAnalyzerDiagnostic[] = diags
@@ -261,24 +263,118 @@ function adjustToZeroBased(value: number): number {
 }
 
 
-/**
- * Algorithm to adjust a diagnostic's range (or discard it by return null) based on the text document change event.
- * This algorithm needs to be very fast since it literally runs on every stroke of a key within the editor window.
- */
 function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.TextDocumentContentChangeEvent,
                                   replacementLines: string[]): CodeAnalyzerDiagnostic | null {
+
+    const violationAdjustment: Adjustment<Violation> = adjustViolationToChange(diag.violation, change, replacementLines);
+    if (violationAdjustment.newValue === null) {
+        return null; // Do not add back a diagnostic if its violation has been marked for removal
+    }
+    const newDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
+
+    if (violationAdjustment.overlapsWithChange || diag.isStale()) {
+        diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.
+        newDiag.markStale();
+    }
+
+    return newDiag;
+}
+
+function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDocumentContentChangeEvent,
+                                 replacementLines: string[]): Adjustment<Violation> {
+    const primaryLocation: CodeLocation = oldViolation.locations[oldViolation.primaryLocationIndex];
+    let hasPrimaryLocationOverlap: boolean = false;
+    const newViolation: Violation = oldViolation;
+
+    // Update violation locations
+    const newViolationLocations: CodeLocation[] = [];
+    for (let i: number = 0; i < oldViolation.locations.length; i++) {
+        const origLocation = oldViolation.locations[i];
+        // Other locations not associated with this file (for the primary location) shouldn't be updated
+        if (origLocation.file !== primaryLocation.file) {
+            newViolationLocations.push(origLocation);
+            continue;
+        }
+
+        const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(origLocation, change, replacementLines);
+        if (i === oldViolation.primaryLocationIndex) {
+            hasPrimaryLocationOverlap = locationAdjustment.overlapsWithChange;
+        }
+
+        if (locationAdjustment.newValue !== null) {
+            newViolationLocations.push(locationAdjustment.newValue);
+        } else if (i === oldViolation.primaryLocationIndex) {
+            return { newValue: null, overlapsWithChange: locationAdjustment.overlapsWithChange }; // Indicates that the violation should be removed
+        } else if (i < oldViolation.primaryLocationIndex) {
+            newViolation.primaryLocationIndex--; // Edge case: need to adjust primary index if deleting a location prior to the primary
+        }
+    }
+    newViolation.locations = newViolationLocations;
+
+
+    // update fix locations
+    newViolation.fixes = oldViolation.fixes?.map(fix => {
+        if (fix.location.file !== primaryLocation.file) {
+            return fix;
+        }
+        const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(fix.location, change, replacementLines);
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ?
+            null : {...fix, location: locationAdjustment.newValue};
+    }).filter(fix => fix !== null);
+
+
+    // update suggestion locations
+    newViolation.suggestions = oldViolation.suggestions?.map(suggestion => {
+        if (suggestion.location.file !== primaryLocation.file) {
+            return suggestion;
+        }
+        const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(suggestion.location, change, replacementLines);
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ? 
+            null : {...suggestion, location: locationAdjustment.newValue};
+    }).filter(suggestion => suggestion !== null);
+
+    return { newValue: newViolation, overlapsWithChange: hasPrimaryLocationOverlap };
+}
+
+function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextDocumentContentChangeEvent,
+                                    replacementLines: string[]): Adjustment<CodeLocation> {
+    const origRange: vscode.Range = toRange(origLocation);
+    const rangeAdjustment: Adjustment<vscode.Range> = adjustRangeToChange(origRange, change, replacementLines);
+    if (rangeAdjustment.newValue === null) {
+        return { newValue: null, overlapsWithChange: rangeAdjustment.overlapsWithChange };
+    }
+    return {
+        newValue: {
+            file: origLocation.file,
+            comment: origLocation.comment,
+            startLine: rangeAdjustment.newValue.start.line + 1,
+            startColumn: rangeAdjustment.newValue.start.character + 1,
+            endLine: rangeAdjustment.newValue.end.line + 1,
+            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ? 
+                undefined : rangeAdjustment.newValue.end.character + 1
+        },
+        overlapsWithChange: rangeAdjustment.overlapsWithChange
+    }
+}
+
+/**
+ * Algorithm to adjust a range (or discard it by return null) based on the text document change event.
+ * This algorithm needs to be very fast since it literally runs on every stroke of a key within the editor window.
+ */
+function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumentContentChangeEvent,
+                             replacementLines: string[]): Adjustment<vscode.Range> {
     // Key: .  single line (i.e. no '\n' characters)
     //      _  multiple lines (i.e. at least one '\n' character)
     //      *  line that could be single or multiple (may or may not contain at least one '\n' character)
     //      {  start of change range
     //      }  end of change range
-    //      [  start of diagnostic range
-    //      ]  end of diagnostic range
+    //      [  start of original range
+    //      ]  end of original range
 
     // Cases: [*]*{*}
-    // If the change is after the diagnostic, then no updates needed
-    if (change.range.start.isAfterOrEqual(diag.range.end)) {
-        return diag;
+    // If the change is after the original range, then no updates needed
+    if (change.range.start.isAfterOrEqual(origRange.end)) {
+        return { newValue: origRange, overlapsWithChange: false };
     }
 
     // Calculate the change in the number of lines
@@ -286,64 +382,60 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
     const numLinesDiff: number = replacementLines.length - numLinesInChangeRange;
 
     // Initialize the results
-    let newStartLine: number = diag.range.start.line;
-    let newStartChar: number = diag.range.start.character;
-    let newEndLine: number = diag.range.end.line;
-    let newEndChar: number = diag.range.end.character;
+    let newStartLine: number = origRange.start.line;
+    let newStartChar: number = origRange.start.character;
+    let newEndLine: number = origRange.end.line;
+    let newEndChar: number = origRange.end.character;
 
     // Cases: {*}*[*]
-    // If the change is before the diagnostic, then we just need to increase the diagnostic lines
-    if (change.range.end.isBeforeOrEqual(diag.range.start)) {
-        newStartLine = diag.range.start.line + numLinesDiff;
-        newEndLine = diag.range.end.line + numLinesDiff;
+    // If the change is before the original range, then we just need to increase the range lines
+    if (change.range.end.isBeforeOrEqual(origRange.start)) {
+        newStartLine = origRange.start.line + numLinesDiff;
+        newEndLine = origRange.end.line + numLinesDiff;
 
         // Cases: {*}.[*]
-        // If the preceding change is on the same line as the diagnostic, then adjust the characters as well
-        if (change.range.end.line === diag.range.start.line) {
+        // If the preceding change is on the same line as the original range, then adjust the characters as well
+        if (change.range.end.line === origRange.start.line) {
             const leftPos: number = replacementLines.length > 1 ? 0 : change.range.start.character;
-            const origLen: number = diag.range.start.character - change.range.end.character;
+            const origLen: number = origRange.start.character - change.range.end.character;
             const lastLineLen: number = replacementLines[replacementLines.length-1].length;
             newStartChar = leftPos + origLen + lastLineLen;
 
             // Cases: {*}.[.]
-            if (diag.range.isSingleLine) {
-                newEndChar = newStartChar + (diag.range.end.character - diag.range.start.character);
+            if (origRange.isSingleLine) {
+                newEndChar = newStartChar + (origRange.end.character - origRange.start.character);
             }
         }
-        diag.range = new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar);
-        return diag;
+        return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), overlapsWithChange: false };
     }
+
+    // At this point, there must be some sort of overlap of the original range with the change, so we set overlapsWithChange to true
 
     // Case: {*[*]*}
-    // If the entire diagnostic is contained within the change, then we can just remove the diagnostic
-    if(change.range.start.isBeforeOrEqual(diag.range.start) && change.range.end.isAfterOrEqual(diag.range.end)) {
-        return null; // Using null to mark for removal
+    // If the entire original range is contained within the change, then we can just mark the range to be removed
+    if(change.range.start.isBeforeOrEqual(origRange.start) && change.range.end.isAfterOrEqual(origRange.end)) {
+        return { newValue: null, overlapsWithChange: true }; // Using null to mark for removal
     }
 
-    // Cases: [*{*]*} or {*[*}*]
-    // At this point, there must be some sort of overlap of the diagnostic range with the change, so mark it stale:
-    diag.markStale();
-
     // Cases: [*{*]*}
-    // If the change continues past the diagnostic, then we shorten the diagnostic from the right and return
-    if (change.range.end.isAfterOrEqual(diag.range.end)) {
+    // If the change continues past the original range, then we shorten the range from the right and return
+    if (change.range.end.isAfterOrEqual(origRange.end)) {
         newEndLine = change.range.start.line;
         newEndChar = change.range.start.character;
-        diag.range = new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar);
-        return diag;
+        return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), overlapsWithChange: true };
     }
 
     // Cases: {*[*}*] or [*{*}*]
-    // If the change range's end is within the diagnostic, then we can safely grow or shrink the end line
-    newEndLine = diag.range.end.line + numLinesDiff;
+    // If the change range's end is within the original range, then we can safely grow or shrink the end line
+    newEndLine = origRange.end.line + numLinesDiff;
 
     // Cases: {*[*}.] or [*{*}.]
-    // ... and if the diagnostic ends on the same line that the change ends then we need to adjust the end char as well
-    if (change.range.end.line === diag.range.end.line) {
+    // ... and if the original range ends on the same line that the change ends then we need to adjust the end char as well
+    if (change.range.end.line === origRange.end.line) {
         const leftPos: number = replacementLines.length > 1 ? 0 : change.range.start.character;
         const origLen: number = change.range.isSingleLine ?
-            diag.range.end.character - change.range.start.character :
-            diag.range.end.character;
+            origRange.end.character - change.range.start.character :
+            origRange.end.character;
         const removalLen: number = change.range.isSingleLine ?
             change.range.end.character - change.range.start.character :
             change.range.end.character;
@@ -352,8 +444,8 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
     }
 
     // Cases: {*[*}*]
-    // And if the change starts before the diagnostic starts, we must shorten the diagnostic from the left
-    if(change.range.start.isBeforeOrEqual(diag.range.start)) {
+    // And if the change starts before the original range starts, we must shorten the range from the left
+    if(change.range.start.isBeforeOrEqual(origRange.start)) {
         newStartLine = change.range.start.line + replacementLines.length - 1;
         if (replacementLines.length === 1) {
             newStartChar = change.range.start.character + replacementLines[0].length;
@@ -362,6 +454,10 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
         }
     }
 
-    diag.range = new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar);
-    return diag;
+    return { newValue: new vscode.Range(newStartLine, newStartChar, newEndLine, newEndChar), overlapsWithChange: true };
+}
+
+class Adjustment<T> {
+    newValue: T | null; // null is a way of marking that there is no new value and thus the old should be removed
+    overlapsWithChange: boolean; 
 }
