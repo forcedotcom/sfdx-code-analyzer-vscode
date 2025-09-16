@@ -5,7 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 
-import {CodeLocation, Fix, Suggestion, Violation} from '../diagnostics';
+import {CodeLocation, Fix, normalizeViolation, Suggestion, Violation} from '../diagnostics';
 import {Logger} from "../logger";
 import {getErrorMessage, indent} from '../utils';
 import {HttpMethods, HttpRequest, OrgConnectionService, OrgUserInfo} from '../external-services/org-connection-service';
@@ -138,7 +138,9 @@ export class LiveApexGuruService implements ApexGuruService {
         const payloadStr: string = decodeFromBase64(queryResponse.report);
         this.logger.debug(`ApexGuru Analysis completed for Request Id: ${requestId}\n\nDecoded Response Payload:\n${payloadStr}`);
         const apexGuruViolations: ApexGuruViolation[] = parsePayload(payloadStr);
-        return apexGuruViolations.map(v => toViolation(v, absFileToScan));
+
+        const lineLengths: number[] = fileContent.split(/\r?\n/).map(l => l.length);
+        return apexGuruViolations.map(v => toViolation(v, absFileToScan, lineLengths));
     }
 
     private async initiateRequest(fileContent: string): Promise<string> {
@@ -224,7 +226,7 @@ export function parsePayload(payloadStr: string): ApexGuruViolation[] {
     }
 }
 
-function toViolation(apexGuruViolation: ApexGuruViolation, file: string): Violation {
+function toViolation(apexGuruViolation: ApexGuruViolation, file: string, lineLengths: number[]): Violation {
     const codeAnalyzerViolation: Violation = {
         rule: apexGuruViolation.rule,
         engine: APEX_GURU_ENGINE_NAME,
@@ -243,7 +245,7 @@ function toViolation(apexGuruViolation: ApexGuruViolation, file: string): Violat
             return f;
         })
     };
-    return codeAnalyzerViolation;
+    return normalizeViolation(codeAnalyzerViolation, lineLengths);
 }
 
 function addFile(apexGuruLocation: CodeLocation, filePath: string): CodeLocation {
