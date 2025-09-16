@@ -228,17 +228,45 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
     }
 }
 
+export function normalizeViolation(violation: Violation, lineLengthsForPrimaryFile?: number[]): Violation {
+    const primaryFile: string = violation.locations[violation.primaryLocationIndex].file;
+
+    for (let i: number = 0; i < violation.locations.length; i++) {
+        if (violation.locations[i].file === primaryFile) {
+            normalizeLocation(violation.locations[i], lineLengthsForPrimaryFile);
+        }
+    }
+
+    for (let i: number = 0; i < violation.fixes?.length; i++) {
+        if (violation.fixes[i].location.file === primaryFile) {
+            normalizeLocation(violation.fixes[i].location, lineLengthsForPrimaryFile);
+        }
+    }
+
+    for (let i: number = 0; i < violation.suggestions?.length; i++) {
+        if (violation.suggestions[i].location.file === primaryFile) {
+            normalizeLocation(violation.suggestions[i].location, lineLengthsForPrimaryFile);
+        }
+    }
+
+    return violation;
+}
+
+function normalizeLocation(location: CodeLocation, lineLengths?: number[]): CodeLocation {
+    location.startLine = location.startLine ?? 1;
+    location.startColumn = location.startColumn ?? 1;
+    location.endLine = location.endLine ?? location.startLine;
+    location.endColumn = location.endColumn ?? (lineLengths ? (lineLengths[location.endLine-1] + 1) : Number.MAX_SAFE_INTEGER);
+    return location;
+}
 
 export function toRange(codeLocation: CodeLocation): vscode.Range {
-    // If there's no explicit startLine, just use the first line.
-    const startLine: number = codeLocation.startLine != null ? adjustToZeroBased(codeLocation.startLine) : 0;
-    // If there's no explicit startColumn, just use the first column.
-    const startColumn: number = codeLocation.startColumn != null ? adjustToZeroBased(codeLocation.startColumn) : 0;
-    // If there's no explicit end line, just use the start line.
-    const endLine: number = codeLocation.endLine != null ? adjustToZeroBased(codeLocation.endLine) : startLine;
-    // If there's no explicit end column, just highlight everything through the end of the line (by just using a really large number).
-    const endColumn = codeLocation.endColumn != null ? adjustToZeroBased(codeLocation.endColumn) : Number.MAX_SAFE_INTEGER;
-    return new vscode.Range(startLine, startColumn, endLine, endColumn);
+    normalizeLocation(codeLocation);
+    return new vscode.Range(
+        adjustToZeroBased(codeLocation.startLine),
+        adjustToZeroBased(codeLocation.startColumn),
+        adjustToZeroBased(codeLocation.endLine),
+        adjustToZeroBased(codeLocation.endColumn));
 }
 
 function groupByUri(diags: CodeAnalyzerDiagnostic[]): Map<vscode.Uri, CodeAnalyzerDiagnostic[]> {

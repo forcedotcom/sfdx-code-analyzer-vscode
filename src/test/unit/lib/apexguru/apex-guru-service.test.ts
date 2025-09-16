@@ -6,6 +6,40 @@ import { expectEventuallyIsTrue } from "../../test-utils";
 
 describe("Tests for LiveApexGuruService", () => {
     const sampleFile: string = '/some/file.cls';
+    const sampleContent: string = 
+        `public class ConsolidatedClass {\n` +
+        `    public static void processAccountsAndContacts(List<Account> accounts) {\n` +
+        `        // Antipattern [Avoid using Schema.getGlobalDescribe() in Apex]:  (has fix)\n` +
+        `        Schema.DescribeSObjectResult opportunityDescribe = Schema.getGlobalDescribe().get('Opportunity').getDescribe();\n` +
+        `        System.debug('Opportunity Describe: ' + opportunityDescribe);\n` +
+        `\n` +
+        `        for (Account acc : accounts) {\n` +
+        `            // Antipattern [SOQL in loop]:\n` +
+        `            List<Contact> contacts = [SELECT Id, Email FROM Contact WHERE AccountId = :acc.Id];\n` +
+        `            for (Contact con : contacts) {\n` +
+        `                con.Email = 'newemail@example.com';\n` +
+        `                // Antipattern [DML in loop]:\n` +
+        `                update con;\n` +
+        `            }\n` +
+        `        }\n` +
+        `\n` +
+        `        // Antipattern [SOQL with negative expression]:\n` +
+        `        List<Contact> contactsNotInUS = [SELECT Id, FirstName, LastName FROM Contact WHERE MailingCountry != 'US'];\n` +
+        `        System.debug('Contacts not in US: ' + contactsNotInUS);\n` +
+        `\n` +
+        `        // Antipattern [SOQL without WHERE clause or LIMIT]:\n` +
+        `        List<Account> allAccounts = [SELECT Id, Name FROM Account];\n` +
+        `        System.debug('All Accounts: ' + allAccounts);\n` +
+        `\n` +
+        `        // Antipattern [Using a list of SObjects for an IN-bind to ID in a SOQL]:  (has suggestion)\n` +
+        `        List<Contact> contactsFromAccounts = [SELECT Id, FirstName, LastName FROM Contact WHERE AccountId IN :accounts];\n` +
+        `        System.debug('Contacts from Accounts: ' + contactsFromAccounts);\n` +
+        `\n` +
+        `        // Antipattern [SOQL with wildcard filters]:\n` +
+        `        List<Account> accountsWithWildcard = [SELECT Id, Name FROM Account WHERE Name LIKE '%Corp%'];\n` +
+        `        System.debug('Accounts with wildcard: ' + accountsWithWildcard);\n` +
+        `    }\n` +
+        `}`;
 
     const sampleApexGuruPayload = [
         {
@@ -69,6 +103,9 @@ describe("Tests for LiveApexGuruService", () => {
                 {
                     file: sampleFile,
                     startLine: 4,
+                    startColumn: 1,
+                    endLine: 4,
+                    endColumn: 120,
                     comment: "api_class.processAccountsAndContacts",
                 }
             ],
@@ -83,6 +120,8 @@ describe("Tests for LiveApexGuruService", () => {
                         file: sampleFile,
                         startLine: 4,
                         startColumn: 8,
+                        endLine: 4,
+                        endColumn: 120,
                         comment: "api_class.processAccountsAndContacts",
                     },
                     fixedCode: "Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe();",
@@ -98,6 +137,9 @@ describe("Tests for LiveApexGuruService", () => {
                 {
                     file: sampleFile,
                     startLine: 7,
+                    startColumn: 1,
+                    endLine: 7,
+                    endColumn: 39,
                     comment: "api_class.processAccountsAndContacts"
                 }
             ],
@@ -111,6 +153,9 @@ describe("Tests for LiveApexGuruService", () => {
                     location: {
                         file: sampleFile,
                         startLine: 7,
+                        startColumn: 1,
+                        endLine: 7,
+                        endColumn: 39,
                         comment: "api_class.processAccountsAndContacts",
                     },
                     message: "Sample suggestion message",
@@ -127,7 +172,7 @@ describe("Tests for LiveApexGuruService", () => {
     beforeEach(() => {
         orgConnectionService = new StubOrgConnectionServiceForApexGuru();
         fileHandler = new stubs.StubFileHandler();
-        fileHandler.readFileReturnValue = 'dummyContent';
+        fileHandler.readFileReturnValue = sampleContent;
         logger = new stubs.SpyLogger();
         const maxTimeOutSecs: number = 3; // Defaulting to 3 seconds for worse case scenario, but the below tests shouldn't depend on it
         const retryIntervalMillis: number = 5; // Reducing to keep polling based tests fast

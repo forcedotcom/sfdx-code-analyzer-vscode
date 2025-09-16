@@ -107,12 +107,12 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
             expect(diag.relatedInformation[1]).toEqual(new vscode.DiagnosticRelatedInformation(
                 new vscode.Location(
                     vscode.Uri.file('/path/to/some/someFileButNoLineInfo.cls'),
-                    new vscode.Range(0, 0, 0, Number.MAX_SAFE_INTEGER)),
+                    new vscode.Range(0, 0, 0, Number.MAX_SAFE_INTEGER-1)),
                 'someDummyComment'));
             expect(diag.relatedInformation[2]).toEqual(new vscode.DiagnosticRelatedInformation(
                 new vscode.Location(
                     vscode.Uri.file('/path/to/some/someFileWithSomeLineInfo.cls'),
-                    new vscode.Range(0, 0, 17, Number.MAX_SAFE_INTEGER)),
+                    new vscode.Range(0, 0, 17, Number.MAX_SAFE_INTEGER-1)),
                 messages.diagnostics.defaultAlternativeLocationMessage));
         });
 
