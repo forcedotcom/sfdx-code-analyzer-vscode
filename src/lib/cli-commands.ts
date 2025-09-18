@@ -106,8 +106,10 @@ export class CliCommandExecutorImpl implements CliCommandExecutor {
 
             let childProcess: cp.ChildProcessWithoutNullStreams;
             try {
-                childProcess = IS_WINDOWS ? cp.spawn(command, wrapArgsWithSpacesWithQuotes(args), {shell: true}) :
-                    cp.spawn(command, args);
+                childProcess = 
+                    IS_WINDOWS 
+                    ? cp.spawn(command, wrapArgsWithSpacesWithQuotes(args), {shell: true, env: {...process.env, NO_COLOR: '1'}}) 
+                    : cp.spawn(command, args, {env: {...process.env, NO_COLOR: '1'}});
             } catch (err) {
                 this.logger.logAtLevel(vscode.LogLevel.Error, `Failed to execute the following command:\n` +
                     indent(`${command} ${wrapArgsWithSpacesWithQuotes(args).join(' ')}`) + `\n\n` +
