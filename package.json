@@ -33,6 +33,13 @@
         "SFCA"
     ],
     "dependencies": {
+        "@salesforce/code-analyzer-core": "^0.36.0",
+        "@salesforce/code-analyzer-eslint-engine": "^0.34.0",
+        "@salesforce/code-analyzer-flow-engine": "^0.27.0",
+        "@salesforce/code-analyzer-pmd-engine": "^0.31.0",
+        "@salesforce/code-analyzer-regex-engine": "^0.28.0",
+        "@salesforce/code-analyzer-retirejs-engine": "^0.27.0",
+        "@salesforce/code-analyzer-sfge-engine": "^0.13.0",
         "@salesforce/vscode-service-provider": "^1.5.0",
         "@types/jest": "^30.0.0",
         "@types/semver": "^7.7.1",
