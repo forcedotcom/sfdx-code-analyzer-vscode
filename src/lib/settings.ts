@@ -10,7 +10,6 @@ export interface SettingsManager {
     // General Settings
     getAnalyzeOnOpen(): boolean;
     getAnalyzeOnSave(): boolean;
-    getApexGuruEnabled(): boolean;
 
     // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
@@ -30,10 +29,6 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getAnalyzeOnSave(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnSave').get('enabled');
-    }
-
-    public getApexGuruEnabled(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer.apexGuru').get('enabled');
     }
 
     // =================================================================================================================

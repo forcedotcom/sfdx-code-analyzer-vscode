@@ -33,7 +33,7 @@ import {PMDSupressionsCodeActionProvider} from './lib/pmd/pmd-suppressions-code-
 import {ApplyViolationFixesActionProvider} from './lib/apply-violation-fixes-action-provider';
 import {ApplyViolationFixesAction} from './lib/apply-violation-fixes-action';
 import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hover-provider';
-import {ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
+import {ApexGuruAccess, ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
 import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
 import {OrgConnectionService} from './lib/external-services/org-connection-service';
 
@@ -246,15 +246,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
     const apexGuruService: ApexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger);
     const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
-
-    // TODO: This is temporary and will change soon when we remove pilot flag and instead add a watch to org auth changes
-    const isApexGuruEnabled: () => Promise<boolean> = async () => settingsManager.getApexGuruEnabled() &&
-            // Currently we don't watch for changes here when a user has apex guru enabled already. That is,
-            // if the user logs into an org post activation of this extension, it won't show the command until they
-            // refresh or toggle the "ApexGuru enabled" setting off and back on. At some point we might want to see
-            // if it is possible to monitor changes to the users org so we can re-trigger this check.
-            await apexGuruService.isApexGuruAvailable();
-    await establishVariableInContext(Constants.CONTEXT_VAR_APEX_GURU_ENABLED, isApexGuruEnabled);
+    apexGuruService.onAccessChange((access: ApexGuruAccess) => {
+        logger.debug(`Access to ApexGuru has been set '${access}'.`);
+        void vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_SHOULD_SHOW_APEX_GURU_BUTTONS, 
+            access === ApexGuruAccess.ENABLED || access === ApexGuruAccess.ELIGIBLE);
+    });
+    void apexGuruService.updateAvailability(); // This asyncronously triggers the first AccessChanged Event to establish the context variable
 
     // COMMAND_RUN_APEX_GURU_ON_FILE: Invokable by 'explorer/context' menu only when: "sfca.apexGuruEnabled && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
     registerCommand(Constants.COMMAND_RUN_APEX_GURU_ON_FILE, async (selection: vscode.Uri, multiSelect?: vscode.Uri[]) => {
@@ -317,19 +314,6 @@ export async function deactivate(): Promise<void> {
 export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
     const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
     return allowedFileTypes.includes(path.extname(documentUri.fsPath));
-}
-
-// TODO: This is only used by apex guru right now and is tied to the pilot setting. Soon we will be removing the pilot
-// setting and instead we should be adding a watch to the onOrgChange event of the OrgConnectionService instead.
-// Inside our package.json you'll see things like:
-//     "when": "sfca.apexGuruEnabled"
-// which helps determine when certain commands and menus are available.
-// To make these "context variables" set and stay updated when settings change, use this helper function:
-async function establishVariableInContext(varUsedInPackageJson: string, getValueFcn: () => Promise<boolean>): Promise<void> {
-    await vscode.commands.executeCommand('setContext', varUsedInPackageJson, await getValueFcn());
-    vscode.workspace.onDidChangeConfiguration(async () => {
-        await vscode.commands.executeCommand('setContext', varUsedInPackageJson, await getValueFcn());
-    });
 }
 
 async function getActiveDocument(): Promise<vscode.TextDocument | null> {

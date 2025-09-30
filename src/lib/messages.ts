@@ -22,6 +22,7 @@ export const messages = {
         editorCodeLensMustBeEnabled: "This action requires the 'Editor: Code Lens' setting to be enabled."
     },
     apexGuru: {
+        noOrgAuthed: "No org is authed.", // This message should never show up, but in the unlikely event of a millisecond race condition it theoretically could
         runningAnalysis: "Code Analyzer is running ApexGuru analysis.",
         finishedScan: (violationCount: number) => `Scan complete. ${violationCount} violations found.`,
         warnings: {
@@ -61,7 +62,8 @@ export const messages = {
         messageGenerator: (severity: number, message: string) => `Sev${severity}: ${message}`,
         source: {
             suffix: 'via Code Analyzer'
-        }
+        },
+        defaultAlternativeLocationMessage: 'This location is also associated with the violation.'
     },
     targeting: {
         error: {

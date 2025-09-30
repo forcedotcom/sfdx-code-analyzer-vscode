@@ -5,12 +5,13 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 
-import {CodeLocation, Fix, Suggestion, Violation} from '../diagnostics';
+import {CodeLocation, Fix, normalizeViolation, Suggestion, Violation} from '../diagnostics';
 import {Logger} from "../logger";
 import {getErrorMessage, indent} from '../utils';
-import {HttpMethods, HttpRequest, OrgConnectionService} from '../external-services/org-connection-service';
+import {HttpMethods, HttpRequest, OrgConnectionService, OrgUserInfo} from '../external-services/org-connection-service';
 import {FileHandler} from '../fs-utils';
 import { messages } from '../messages';
+import { EventEmitter } from 'node:stream';
 
 export const APEX_GURU_ENGINE_NAME: string = 'apexguru';
 const APEX_GURU_MAX_TIMEOUT_SECONDS = 60;
@@ -24,9 +25,33 @@ const RESPONSE_STATUS = {
 }
 
 export interface ApexGuruService {
-    isApexGuruAvailable(): Promise<boolean>;
+    getAvailability(): ApexGuruAvailability;
+    updateAvailability(): Promise<void>;
+    onAccessChange(callback: (access: ApexGuruAccess) => void): void;
     scan(absFileToScan: string): Promise<Violation[]>;
 }
+
+export type ApexGuruAvailability = {
+    access: ApexGuruAccess,
+    message: string
+}
+
+export enum ApexGuruAccess {
+    // In this case, ApexGuru scans are allowed
+    ENABLED = "enabled",
+
+    // In this case, the org is eligible to be enabled, but an admin hasn't set the permissions yet, so we should still
+    // show the scan button but then show a message with the instructions sent from the validate endpoint.
+    ELIGIBLE = "eligible-but-not-enabled",
+
+    // In this case, the org is not eligible for ApexGuru at all, so we should not show the scan button at all.
+    INELIGIBLE = "ineligible",
+
+    // In this case, the user has not authed into an org, so we should not show the scan button at all.
+    NOT_AUTHED = "not-authed"
+}
+
+const ACCESS_CHANGED_EVENT = "apexGuruAccessChanged";
 
 export class LiveApexGuruService implements ApexGuruService {
     private readonly orgConnectionService: OrgConnectionService;
@@ -34,6 +59,9 @@ export class LiveApexGuruService implements ApexGuruService {
     private readonly logger: Logger;
     private readonly maxTimeoutSeconds: number;
     private readonly retryIntervalMillis: number;
+    private readonly eventEmitter: EventEmitter = new EventEmitter();
+    private availability?: ApexGuruAvailability;
+
     constructor(
                 orgConnectionService: OrgConnectionService,
                 fileHandler: FileHandler,
@@ -45,14 +73,61 @@ export class LiveApexGuruService implements ApexGuruService {
         this.logger = logger;
         this.maxTimeoutSeconds = maxTimeoutSeconds;
         this.retryIntervalMillis = retryIntervalMillis;
+
+        // Every time an org is changed (authed or unauthed) then we recalculate the availability asyncronously
+        orgConnectionService.onOrgChange((_orgUserInfo: OrgUserInfo) => {
+            void this.updateAvailability();
+        });
     }
 
-    async isApexGuruAvailable(): Promise<boolean> {
-        if (!this.orgConnectionService.isAuthed()) {
-            return false;
+    getAvailability(): ApexGuruAvailability {
+        if (this.availability === undefined) {
+            // This should never happen in production because updateAvailability must be called prior to enabling
+            // the user to even have access to any of the ApexGuru scan buttons. If it does, we should investigate.
+            throw new Error('The getAvailability method should not be called until updateAvailability is first called');
         }
+        return this.availability;
+    }
+
+    onAccessChange(callback: (access: ApexGuruAccess) => void): void {
+        this.eventEmitter.addListener(ACCESS_CHANGED_EVENT, callback);
+    }
+
+    async updateAvailability(): Promise<void> {
+        if (!this.orgConnectionService.isAuthed()) {
+            this.setAvailability({
+                access: ApexGuruAccess.NOT_AUTHED,
+                message: messages.apexGuru.noOrgAuthed
+            });
+            return;
+        }
+
         const response: ApexGuruResponse = await this.request('GET', await this.getValidateEndpoint());
-        return response.status === RESPONSE_STATUS.SUCCESS;
+
+        if (response.status === RESPONSE_STATUS.SUCCESS) {
+            this.setAvailability({ 
+                access: ApexGuruAccess.ENABLED,
+
+                // This message isn't used anywhere except for debugging purposes and it allows us to make message field
+                // a string instead of a string | undefined.
+                message: "ApexGuru access is enabled."
+            });
+        } else {
+            this.setAvailability({
+                access:  response.status === RESPONSE_STATUS.FAILED ? ApexGuruAccess.ELIGIBLE : ApexGuruAccess.INELIGIBLE,
+
+                // There should always be a message on failed and error responses, but adding this here just in case
+                message: response.message ?? `ApexGuru access is not enabled. Response:  ${JSON.stringify(response)}`
+            });
+        }
+    }
+
+    private setAvailability(availability: ApexGuruAvailability) {
+        const oldAccess: ApexGuruAccess | undefined = this.availability?.access;
+        this.availability = availability;
+        if (availability.access !== oldAccess) {
+            this.eventEmitter.emit(ACCESS_CHANGED_EVENT, availability.access);
+        }
     }
 
     async scan(absFileToScan: string): Promise<Violation[]> {
@@ -63,7 +138,9 @@ export class LiveApexGuruService implements ApexGuruService {
         const payloadStr: string = decodeFromBase64(queryResponse.report);
         this.logger.debug(`ApexGuru Analysis completed for Request Id: ${requestId}\n\nDecoded Response Payload:\n${payloadStr}`);
         const apexGuruViolations: ApexGuruViolation[] = parsePayload(payloadStr);
-        return apexGuruViolations.map(v => toViolation(v, absFileToScan));
+
+        const lineLengths: number[] = fileContent.split(/\r?\n/).map(l => l.length);
+        return apexGuruViolations.map(v => toViolation(v, absFileToScan, lineLengths));
     }
 
     private async initiateRequest(fileContent: string): Promise<string> {
@@ -149,7 +226,7 @@ export function parsePayload(payloadStr: string): ApexGuruViolation[] {
     }
 }
 
-function toViolation(apexGuruViolation: ApexGuruViolation, file: string): Violation {
+function toViolation(apexGuruViolation: ApexGuruViolation, file: string, lineLengths: number[]): Violation {
     const codeAnalyzerViolation: Violation = {
         rule: apexGuruViolation.rule,
         engine: APEX_GURU_ENGINE_NAME,
@@ -168,7 +245,7 @@ function toViolation(apexGuruViolation: ApexGuruViolation, file: string): Violat
             return f;
         })
     };
-    return codeAnalyzerViolation;
+    return normalizeViolation(codeAnalyzerViolation, lineLengths);
 }
 
 function addFile(apexGuruLocation: CodeLocation, filePath: string): CodeLocation {

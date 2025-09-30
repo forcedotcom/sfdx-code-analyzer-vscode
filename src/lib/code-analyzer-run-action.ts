@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import {Logger} from "./logger";
-import {CodeAnalyzerDiagnostic, DiagnosticManager, Violation} from "./diagnostics";
+import {CodeAnalyzerDiagnostic, DiagnosticManager, normalizeViolation, Violation} from "./diagnostics";
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
 import * as Constants from './constants';
@@ -10,6 +10,7 @@ import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
 import {WindowManager} from "./vscode-api";
 import {Workspace} from "./workspace";
+import { APEX_GURU_ENGINE_NAME } from "./apexguru/apex-guru-service";
 
 export const UNINSTANTIABLE_ENGINE_RULE = 'UninstantiableEngineError';
 
@@ -78,9 +79,29 @@ export class CodeAnalyzerRunAction {
                     return true;
                 });
 
-                const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation.map(v => CodeAnalyzerDiagnostic.fromViolation(v));
+                // Ideally we should be passing in the line lengths array for the primary locations for each violation
+                // in our call to normalizeViolation, so that it can set the endColumn when it is missing instead of
+                // setting it to MAX_SAFE_INTEGER, but it might be rather expensive to read and process all files
+                // in a scan to get the line numbers. So I'm not sure if it is worth it to do this right now unless
+                // a user complains. Without doing this, any diagnostics that are from locations without an endColumn
+                // will be given MAX_SAFE_INTEGER which makes them unable to be deleted by the user via edits. Even if
+                // the user highlights and deletes the diagnostic, they'll might see a 0 character blue line stale
+                // diagnostic still be visible in some cases (because the new diag range still has a range that extends
+                // past the length of the line in the editor window).
+                const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation
+                    .map(v => normalizeViolation(v)) // <-- Maybe in the future we'll pass in the lineLengths for the primary file
+                    .map(v => CodeAnalyzerDiagnostic.fromViolation(v));
                 const targetedFiles: string[] = await workspace.getTargetedFiles();
-                this.diagnosticManager.clearDiagnosticsForFiles(targetedFiles.map(f => vscode.Uri.file(f)));
+                
+                // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics 
+                // except for ApexGuru based diagnostics which are handled separately.
+                for (const file of targetedFiles) {
+                    const diagsToClear: CodeAnalyzerDiagnostic[] = 
+                        this.diagnosticManager.getDiagnosticsForFile(vscode.Uri.file(file))
+                        .filter(d => d.violation.engine !== APEX_GURU_ENGINE_NAME);
+                    this.diagnosticManager.clearDiagnostics(diagsToClear);
+                }
+                
                 this.diagnosticManager.addDiagnostics(diagnostics);
                 void this.displayResults(targetedFiles.length, violationsWithFileLocation);
 

@@ -35,6 +35,7 @@ export const TELEM_SUCCESSFUL_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_c
 export const TELEM_FAILED_STATIC_ANALYSIS = 'sfdx__codeanalyzer_static_run_failed';
 export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_complete';
 export const TELEM_FAILED_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_failed';
+export const TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED = 'sfdx__apexguru_file_run_not_enabled';
 export const TELEM_COPY_SUGGESTION_CLICKED = 'sfdx__codeanalyzer_copy_suggestion_clicked';
 
 // telemetry keys used by eGPT (A4D)
@@ -57,7 +58,7 @@ export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0
 
 // Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
 export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
-export const CONTEXT_VAR_APEX_GURU_ENABLED = 'sfca.apexGuruEnabled';
+export const CONTEXT_VAR_SHOULD_SHOW_APEX_GURU_BUTTONS = 'sfca.shouldShowApexGuruButtons';
 
 // Documentation URLs
 export const DOCS_SETUP_LINK = 'https://developer.salesforce.com/docs/platform/salesforce-code-analyzer/guide/analyze-vscode.html#install-and-configure-code-analyzer-vs-code-extension';
