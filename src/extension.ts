@@ -273,7 +273,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     
 
     // =================================================================================================================
-    // ==  Agentforce for Developers Integration
+    // ==  Agentforce Vibes Integration
     // =================================================================================================================
     const a4dFixAction: A4DFixAction = new A4DFixAction(externalServiceProvider, codeAnalyzer, unifiedDiffService, 
         diagnosticManager, telemetryService, logger, display);
