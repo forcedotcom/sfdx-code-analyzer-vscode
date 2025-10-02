@@ -159,20 +159,134 @@ describe('Tests for A4DFixAction', () => {
             A4DFixAction.COMMAND);
     });
 
-    it('When llm response is not valid JSON, then display error message and send exception telemetry event', async () => {
-        spyLLMService.callLLMReturnValue = 'oops - not json';
-        await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+    describe('JSON parsing positive tests', () => {
+        it('When llm response has JSON with only fixedCode field (explanation is optional), then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = '{"fixedCode": "test code"}';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
 
-        expect(display.displayErrorCallHistory).toHaveLength(1);
-        expect(display.displayErrorCallHistory[0].msg).toContain(`Response from LLM is not valid JSON`);
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('test code');
+            expect(display.displayInfoCallHistory).toHaveLength(0); // No explanation provided
+        });
 
-        expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
-        expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
-            `Response from LLM is not valid JSON`);
-        expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
-            'sfdx__eGPT_suggest_failure');
-        expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
-            A4DFixAction.COMMAND);
+        it('When llm response has JSON with additional fields but still has a fixedCode field, then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = '{"fixedCode": "test code", "additionalField": "additional value"}';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('test code');
+            expect(display.displayInfoCallHistory).toHaveLength(0); // No explanation provided
+        });
+
+        it('When llm response is JSON in markdown code blocks with json language specifier, then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = '```json\n{"fixedCode": "fixed code", "explanation": "explanation"}\n```';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('fixed code');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: explanation');
+        });
+
+        it('When llm response is JSON in markdown code blocks without language specifier, then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = '```\n{"fixedCode": "fixed code", "explanation": "explanation"}\n```';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('fixed code');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: explanation');
+        });
+
+        it('When llm response has extra text before JSON (like "apist"), then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = 'apist\n{\n  "explanation": "Added ApexDoc comment to the class",\n  "fixedCode": "/**\\n * This class demonstrates bad practices.\\n */\\npublic class Test {}"\n}';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('This class demonstrates bad practices');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: Added ApexDoc comment to the class');
+        });
+
+        it('When llm response has extra text before and after JSON, then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = 'some extra text here{"fixedCode": "test code", "explanation": "test explanation"}\nsome extra text here';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('test code');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: test explanation');
+        });
+
+        it('When llm response is JSON wrapped in single quotes and markdown, then fix is suggested successfully', async () => {
+            const complexResponse = `' \`\`\`json{  "explanation": "Added ApexDoc comment to the class to satisfy the ApexDoc rule requirement for public classes.",  "fixedCode": "/**\\\\n * This class demonstrates bad cryptographic practices.\\\\n */\\\\npublic without sharing class ApexBadCrypto {\\\\n    Blob hardCodedIV = Blob.valueOf('Hardcoded IV 123');\\\\n    Blob hardCodedKey = Blob.valueOf('0000000000000000');\\\\n    Blob data = Blob.valueOf('Data to be encrypted');\\\\n    Blob encrypted = Crypto.encrypt('AES128', hardCodedKey, hardCodedIV, data);\\\\n}"}\`\`\`'`;
+            spyLLMService.callLLMReturnValue = complexResponse;
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('public without sharing class ApexBadCrypto');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: Added ApexDoc comment to the class to satisfy the ApexDoc rule requirement for public classes.');
+        });
+
+        it('When llm response has leading whitespace and newlines, then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = '\n\n   \n{"fixedCode": "test code", "explanation": "test explanation"}   \n\n';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('test code');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: test explanation');
+        });
+
+        it('When llm response has JSON with nested braces and trailing content, then fix is suggested successfully', async () => {
+            spyLLMService.callLLMReturnValue = '{"fixedCode": "code with {nested} braces", "explanation": "test explanation"} and trailing text here';
+            
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+            
+            expect(unifiedDiffService.showDiffCallHistory).toHaveLength(1);
+            expect(unifiedDiffService.showDiffCallHistory[0].newCode).toContain('code with {nested} braces');
+            expect(display.displayInfoCallHistory).toHaveLength(1);
+            expect(display.displayInfoCallHistory[0].msg).toEqual('Fix Explanation: test explanation');
+        });
+    });
+    describe('JSON parsing negative tests', () => {
+        it.each([
+            //no JSON at all
+            'This is just plain text with no JSON at all',
+            //multiple JSON objects with text between them
+            '{"wrong": "object"} some text {"fixedCode": "test code", "explanation": "test explanation"} more text',
+            //JSON with missing opening brace
+            '"fixedCode": "test code", "explanation": "test explanation"}',
+            //JSON with missing closing brace
+            '{"fixedCode": "test code", "explanation": "test explanation"',
+            //JSON with missing quote and brace
+            '{"fixedCode": "test code", "explanation": "missing closing quote and brace',
+        ])('When llm response is not valid, then display error message and send exception telemetry event', async (response: string) => {
+            spyLLMService.callLLMReturnValue = response;
+            await a4dFixAction.run(sampleDiagForSingleLine, sampleDocument);
+
+            expect(display.displayErrorCallHistory).toHaveLength(1);
+            expect(display.displayErrorCallHistory[0].msg).toContain('Response from LLM');
+            expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+            expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain('Unable to extract valid JSON from response');
+
+            expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+            expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain(
+                `Response from LLM is not valid JSON`);
+            expect(telemetryService.sendExceptionCallHistory[0].name).toEqual(
+                'sfdx__eGPT_suggest_failure');
+            expect(telemetryService.sendExceptionCallHistory[0].properties['executedCommand']).toEqual(
+                A4DFixAction.COMMAND);
+        });
     });
 
     it('When fix is suggested, then the diff is displayed, the diagnostic is cleared, and a telemetry event is sent', async () => {
