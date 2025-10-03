@@ -14,8 +14,8 @@ export const messages = {
         processingResults: "Code Analyzer is processing results." // Shared with ApexGuru and CodeAnalyzer
     },
     agentforce: {
-        a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce for Developers' is unavailable since a compatible 'Agentforce for Developers' extension was not found or activated. To enable this functionality, please install the 'Agentforce for Developers' extension and restart VS Code.",
-        failedA4DResponse: "Unable to receive code fix suggestion from Agentforce for Developers."
+        a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce Vibes' is unavailable since a compatible 'Agentforce Vibes' extension was not found or activated. To enable this functionality, please install the 'Agentforce Vibes' extension and restart VS Code.",
+        failedA4DResponse: "Unable to receive code fix suggestion from Agentforce Vibes."
     },
     unifiedDiff: {
         mustAcceptOrRejectDiffFirst: "You must accept or reject all changes before performing this action.",
