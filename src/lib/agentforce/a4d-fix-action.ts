@@ -53,6 +53,102 @@ export class A4DFixAction extends SuggestFixWithDiffAction {
     }
 
     /**
+     * Robustly parses JSON from LLM response text that may contain extra formatting or text.
+     * Handles common cases like:
+     * - Markdown code blocks (```json ... ```)
+     * - Extra text before or after the JSON
+     * - Malformed responses with partial text
+     * @param responseText The raw response text from the LLM
+     * @returns Parsed JSON object
+     * @throws Error if no valid JSON can be extracted
+     */
+    private parseRobustJSON(responseText: string): LLMResponse {
+        // First, try parsing the response as-is
+        try {
+            return JSON.parse(responseText) as LLMResponse;
+        } catch {
+            // If that fails, try to extract JSON from the response
+        }
+
+        // Remove leading/trailing whitespace
+        const cleanedText = responseText.trim();
+
+        // Try to extract JSON from markdown code blocks
+        const codeBlockRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/i;
+        const codeBlockMatch = cleanedText.match(codeBlockRegex);
+        if (codeBlockMatch) {
+            try {
+                return JSON.parse(codeBlockMatch[1]) as LLMResponse;
+            } catch {
+                // Continue to other methods if this fails
+            }
+        }
+
+        // Try to find JSON object boundaries in the text
+        const jsonStartIndex = cleanedText.indexOf('{');
+        const jsonEndIndex = cleanedText.lastIndexOf('}');
+        
+        if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+            const potentialJson = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1);
+            try {
+                return JSON.parse(potentialJson) as LLMResponse;
+            } catch {
+                // Continue to other methods if this fails
+            }
+        }
+
+        // Try to extract JSON using a more flexible regex that handles nested objects
+        const jsonRegex = /\{(?:[^{}]|{[^{}]*})*\}/;
+        const jsonMatch = cleanedText.match(jsonRegex);
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]) as LLMResponse;
+            } catch {
+                // Continue if this fails
+            }
+        }
+
+        // If all else fails, try to clean up common issues and parse again
+        // Remove any leading non-JSON text
+        const lines = cleanedText.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line.startsWith('{')) {
+                const remainingText = lines.slice(i).join('\n');
+                const endBraceIndex = remainingText.lastIndexOf('}');
+                if (endBraceIndex !== -1) {
+                    const jsonCandidate = remainingText.substring(0, endBraceIndex + 1);
+                    try {
+                        return JSON.parse(jsonCandidate) as LLMResponse;
+                    } catch {
+                        // Continue if this fails
+                    }
+                }
+            }
+        }
+
+        // Final attempt: try to fix common JSON issues
+        try {
+            // Remove any trailing text after the last }
+            const lastBraceIndex = cleanedText.lastIndexOf('}');
+            if (lastBraceIndex !== -1) {
+                let jsonCandidate = cleanedText.substring(0, lastBraceIndex + 1);
+                
+                // Find the first { and use everything from there
+                const firstBraceIndex = jsonCandidate.indexOf('{');
+                if (firstBraceIndex !== -1) {
+                    jsonCandidate = jsonCandidate.substring(firstBraceIndex);
+                    return JSON.parse(jsonCandidate) as LLMResponse;
+                }
+            }
+        } catch {
+            // If this also fails, we'll throw the error below
+        }
+
+        throw new Error(`Unable to extract valid JSON from response: ${responseText.substring(0, 200)}...`);
+    }
+
+    /**
      * Returns suggested replacement code for the entire document that should fix the violation associated with the diagnostic (using A4D).
      * @param document
      * @param diagnostic
@@ -102,7 +198,7 @@ export class A4DFixAction extends SuggestFixWithDiffAction {
 
         let llmResponse: LLMResponse;
         try {
-            llmResponse = JSON.parse(llmResponseText) as LLMResponse;
+            llmResponse = this.parseRobustJSON(llmResponseText);
         } catch (error) {
             throw new Error(`Response from LLM is not valid JSON: ${getErrorMessage(error)}`);
         }
