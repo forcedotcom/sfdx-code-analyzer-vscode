@@ -53,6 +53,43 @@ export class A4DFixAction extends SuggestFixWithDiffAction {
     }
 
     /**
+     * Parses JSON from LLM response text that may contain extra formatting or text.
+     * Handles common cases like:
+     * - Markdown code blocks (```json ... ```)
+     * - Extra text before or after the JSON
+     * - Malformed responses with partial text
+     * @param responseText The raw response text from the LLM
+     * @returns Parsed JSON object
+     * @throws Error if no valid JSON can be extracted
+     */
+    private parseJSON(responseText: string): LLMResponse {
+        // First, try parsing the response as-is
+        try {
+            return JSON.parse(responseText) as LLMResponse;
+        } catch {
+            // If that fails, try to extract JSON from the response
+        }
+
+        // Remove leading/trailing whitespace
+        const cleanedText = responseText.trim();
+
+        // Try to find JSON object boundaries in the text
+        const jsonStartIndex = cleanedText.indexOf('{');
+        const jsonEndIndex = cleanedText.lastIndexOf('}');
+        
+        if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+            const potentialJson = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1);
+            try {
+                return JSON.parse(potentialJson) as LLMResponse;
+            } catch {
+                // Continue to other methods if this fails
+            }
+        }
+
+        throw new Error(`Unable to extract valid JSON from response: ${responseText.substring(0, 200)}...`);
+    }
+
+    /**
      * Returns suggested replacement code for the entire document that should fix the violation associated with the diagnostic (using A4D).
      * @param document
      * @param diagnostic
@@ -102,7 +139,7 @@ export class A4DFixAction extends SuggestFixWithDiffAction {
 
         let llmResponse: LLMResponse;
         try {
-            llmResponse = JSON.parse(llmResponseText) as LLMResponse;
+            llmResponse = this.parseJSON(llmResponseText);
         } catch (error) {
             throw new Error(`Response from LLM is not valid JSON: ${getErrorMessage(error)}`);
         }
