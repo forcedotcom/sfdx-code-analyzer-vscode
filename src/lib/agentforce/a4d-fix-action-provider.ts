@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import {messages} from "../messages";
 import {LLMServiceProvider} from "../external-services/llm-service";
+import {OrgConnectionService} from "../external-services/org-connection-service";
 import {Logger} from "../logger";
 import {CodeAnalyzerDiagnostic} from "../diagnostics";
 import { A4DFixAction } from "./a4d-fix-action";
@@ -13,11 +14,14 @@ export class A4DFixActionProvider implements vscode.CodeActionProvider {
     static readonly providedCodeActionKinds: vscode.CodeActionKind[] = [vscode.CodeActionKind.QuickFix];
 
     private readonly llmServiceProvider: LLMServiceProvider;
+    private readonly orgConnectionService: OrgConnectionService;
     private readonly logger: Logger;
     private hasWarnedAboutUnavailableLLMService: boolean = false;
+    private hasWarnedAboutUnauthenticatedOrg: boolean = false;
 
-    constructor(llmServiceProvider: LLMServiceProvider, logger: Logger) {
+    constructor(llmServiceProvider: LLMServiceProvider, orgConnectionService: OrgConnectionService, logger: Logger) {
         this.llmServiceProvider = llmServiceProvider;
+        this.orgConnectionService = orgConnectionService;
         this.logger = logger;
     }
 
@@ -30,6 +34,15 @@ export class A4DFixActionProvider implements vscode.CodeActionProvider {
             .filter(d => range.intersection(d.range) != undefined);
 
         if (filteredDiagnostics.length == 0) {
+            return [];
+        }
+
+        // Do not provide quick fix code actions if user is not authenticated to an org
+        if (!this.orgConnectionService.isAuthed()) {
+            if (!this.hasWarnedAboutUnauthenticatedOrg) {
+                this.logger.warn(messages.agentforce.a4dQuickFixUnauthenticatedOrg);
+                this.hasWarnedAboutUnauthenticatedOrg = true;
+            }
             return [];
         }
 
