@@ -15,6 +15,7 @@ export const messages = {
     },
     agentforce: {
         a4dQuickFixUnavailable: "The ability to fix violations with 'Agentforce Vibes' is unavailable since a compatible 'Agentforce Vibes' extension was not found or activated. To enable this functionality, please install the 'Agentforce Vibes' extension and restart VS Code.",
+        a4dQuickFixUnauthenticatedOrg: "The ability to fix violations with 'Agentforce Vibes' is unavailable since you are not authenticated to an org. To enable this functionality, please authenticate to an org.",
         failedA4DResponse: "Unable to receive code fix suggestion from Agentforce Vibes."
     },
     unifiedDiff: {
