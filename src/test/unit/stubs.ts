@@ -16,7 +16,7 @@ import {FileHandler} from "../../lib/fs-utils";
 import {VscodeWorkspace, WindowManager} from "../../lib/vscode-api";
 import {Workspace} from "../../lib/workspace";
 import { ApexGuruAccess, ApexGuruAvailability, ApexGuruService } from "../../lib/apexguru/apex-guru-service";
-
+import { HttpRequest, OrgConnectionService, OrgUserInfo } from "../../lib/external-services/org-connection-service";
 
 export class SpyTelemetryService implements TelemetryService {
     sendExtensionActivationEventCallHistory: { hrStart: number }[] = [];
@@ -383,5 +383,25 @@ export class StubApexGuruService implements ApexGuruService {
 export class ThrowingScanApexGuruService extends StubApexGuruService {
     scan(_absFileToScan: string): Promise<Violation[]> {
         throw new Error("Sample error message from scan method");
+    }
+}
+
+export class StubOrgConnectionService implements OrgConnectionService {
+    isAuthedReturnValue: boolean = true;
+
+    isAuthed(): boolean {
+        return this.isAuthedReturnValue;
+    }
+
+    getApiVersion(): Promise<string> {
+        return Promise.resolve('64.0');
+    }
+
+    onOrgChange(_callback: (orgUserInfo: OrgUserInfo) => void): void {
+        // No-op
+    }
+
+    request<T>(requestOptions: HttpRequest): Promise<T> {
+        throw new Error(`Not implemented:\n${JSON.stringify(requestOptions, null, 2)}`);
     }
 }

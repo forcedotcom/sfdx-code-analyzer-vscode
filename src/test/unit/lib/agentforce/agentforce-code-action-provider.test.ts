@@ -1,6 +1,6 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 import {A4DFixActionProvider} from "../../../../lib/agentforce/a4d-fix-action-provider";
-import {SpyLLMService, SpyLogger, StubLLMServiceProvider} from "../../stubs";
+import {SpyLLMService, SpyLogger, StubOrgConnectionService, StubLLMServiceProvider} from "../../stubs";
 import {StubCodeActionContext} from "../../vscode-stubs";
 import {messages} from "../../../../lib/messages";
 import {createTextDocument} from "jest-mock-vscode";
@@ -11,13 +11,15 @@ describe('AgentforceCodeActionProvider Tests', () => {
     let spyLLMService: SpyLLMService;
     let llmServiceProvider: StubLLMServiceProvider;
     let spyLogger: SpyLogger;
+    let stubOrgConnectionService: StubOrgConnectionService;
     let actionProvider: A4DFixActionProvider;
 
     beforeEach(() => {
         spyLLMService = new SpyLLMService();
         llmServiceProvider = new StubLLMServiceProvider(spyLLMService);
         spyLogger = new SpyLogger();
-        actionProvider = new A4DFixActionProvider(llmServiceProvider, spyLogger);
+        stubOrgConnectionService = new StubOrgConnectionService();
+        actionProvider = new A4DFixActionProvider(llmServiceProvider, stubOrgConnectionService, spyLogger);
     });
 
     describe('provideCodeActions Tests', () => {
@@ -68,7 +70,8 @@ describe('AgentforceCodeActionProvider Tests', () => {
             expect(codeActions[2].diagnostics).toEqual([supportedDiag3]);
         });
 
-        it('When the LLMService is unavailable, then warn once and return no code actions', async () => {
+        // Authentication and LLM Service Availability Tests
+        it('When the LLMService is unavailable, then warn once and return no code actions and warn only once', async () => {
             llmServiceProvider.isLLMServiceAvailableReturnValue = false;
             const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [supportedDiag1]});
             const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
@@ -77,6 +80,45 @@ describe('AgentforceCodeActionProvider Tests', () => {
             expect(codeActions).toHaveLength(0);
             expect(spyLogger.warnCallHistory).toHaveLength(1);
             expect(spyLogger.warnCallHistory[0]).toEqual({msg: messages.agentforce.a4dQuickFixUnavailable});
+        });
+
+        it('When user is not authenticated to an org, then return no code actions and warn once', async () => {
+            stubOrgConnectionService.isAuthedReturnValue = false;
+            const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [supportedDiag1]});
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
+            await actionProvider.provideCodeActions(sampleDocument, range, context); // Sanity check that multiple calls do not produce additional warnings
+
+            expect(codeActions).toHaveLength(0);
+            expect(spyLogger.warnCallHistory).toHaveLength(1);
+            expect(spyLogger.warnCallHistory[0]).toEqual({msg: messages.agentforce.a4dQuickFixUnauthenticatedOrg});
+        });
+
+        it('When user is authenticated and LLMService is available, then user does not see any warnings', async () => {
+            stubOrgConnectionService.isAuthedReturnValue = true;
+            llmServiceProvider.isLLMServiceAvailableReturnValue = true;
+            const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [supportedDiag1]});
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
+
+            expect(codeActions).toHaveLength(1);
+            expect(spyLogger.warnCallHistory).toHaveLength(0);
+        });
+
+        it('When no supported diagnostics are in the context and user is not authenticated to an org, then do not warn', async () => {
+            stubOrgConnectionService.isAuthedReturnValue = false;
+            const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [unsupportedDiag1]});
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
+
+            expect(codeActions).toHaveLength(0);
+            expect(spyLogger.warnCallHistory).toHaveLength(0);
+        });
+
+        it('When no supported diagnostics are in the context and LLM Service is unavailable, then do not warn', async () => {
+            llmServiceProvider.isLLMServiceAvailableReturnValue = false;
+            const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [unsupportedDiag1]});
+            const codeActions: vscode.CodeAction[] = await actionProvider.provideCodeActions(sampleDocument, range, context);
+
+            expect(codeActions).toHaveLength(0);
+            expect(spyLogger.warnCallHistory).toHaveLength(0);
         });
     });
 });
