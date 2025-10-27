@@ -12,10 +12,10 @@ suite('E2E Extension tests', function () {
 
     setup(async () => {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    });
 
-        // Should already be activated because the sampleWorkspace has a sfdx-project.json file
+    test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', () => {
         const extension: vscode.Extension<unknown> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-        await extension.activate();
         expect(extension.isActive).equals(true);
     });
 
