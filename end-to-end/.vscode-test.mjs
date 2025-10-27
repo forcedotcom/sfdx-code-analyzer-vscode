@@ -1,9 +1,12 @@
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import { defineConfig } from '@vscode/test-cli';
 
 const extensionsDir = path.resolve(import.meta.dirname, '.vscode-test', 'extensions');
 fs.mkdirSync(extensionsDir, { recursive: true });
+
+const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),'sfca-'));
 
 export default defineConfig({
     /**
@@ -42,6 +45,7 @@ export default defineConfig({
      * See `code --help` for possible arguments.
      */
     launchArgs: [
-        `--extensions-dir=${extensionsDir}`
+        `--extensions-dir=${extensionsDir}`,
+        `--user-data-dir=${tempDir}`
     ]
 });
