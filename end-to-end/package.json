@@ -1,0 +1,19 @@
+{
+    "name": "end-to-end-tests",
+    "private": true,
+    "version": "0.0.1",
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/vscode": "^1.90.0",
+        "@vscode/test-cli": "^0.0.12",
+        "@vscode/test-electron": "^2.5.2",
+        "chai": "^6.2.0"
+    },
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "scripts": {
+        "pretest": "tsc -p .",
+        "test": "vscode-test"
+    }
+}
