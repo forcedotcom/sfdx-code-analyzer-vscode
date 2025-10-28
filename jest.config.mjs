@@ -1,18 +1,26 @@
 const config = {
     preset: 'ts-jest',
     testEnvironment: 'node',
-    roots: ['<rootDir>/src/test/unit'],
+    roots: ['<rootDir>/test'],
     testMatch: ['**/*.test.ts'],
     collectCoverage: true,
     collectCoverageFrom: [
       './src/**/*.ts',
     ],
     coveragePathIgnorePatterns: [
-        '/src/test/',
+        '/src/shared',
     ],
     coverageReporters: ['text', 'lcov'],
     coverageDirectory: '<rootDir>/coverage/unit',
-    setupFilesAfterEnv: ['./scripts/setup-jest.ts'],
+    coverageThreshold: {
+      global: {
+          branches: 90,
+          functions: 90,
+          lines: 90,
+          statements: 90
+      }
+    },
+    setupFilesAfterEnv: ['<rootDir>/test/setup-jest.ts'],
     resetMocks: true
 };
 

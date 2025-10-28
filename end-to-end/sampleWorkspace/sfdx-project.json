@@ -1,0 +1,10 @@
+{
+  "packageDirectories": [
+    {
+      "path": "folder a",
+      "default": true
+    }
+  ],
+  "name": "sampleProject",
+  "sourceApiVersion": "64.0"
+}
