@@ -145,6 +145,7 @@ export interface DiagnosticManager extends vscode.Disposable {
     clearDiagnostic(diag: CodeAnalyzerDiagnostic): void
     clearDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
     clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void
+    clearDiagnosticsInRangeByRule(uri: vscode.Uri, range: vscode.Range, engine: string, ruleName: string): void
     clearDiagnosticsForFiles(uris: vscode.Uri[]): void
     getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
     handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void
@@ -193,6 +194,21 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
         const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
         // Only keep the diagnostics that aren't within the specified range
         const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(diagnostic => !range.contains(diagnostic.range));
+        this.setDiagnosticsForFile(uri, updatedDiagnostics);
+    }
+
+    public clearDiagnosticsInRangeByRule(uri: vscode.Uri, range: vscode.Range, engine: string, ruleName: string): void {
+        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
+        // Only keep the diagnostics that either:
+        // - Aren't within the specified range, OR
+        // - Are within the range but don't match the specified engine and rule
+        const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(diagnostic => {
+            if (!range.contains(diagnostic.range)) {
+                return true; // Keep diagnostics outside the range
+            }
+            // Within the range: only keep if different engine or different rule
+            return diagnostic.violation.engine !== engine || diagnostic.violation.rule !== ruleName;
+        });
         this.setDiagnosticsForFile(uri, updatedDiagnostics);
     }
 

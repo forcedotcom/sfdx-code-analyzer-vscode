@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { CodeAnalyzerDiagnostic } from "../diagnostics";
 import { messages } from "../messages";
 import * as Constants from '../constants';
+import { ApexCodeBoundaries } from '../apex-code-boundaries';
 
 export class PMDSupressionsCodeActionProvider implements vscode.CodeActionProvider {
     provideCodeActions(document: vscode.TextDocument, selectedRange: vscode.Range | vscode.Selection, context: vscode.CodeActionContext): vscode.CodeAction[] {
@@ -104,10 +105,14 @@ function generateClassLevelSuppression(document: vscode.TextDocument, diag: Code
     }
 
     action.diagnostics = [diag];
+
+    // Find the class range and clear all diagnostics for this specific rule within the class
+    // @SuppressWarnings is rule-specific and class-scoped
+    const classRange = findClassRange(document, diag);
     action.command = {
-        command: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, // TODO: This is wrong. It should only clear the PMD diagnostics within the class instead of all diagnostics within the file
-        title: 'Remove diagnostics for this file',
-        arguments: [document.uri]
+        command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE_BY_RULE,
+        title: 'Remove diagnostics for this class',
+        arguments: [document.uri, classRange, diag.violation.engine, diag.violation.rule]
     };
 
     return action;
@@ -167,6 +172,75 @@ function findClassStartPosition(document: vscode.TextDocument, diag: CodeAnalyze
 
     // Default to the start of the document if class is not found
     return new vscode.Position(0, 0);
+}
+
+/**
+ * Finds the complete range of the class containing the diagnostic.
+ * Uses ApexCodeBoundaries to accurately determine class start and end positions.
+ * @returns A range representing the entire class from start to end.
+ */
+function findClassRange(document: vscode.TextDocument, diag: CodeAnalyzerDiagnostic): vscode.Range {
+    const apexCode = document.getText();
+    const boundaries = ApexCodeBoundaries.forApexCode(apexCode);
+    
+    const diagnosticLine = diag.range.start.line;
+    const classStartLines = boundaries.getClassStartLines();
+    const classEndLines = boundaries.getClassEndLines();
+    
+    // Find the class that contains the diagnostic
+    // Iterate through class starts in reverse to find the nearest (innermost) class containing the diagnostic
+    let classStartLine: number | undefined;
+    let classEndLine: number | undefined;
+    
+    for (let i = classStartLines.length - 1; i >= 0; i--) {
+        const potentialStartLine = classStartLines[i];
+        if (potentialStartLine <= diagnosticLine) {
+            // Found a class start before or at the diagnostic line
+            // Now find the matching class end for this start
+            // For nested classes, count how many inner class starts come after this class start
+            // All those inner classes will close before this outer class closes
+            let innerClassCount = 0;
+            for (let j = i + 1; j < classStartLines.length; j++) {
+                if (classStartLines[j] > potentialStartLine) {
+                    innerClassCount++;
+                }
+            }
+            
+            // Find the end line: skip 'innerClassCount' end lines that come after the start
+            // (those belong to inner classes), then pick the next one (which is this class's end)
+            let endCount = 0;
+            for (let k = 0; k < classEndLines.length; k++) {
+                if (classEndLines[k] > potentialStartLine) {
+                    if (endCount === innerClassCount) {
+                        // Only use this end if it comes after the diagnostic line
+                        if (classEndLines[k] >= diagnosticLine) {
+                            classEndLine = classEndLines[k];
+                            break;
+                        }
+                    }
+                    endCount++;
+                }
+            }
+            
+            if (classEndLine !== undefined) {
+                classStartLine = potentialStartLine;
+                break;
+            }
+        }
+    }
+    
+    // If we found both start and end, create the range
+    if (classStartLine !== undefined && classEndLine !== undefined) {
+        const startPosition = new vscode.Position(classStartLine, 0);
+        const endPosition = new vscode.Position(classEndLine, Number.MAX_SAFE_INTEGER);
+        return new vscode.Range(startPosition, endPosition);
+    }
+    
+    // Fallback: return a range covering the entire document if class boundaries couldn't be determined
+    return new vscode.Range(
+        new vscode.Position(0, 0),
+        new vscode.Position(document.lineCount - 1, Number.MAX_SAFE_INTEGER)
+    );
 }
 
 /**
