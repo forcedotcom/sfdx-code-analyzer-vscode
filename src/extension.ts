@@ -202,6 +202,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // TODO: We need to fix this - because we should be just removing the relevant diagnostics - not all in a specific range
     registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
         diagnosticManager.clearDiagnosticsInRange(uri, range));
+    
+    // QF_COMMAND_DIAGNOSTICS_IN_RANGE_BY_RULE: Invoked by PMD class-level suppression to clear only specific rule violations
+    registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE_BY_RULE, (uri: vscode.Uri, range: vscode.Range, engine: string, ruleName: string) =>
+        diagnosticManager.clearDiagnosticsInRangeByRule(uri, range, engine, ruleName));
 
 
     // =================================================================================================================
