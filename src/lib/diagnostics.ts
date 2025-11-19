@@ -64,8 +64,8 @@ const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
  */
 function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
     const config = vscode.workspace.getConfiguration('codeAnalyzer');
-    const errorThreshold: number = config.get('priorityErrorThreshold', 1);
-    const warnThreshold: number = config.get('priorityWarnThreshold', 3);
+    const errorThreshold: number = config.get('severityErrorThreshold', 1);
+    const warnThreshold: number = config.get('severityWarningThreshold', 3);
 
     if (violationSeverity <= errorThreshold) {
         return vscode.DiagnosticSeverity.Error;

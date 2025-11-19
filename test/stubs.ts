@@ -264,16 +264,16 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
-    getPriorityErrorThresholdReturnValue: number = 1;
+    getSeverityErrorThresholdReturnValue: number = 1;
 
-    getPriorityErrorThreshold(): number {
-        return this.getPriorityErrorThresholdReturnValue;
+    getSeverityErrorThreshold(): number {
+        return this.getSeverityErrorThresholdReturnValue;
     }
 
-    getPriorityWarnThresholdReturnValue: number = 3;
+    getSeverityWarningThresholdReturnValue: number = 3;
 
-    getPriorityWarnThreshold(): number {
-        return this.getPriorityWarnThresholdReturnValue;
+    getSeverityWarningThreshold(): number {
+        return this.getSeverityWarningThresholdReturnValue;
     }
 
     // =================================================================================================================
