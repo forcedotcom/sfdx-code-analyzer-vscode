@@ -146,6 +146,30 @@
                         "type": "string",
                         "default": "Recommended",
                         "markdownDescription": "Selection of rules used to scan your code with Code Analyzer.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
+                    },
+                    "codeAnalyzer.priorityErrorThreshold": {
+                        "type": "number",
+                        "enum": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5
+                        ],
+                        "default": 1,
+                        "description": "Determines at what priority level 'errors' will be added. Anything less will be a warning or hint."
+                    },
+                    "codeAnalyzer.priorityWarnThreshold": {
+                        "type": "number",
+                        "enum": [
+                            1,
+                            2,
+                            3,
+                            4,
+                            5
+                        ],
+                        "default": 3,
+                        "description": "Determines at what priority level 'warnings' will be added. Anything less will be a hint."
                     }
                 }
             }

@@ -14,6 +14,8 @@ export interface SettingsManager {
     // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
     getCodeAnalyzerRuleSelectors(): string;
+    getPriorityErrorThreshold(): number;
+    getPriorityWarnThreshold(): number;
 
     // Other Settings that we may depend on
     getEditorCodeLensEnabled(): boolean;
@@ -40,6 +42,14 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getCodeAnalyzerRuleSelectors(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
+    }
+
+    public getPriorityErrorThreshold(): number {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('priorityErrorThreshold');
+    }
+
+    public getPriorityWarnThreshold(): number {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('priorityWarnThreshold');
     }
 
     // =================================================================================================================

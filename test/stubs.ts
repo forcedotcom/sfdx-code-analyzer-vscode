@@ -264,6 +264,18 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
+    getPriorityErrorThresholdReturnValue: number = 1;
+
+    getPriorityErrorThreshold(): number {
+        return this.getPriorityErrorThresholdReturnValue;
+    }
+
+    getPriorityWarnThresholdReturnValue: number = 3;
+
+    getPriorityWarnThreshold(): number {
+        return this.getPriorityWarnThresholdReturnValue;
+    }
+
     // =================================================================================================================
     // ==== Other Settings that we may depend on
     // =================================================================================================================

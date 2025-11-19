@@ -58,6 +58,25 @@ export type Suggestion = {
 const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
 
 /**
+ * Determines the diagnostic severity based on the violation severity and user-configured thresholds.
+ * @param violationSeverity The severity number from the violation (lower number = higher severity)
+ * @returns The appropriate VSCode DiagnosticSeverity
+ */
+function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
+    const config = vscode.workspace.getConfiguration('codeAnalyzer');
+    const errorThreshold: number = config.get('priorityErrorThreshold', 1);
+    const warnThreshold: number = config.get('priorityWarnThreshold', 3);
+
+    if (violationSeverity <= errorThreshold) {
+        return vscode.DiagnosticSeverity.Error;
+    } else if (violationSeverity <= warnThreshold) {
+        return vscode.DiagnosticSeverity.Warning;
+    } else {
+        return vscode.DiagnosticSeverity.Hint;
+    }
+}
+
+/**
  * Extended Diagnostic class to hold violation information and uri to make our life easier
  */
 export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
@@ -69,7 +88,7 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
         const primaryLocation: CodeLocation = violation.locations[violation.primaryLocationIndex];
         super(toRange(primaryLocation),
             messages.diagnostics.messageGenerator(violation.severity, violation.message.trim()),
-            vscode.DiagnosticSeverity.Warning); // TODO: We should consider using 'Error' for sev 1 instead of always just using 'Warning'. Note that we reserve 'Information' for stale diagnostics.
+            getDiagnosticSeverity(violation.severity));
         this.violation = violation;
         this.uri = vscode.Uri.file(primaryLocation.file);
     }
@@ -126,7 +145,7 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
                 if (i !== violation.primaryLocationIndex && relatedLocation.file) {
                     const relatedRange = toRange(relatedLocation);
                     const vscodeLocation: vscode.Location = new vscode.Location(vscode.Uri.file(relatedLocation.file), relatedRange);
-                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ?? 
+                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ??
                         messages.diagnostics.defaultAlternativeLocationMessage
                     ));
                 }
@@ -357,7 +376,7 @@ function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDoc
             return suggestion;
         }
         const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(suggestion.location, change, replacementLines);
-        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ? 
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ?
             null : {...suggestion, location: locationAdjustment.newValue};
     }).filter(suggestion => suggestion !== null);
 
@@ -378,7 +397,7 @@ function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextD
             startLine: rangeAdjustment.newValue.start.line + 1,
             startColumn: rangeAdjustment.newValue.start.character + 1,
             endLine: rangeAdjustment.newValue.end.line + 1,
-            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ? 
+            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ?
                 undefined : rangeAdjustment.newValue.end.character + 1
         },
         overlapsWithChange: rangeAdjustment.overlapsWithChange
@@ -487,5 +506,5 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
 
 class Adjustment<T> {
     newValue: T | null; // null is a way of marking that there is no new value and thus the old should be removed
-    overlapsWithChange: boolean; 
+    overlapsWithChange: boolean;
 }
