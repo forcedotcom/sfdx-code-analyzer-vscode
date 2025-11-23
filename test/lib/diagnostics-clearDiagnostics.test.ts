@@ -65,11 +65,16 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
 
             diagnosticManager.addDiagnostics([diag1, diag2, diag3, diag4]);
 
+<<<<<<< HEAD
             // Clear all PMD EmptyCatchBlock violations across the file
             diagnosticManager.clearDiagnosticsFromFile(testUri, { 
                 engineName: 'pmd', 
                 ruleName: 'EmptyCatchBlock' 
             });
+=======
+            // Clear all EmptyCatchBlock violations across the file (using engine:rule format)
+            diagnosticManager.clearDiagnosticsFromFile(testUri, { rule: 'pmd:EmptyCatchBlock' });
+>>>>>>> 7994c4d (addressing review comments)
 
             // Only diag2 (ApexDoc) and diag4 (eslint) should remain
             const remainingDiags = diagnosticManager.getDiagnosticsForFile(testUri);
@@ -86,7 +91,11 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             diagnosticManager.addDiagnostics([diag1, diag2, diag3]);
 
             // Clear EmptyCatchBlock from both engines (no engine specified)
+<<<<<<< HEAD
             diagnosticManager.clearDiagnosticsFromFile(testUri, { ruleName: 'EmptyCatchBlock' });
+=======
+            diagnosticManager.clearDiagnosticsFromFile(testUri, { rule: 'EmptyCatchBlock' });
+>>>>>>> 7994c4d (addressing review comments)
 
             // Only diag3 (ApexDoc) should remain
             const remainingDiags = diagnosticManager.getDiagnosticsForFile(testUri);
@@ -94,6 +103,7 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             expect(remainingDiags[0]).toBe(diag3);
         });
 
+<<<<<<< HEAD
         it('should clear all violations from a specific engine', () => {
             const diag1 = createDiagnostic(testUri, new vscode.Range(2, 0, 2, 10), 'pmd', 'EmptyCatchBlock');
             const diag2 = createDiagnostic(testUri, new vscode.Range(5, 0, 5, 10), 'pmd', 'ApexDoc');
@@ -112,6 +122,8 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             expect(remainingDiags).toContain(diag4);
         });
 
+=======
+>>>>>>> 7994c4d (addressing review comments)
     });
 
     describe('When both range and rules are provided', () => {
@@ -130,8 +142,12 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             // Clear only 'EmptyCatchBlock' violations within the class range
             diagnosticManager.clearDiagnosticsFromFile(testUri, { 
                 range: classRange, 
+<<<<<<< HEAD
                 engineName: 'pmd',
                 ruleName: 'EmptyCatchBlock' 
+=======
+                rule: 'pmd:EmptyCatchBlock' 
+>>>>>>> 7994c4d (addressing review comments)
             });
 
             // Verify that:
@@ -153,8 +169,12 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             const classRange = new vscode.Range(5, 0, 10, 0);
             diagnosticManager.clearDiagnosticsFromFile(testUri, { 
                 range: classRange, 
+<<<<<<< HEAD
                 engineName: 'pmd',
                 ruleName: 'EmptyCatchBlock' 
+=======
+                rule: 'pmd:EmptyCatchBlock' 
+>>>>>>> 7994c4d (addressing review comments)
             });
 
             // Only pmd diagnostic should be cleared, eslint should remain
@@ -178,8 +198,12 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             const secondClassRange = new vscode.Range(7, 0, 12, 0);
             diagnosticManager.clearDiagnosticsFromFile(testUri, { 
                 range: secondClassRange, 
+<<<<<<< HEAD
                 engineName: 'pmd',
                 ruleName: 'ApexDoc' 
+=======
+                rule: 'pmd:ApexDoc' 
+>>>>>>> 7994c4d (addressing review comments)
             });
 
             // FirstClass diagnostics should remain, SecondClass diagnostics should be cleared
@@ -188,6 +212,7 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             expect(remainingDiags).toContain(firstClassDiag1);
             expect(remainingDiags).toContain(firstClassDiag2);
         });
+<<<<<<< HEAD
 
         it('should clear all violations from specific engine within range', () => {
             const pmdDiag1 = createDiagnostic(testUri, new vscode.Range(5, 0, 5, 10), 'pmd', 'EmptyCatchBlock');
@@ -210,6 +235,8 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
             expect(remainingDiags).toContain(eslintDiag1);
             expect(remainingDiags).toContain(eslintDiag2);
         });
+=======
+>>>>>>> 7994c4d (addressing review comments)
     });
 });
 
