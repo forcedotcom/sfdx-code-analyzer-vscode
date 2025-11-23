@@ -138,6 +138,7 @@ export class ApexCodeBoundaries {
      * @returns The line number where the containing class starts, or undefined if no class contains the line
      */
     getStartLineOfClassThatContainsLine(lineNum: number): number | undefined {
+<<<<<<< HEAD
         let depth = 0;
 
         for (let i = lineNum; i >= 0; i--) {
@@ -152,6 +153,28 @@ export class ApexCodeBoundaries {
         }
 
         return undefined;
+=======
+        let value = 1; // Counter to keep track starting and ending of classes seen
+        let skipFirstEnd = this.isEndOfClass(lineNum); // This is to track if we are at the end of the class for the lineNum
+        
+        // Iterate backwards from lineNum to find the start line of the containing class
+        for (let i = lineNum; i >= 0; i--) {
+            if (this.isStartOfClass(i)) {
+                value--;
+                if (value === 0) {
+                    return i; // Found the containing class
+                }
+            } else if (this.isEndOfClass(i)) {
+                if (skipFirstEnd) {
+                    skipFirstEnd = false; // Skip the first ClassEnd if we started on one
+                } else {
+                    value++; // There's a nested class ahead we need to skip
+                }
+            }
+        }
+        
+        return undefined; // No class contains this line
+>>>>>>> fb6535c (addressing review comments)
     }
 
     /**
@@ -175,9 +198,18 @@ export class ApexCodeBoundaries {
             if (this.isStartOfClass(i)) {
                 nestedClassCount++;
             } else if (this.isEndOfClass(i)) {
+<<<<<<< HEAD
                 nestedClassCount--;
                 if (nestedClassCount < 0) {
                     return i; // This is the end of our containing class
+=======
+                // If we've seen nested classes, this end belongs to one of them
+                if (nestedClassCount > 0) {
+                    nestedClassCount--;
+                } else {
+                    // This is the end of our containing class
+                    return i;
+>>>>>>> fb6535c (addressing review comments)
                 }
             }
         }
