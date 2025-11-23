@@ -23,8 +23,7 @@ export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnC
 export const COMMAND_COPY_SUGGESTION = 'sfca.copySuggestion';
 
 // commands that are only invoked by quick fixes (which do not need to be declared in package.json since they can be registered dynamically)
-export const QF_COMMAND_DIAGNOSTICS_IN_RANGE = 'sfca.removeDiagnosticsInRange';
-export const QF_COMMAND_DIAGNOSTICS_IN_RANGE_BY_RULE = 'sfca.removeDiagnosticsInRangeByRule';
+export const QF_COMMAND_CLEAR_DIAGNOSTICS = 'sfca.clearDiagnostics';
 export const QF_COMMAND_A4D_FIX = 'sfca.a4dFix';
 export const QF_COMMAND_APPLY_VIOLATION_FIXES = 'sfca.applyViolationFixes';
 
