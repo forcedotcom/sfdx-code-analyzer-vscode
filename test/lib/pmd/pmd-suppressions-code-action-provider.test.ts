@@ -58,7 +58,6 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(lineEdits).toHaveLength(1);
             expect(lineEdits[0].range).toEqual(new vscode.Range(4, MAX_COL, 4, MAX_COL));
             expect(lineEdits[0].newText).toEqual(" // NOPMD");
-            expect(codeActions[0].command.command).toEqual("sfca.removeDiagnosticsInRange"); // TODO: This is wrong. We should only be clearing the PMD violations on this line - not all within the range
 
 
             // Validate the class level supression action
@@ -67,16 +66,16 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(classEdits).toHaveLength(1);
             expect(classEdits[0].range).toEqual(new vscode.Range(0, 0, 0, 0));
             expect(classEdits[0].newText).toEqual("@SuppressWarnings('PMD.EmptyCatchBlock')\n");
-            expect(codeActions[1].command.command).toEqual("sfca.removeDiagnosticsInRangeByRule");
+            expect(codeActions[1].command.command).toEqual("sfca.clearDiagnostics");
             // Verify the command uses class range and rule info to clear only this rule's violations within the class
-            expect(codeActions[1].command.arguments).toHaveLength(4);
+            expect(codeActions[1].command.arguments).toHaveLength(2);
             expect(codeActions[1].command.arguments[0]).toEqual(sampleApexUri);
-            expect(codeActions[1].command.arguments[1]).toBeInstanceOf(vscode.Range);
-            const classRange = codeActions[1].command.arguments[1] as vscode.Range;
+            const clearOptions = codeActions[1].command.arguments[1];
+            expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+            const classRange = clearOptions.range as vscode.Range;
             expect(classRange.start.line).toEqual(0);  // Class starts at line 0
             expect(classRange.end.line).toEqual(8);    // Class ends at line 8
-            expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-            expect(codeActions[1].command.arguments[3]).toEqual('EmptyCatchBlock');  // Rule name
+            expect(clearOptions.rule).toEqual('pmd:EmptyCatchBlock');  // Engine:Rule format
         });
 
         it('When multiple valid pmd diagnostics on separate lines are within the selected range, then 2 code action are returned for each diagnostic', () => {
@@ -117,7 +116,7 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(lineEdits).toHaveLength(1);
             expect(lineEdits[0].range).toEqual(new vscode.Range(2, MAX_COL, 2, MAX_COL));
             expect(lineEdits[0].newText).toEqual(" // NOPMD");
-            expect(codeActions[0].command.command).toEqual("sfca.removeDiagnosticsInRange"); // TODO: This is wrong. We should only be clearing the PMD violations on this line - not all within the range
+            expect(codeActions[0].command.command).toEqual("sfca.clearDiagnostics");
 
 
             // Validate the class level supression action
@@ -126,16 +125,16 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
             expect(classEdits).toHaveLength(1);
             expect(classEdits[0].range).toEqual(new vscode.Range(0, 0, 0, 40));
             expect(classEdits[0].newText).toEqual("@SuppressWarnings('PMD.EmptyCatchBlock,PMD.ApexDoc')");
-            expect(codeActions[1].command.command).toEqual("sfca.removeDiagnosticsInRangeByRule");
+            expect(codeActions[1].command.command).toEqual("sfca.clearDiagnostics");
             // Verify the command uses class range and rule info to clear only this rule's violations within the class
-            expect(codeActions[1].command.arguments).toHaveLength(4);
+            expect(codeActions[1].command.arguments).toHaveLength(2);
             expect(codeActions[1].command.arguments[0]).toEqual(sampleApexUri);
-            expect(codeActions[1].command.arguments[1]).toBeInstanceOf(vscode.Range);
-            const classRange = codeActions[1].command.arguments[1] as vscode.Range;
+            const clearOptions = codeActions[1].command.arguments[1];
+            expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+            const classRange = clearOptions.range as vscode.Range;
             expect(classRange.start.line).toEqual(1);  // Class starts at line 1 (after the @SuppressWarnings)
             expect(classRange.end.line).toEqual(9);    // Class ends at line 9
-            expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-            expect(codeActions[1].command.arguments[3]).toEqual('ApexDoc');  // Rule name
+            expect(clearOptions.rule).toEqual('pmd:ApexDoc');  // Engine:Rule format
         });
 
         it('When document language is not apex, then return no code actions', () => {
@@ -245,15 +244,16 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
                 
                 // Validate the class level suppression action targets only SecondClass for this specific rule
                 expect(codeActions[1].title).toEqual("Suppress 'pmd.TestRule' on this class");
-                expect(codeActions[1].command.command).toEqual("sfca.removeDiagnosticsInRangeByRule");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                expect(codeActions[1].command.command).toEqual("sfca.clearDiagnostics");
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(multiClassUri);
                 // Should use SecondClass range, not FirstClass or the entire file
-                const classRange = codeActions[1].command.arguments[1] as vscode.Range;
+                const clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                const classRange = clearOptions.range as vscode.Range;
                 expect(classRange.start.line).toEqual(6);  // SecondClass starts at line 6
                 expect(classRange.end.line).toEqual(10);   // SecondClass ends at line 10
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('TestRule');  // Rule name
+                expect(clearOptions.rule).toEqual('pmd:TestRule');  // Engine:Rule format
             });
 
             it('Class level suppression should handle inner classes correctly', () => {
@@ -289,15 +289,16 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
                 
                 // Validate the class level suppression action targets the inner class for this specific rule
                 expect(codeActions[1].title).toEqual("Suppress 'pmd.InnerTestRule' on this class");
-                expect(codeActions[1].command.command).toEqual("sfca.removeDiagnosticsInRangeByRule");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                expect(codeActions[1].command.command).toEqual("sfca.clearDiagnostics");
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(innerClassUri);
                 // Should use InnerClass range
-                const classRange = codeActions[1].command.arguments[1] as vscode.Range;
+                const clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                const classRange = clearOptions.range as vscode.Range;
                 expect(classRange.start.line).toEqual(5);  // InnerClass starts at line 5
                 expect(classRange.end.line).toEqual(9);    // InnerClass ends at line 9
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('InnerTestRule');  // Rule name
+                expect(clearOptions.rule).toEqual('pmd:InnerTestRule');  // Engine:Rule format
             });
 
             it('Class level suppression should work for class with annotations and comments', () => {
@@ -330,70 +331,92 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
                 
                 // Validate the class level suppression action for this specific rule
                 expect(codeActions[1].title).toEqual("Suppress 'pmd.AnnotatedTestRule' on this class");
-                expect(codeActions[1].command.command).toEqual("sfca.removeDiagnosticsInRangeByRule");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                expect(codeActions[1].command.command).toEqual("sfca.clearDiagnostics");
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(annotatedClassUri);
                 // Should use class range
-                const classRange = codeActions[1].command.arguments[1] as vscode.Range;
+                const clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                const classRange = clearOptions.range as vscode.Range;
                 expect(classRange.start.line).toEqual(4);  // Class declaration starts at line 4
                 expect(classRange.end.line).toEqual(8);    // Class ends at line 8
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('AnnotatedTestRule');  // Rule name
+                expect(clearOptions.rule).toEqual('pmd:AnnotatedTestRule');  // Engine:Rule format
             });
 
-            it('Class level suppression should handle multiple levels of nested classes correctly', () => {
+            it('Class level suppression should handle multiple levels of nested classes correctly (up to 5 levels deep)', () => {
                 const deeplyNestedContent: string = 
-                    'public class OuterClass {\n' +                 // line 0
-                    '    public void outerMethod() {\n' +           // line 1
-                    '        // outer code\n' +                     // line 2
-                    '    }\n' +                                     // line 3
-                    '    \n' +                                      // line 4
-                    '    public class Inner1 {\n' +                 // line 5
-                    '        public void inner1Method() {\n' +      // line 6
-                    '            // inner1 code\n' +                // line 7
-                    '        }\n' +                                 // line 8
-                    '        \n' +                                  // line 9
-                    '        public class Inner2 {\n' +             // line 10
-                    '            public void inner2Method() {\n' +  // line 11
-                    '                // inner2 code\n' +            // line 12
-                    '            }\n' +                             // line 13
-                    '            \n' +                              // line 14
-                    '            public class Inner3 {\n' +         // line 15
-                    '                public void inner3Method() {\n' + // line 16
-                    '                    // deepest code\n' +       // line 17
-                    '                }\n' +                         // line 18
-                    '            }\n' +                             // line 19 (Inner3 closes)
-                    '        }\n' +                                 // line 20 (Inner2 closes)
-                    '    }\n' +                                     // line 21 (Inner1 closes)
-                    '}';                                            // line 22 (OuterClass closes)
+                    'public class OuterClass {\n' +                     // line 0
+                    '    public void outerMethod() {\n' +               // line 1
+                    '        // outer code\n' +                         // line 2
+                    '    }\n' +                                         // line 3
+                    '    \n' +                                          // line 4
+                    '    public class Inner1 {\n' +                     // line 5
+                    '        public void inner1Method() {\n' +          // line 6
+                    '            // inner1 code\n' +                    // line 7
+                    '        }\n' +                                     // line 8
+                    '        \n' +                                      // line 9
+                    '        public class Inner2 {\n' +                 // line 10
+                    '            public void inner2Method() {\n' +      // line 11
+                    '                // inner2 code\n' +                // line 12
+                    '            }\n' +                                 // line 13
+                    '            \n' +                                  // line 14
+                    '            public class Inner3 {\n' +             // line 15
+                    '                public void inner3Method() {\n' +  // line 16
+                    '                    // inner3 code\n' +            // line 17
+                    '                }\n' +                             // line 18
+                    '                \n' +                              // line 19
+                    '                public class Inner4 {\n' +         // line 20
+                    '                    public void inner4Method() {\n' + // line 21
+                    '                        // inner4 code\n' +        // line 22
+                    '                    }\n' +                         // line 23
+                    '                    \n' +                          // line 24
+                    '                    public class Inner5 {\n' +     // line 25
+                    '                        public void inner5Method() {\n' + // line 26
+                    '                            // deepest code\n' +  // line 27
+                    '                        }\n' +                     // line 28
+                    '                    }\n' +                         // line 29 (Inner5 closes)
+                    '                }\n' +                             // line 30 (Inner4 closes)
+                    '            }\n' +                                 // line 31 (Inner3 closes)
+                    '        }\n' +                                     // line 32 (Inner2 closes)
+                    '    }\n' +                                         // line 33 (Inner1 closes)
+                    '}';                                                // line 34 (OuterClass closes)
 
                 const deeplyNestedUri: vscode.Uri = vscode.Uri.file('/deeplyNested.cls');
                 const deeplyNestedDocument: vscode.TextDocument = createTextDocument(deeplyNestedUri, deeplyNestedContent, 'apex');
                 
-                // Test 1: Diagnostic in Inner3 (deepest level)
-                const diagInInner3: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
+                // Test 1: Diagnostic in Inner5 (deepest level - 5 levels deep)
+                const diagInInner5: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
                     deeplyNestedUri, 
-                    new vscode.Range(16, 16, 16, 28), 
-                    'Inner3Rule', 
+                    new vscode.Range(26, 24, 26, 36), 
+                    'Inner5Rule', 
                     'pmd'
                 );
 
-                let context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [diagInInner3]});
-                let selectedRange: vscode.Range = new vscode.Range(16, 16, 16, 28);
+                let context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [diagInInner5]});
+                let selectedRange: vscode.Range = new vscode.Range(26, 24, 26, 36);
                 let codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(deeplyNestedDocument, selectedRange, context);
 
                 expect(codeActions).toHaveLength(2);
-                expect(codeActions[1].title).toEqual("Suppress 'pmd.Inner3Rule' on this class");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                expect(codeActions[1].title).toEqual("Suppress 'pmd.Inner5Rule' on this class");
+                
+                // Verify the annotation is added to Inner5 (line 25), not OuterClass (line 0)
+                // and that it has the correct indentation (20 spaces = 5 levels of nesting)
+                const inner5Edits: vscode.TextEdit[] = codeActions[1].edit.get(deeplyNestedUri);
+                expect(inner5Edits).toHaveLength(1);
+                expect(inner5Edits[0].range.start.line).toEqual(25);  // Should insert at Inner5's line
+                expect(inner5Edits[0].newText).toEqual("                    @SuppressWarnings('PMD.Inner5Rule')\n");
+                
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(deeplyNestedUri);
-                // Should use Inner3 class range
-                let classRange = codeActions[1].command.arguments[1] as vscode.Range;
-                expect(classRange.start.line).toEqual(15);  // Inner3 starts at line 15
-                expect(classRange.end.line).toEqual(19);    // Inner3 ends at line 19
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('Inner3Rule');  // Rule name
+                // Should use Inner5 class range
+                let clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                let classRange = clearOptions.range as vscode.Range;
+                expect(classRange.start.line).toEqual(25);  // Inner5 starts at line 25
+                expect(classRange.end.line).toEqual(29);    // Inner5 ends at line 29
+                expect(clearOptions.rule).toEqual('pmd:Inner5Rule');  // Engine:Rule format
 
-                // Test 2: Diagnostic in Inner2 (middle level, containing Inner3)
+                // Test 2: Diagnostic in Inner2 (middle level, containing Inner3, Inner4, Inner5)
                 const diagInInner2: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
                     deeplyNestedUri, 
                     new vscode.Range(11, 12, 11, 24), 
@@ -407,16 +430,24 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
 
                 expect(codeActions).toHaveLength(2);
                 expect(codeActions[1].title).toEqual("Suppress 'pmd.Inner2Rule' on this class");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                
+                // Verify the annotation has correct indentation (8 spaces = 2 levels of nesting)
+                const inner2Edits: vscode.TextEdit[] = codeActions[1].edit.get(deeplyNestedUri);
+                expect(inner2Edits).toHaveLength(1);
+                expect(inner2Edits[0].range.start.line).toEqual(10);
+                expect(inner2Edits[0].newText).toEqual("        @SuppressWarnings('PMD.Inner2Rule')\n");
+                
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(deeplyNestedUri);
-                // Should use Inner2 class range (includes Inner3)
-                classRange = codeActions[1].command.arguments[1] as vscode.Range;
+                // Should use Inner2 class range (includes Inner3, Inner4, Inner5)
+                clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                classRange = clearOptions.range as vscode.Range;
                 expect(classRange.start.line).toEqual(10);  // Inner2 starts at line 10
-                expect(classRange.end.line).toEqual(20);    // Inner2 ends at line 20
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('Inner2Rule');  // Rule name
+                expect(classRange.end.line).toEqual(32);    // Inner2 ends at line 32 (now includes Inner3, Inner4, Inner5)
+                expect(clearOptions.rule).toEqual('pmd:Inner2Rule');  // Engine:Rule format
 
-                // Test 3: Diagnostic in Inner1 (contains Inner2 and Inner3)
+                // Test 3: Diagnostic in Inner1 (contains Inner2, Inner3, Inner4, Inner5)
                 const diagInInner1: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
                     deeplyNestedUri, 
                     new vscode.Range(6, 8, 6, 20), 
@@ -430,16 +461,24 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
 
                 expect(codeActions).toHaveLength(2);
                 expect(codeActions[1].title).toEqual("Suppress 'pmd.Inner1Rule' on this class");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                
+                // Verify the annotation has correct indentation (4 spaces = 1 level of nesting)
+                const inner1Edits: vscode.TextEdit[] = codeActions[1].edit.get(deeplyNestedUri);
+                expect(inner1Edits).toHaveLength(1);
+                expect(inner1Edits[0].range.start.line).toEqual(5);
+                expect(inner1Edits[0].newText).toEqual("    @SuppressWarnings('PMD.Inner1Rule')\n");
+                
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(deeplyNestedUri);
-                // Should use Inner1 class range (includes Inner2 and Inner3)
-                classRange = codeActions[1].command.arguments[1] as vscode.Range;
+                // Should use Inner1 class range (includes Inner2, Inner3, Inner4, Inner5)
+                clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                classRange = clearOptions.range as vscode.Range;
                 expect(classRange.start.line).toEqual(5);   // Inner1 starts at line 5
-                expect(classRange.end.line).toEqual(21);    // Inner1 ends at line 21
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('Inner1Rule');  // Rule name
+                expect(classRange.end.line).toEqual(33);    // Inner1 ends at line 33 (now includes all inner classes)
+                expect(clearOptions.rule).toEqual('pmd:Inner1Rule');  // Engine:Rule format
 
-                // Test 4: Diagnostic in OuterClass (contains all inner classes)
+                // Test 4: Diagnostic in OuterClass (contains all inner classes up to 5 levels deep)
                 const diagInOuter: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
                     deeplyNestedUri, 
                     new vscode.Range(1, 4, 1, 16), 
@@ -453,14 +492,76 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
 
                 expect(codeActions).toHaveLength(2);
                 expect(codeActions[1].title).toEqual("Suppress 'pmd.OuterRule' on this class");
-                expect(codeActions[1].command.arguments).toHaveLength(4);
+                
+                // Verify the annotation has no indentation (0 spaces = top level)
+                const outerEdits: vscode.TextEdit[] = codeActions[1].edit.get(deeplyNestedUri);
+                expect(outerEdits).toHaveLength(1);
+                expect(outerEdits[0].range.start.line).toEqual(0);
+                expect(outerEdits[0].newText).toEqual("@SuppressWarnings('PMD.OuterRule')\n");
+                
+                expect(codeActions[1].command.arguments).toHaveLength(2);
                 expect(codeActions[1].command.arguments[0]).toEqual(deeplyNestedUri);
-                // Should use OuterClass range (includes all inner classes)
-                classRange = codeActions[1].command.arguments[1] as vscode.Range;
+                // Should use OuterClass range (includes all inner classes up to 5 levels deep)
+                clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                classRange = clearOptions.range as vscode.Range;
                 expect(classRange.start.line).toEqual(0);   // OuterClass starts at line 0
-                expect(classRange.end.line).toEqual(22);    // OuterClass ends at line 22
-                expect(codeActions[1].command.arguments[2]).toEqual('pmd');  // Engine
-                expect(codeActions[1].command.arguments[3]).toEqual('OuterRule');  // Rule name
+                expect(classRange.end.line).toEqual(34);    // OuterClass ends at line 34 (now includes all 5 levels of nesting)
+                expect(clearOptions.rule).toEqual('pmd:OuterRule');  // Engine:Rule format
+            });
+
+            it('When nested class already has @SuppressWarnings, adding a new rule should update the nested class annotation, not the outer class', () => {
+                // Outer class with existing @SuppressWarnings
+                // Inner class ALSO with existing @SuppressWarnings
+                // Adding a new rule to inner class should only update inner class annotation
+                const nestedWithAnnotationsContent: string = 
+                    '@SuppressWarnings(\'PMD.OuterRule\')\n' +        // line 0
+                    'public class OuterClass {\n' +                   // line 1
+                    '    public void outerMethod() {\n' +             // line 2
+                    '        // outer code\n' +                       // line 3
+                    '    }\n' +                                       // line 4
+                    '    \n' +                                        // line 5
+                    '    @SuppressWarnings(\'PMD.InnerRule1\')\n' +  // line 6 - Inner class has its own annotation
+                    '    public class InnerClass {\n' +               // line 7
+                    '        public void innerMethod() {\n' +         // line 8
+                    '            // inner code with violation\n' +    // line 9
+                    '        }\n' +                                   // line 10
+                    '    }\n' +                                       // line 11
+                    '}';                                              // line 12
+
+                const nestedAnnotUri: vscode.Uri = vscode.Uri.file('/nestedWithAnnotations.cls');
+                const nestedAnnotDocument: vscode.TextDocument = createTextDocument(nestedAnnotUri, nestedWithAnnotationsContent, 'apex');
+                
+                // Diagnostic in InnerClass at line 9
+                const diagInInner: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
+                    nestedAnnotUri, 
+                    new vscode.Range(9, 12, 9, 23), 
+                    'InnerRule2',  // Different rule than InnerRule1
+                    'pmd'
+                );
+
+                const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [diagInInner]});
+                const selectedRange: vscode.Range = new vscode.Range(9, 12, 9, 23);
+                const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(nestedAnnotDocument, selectedRange, context);
+
+                expect(codeActions).toHaveLength(2);
+                expect(codeActions[1].title).toEqual("Suppress 'pmd.InnerRule2' on this class");
+                
+                // Verify the annotation on InnerClass (line 6) is updated, NOT OuterClass (line 0)
+                const innerEdits: vscode.TextEdit[] = codeActions[1].edit.get(nestedAnnotUri);
+                expect(innerEdits).toHaveLength(1);
+                expect(innerEdits[0].range.start.line).toEqual(6);  // Should update line 6 (InnerClass annotation)
+                expect(innerEdits[0].range.end.line).toEqual(6);    // Same line
+                expect(innerEdits[0].newText).toEqual("    @SuppressWarnings('PMD.InnerRule1,PMD.InnerRule2')");  // Appends to existing
+                
+                // Verify the command clears diagnostics only for InnerClass range
+                expect(codeActions[1].command.arguments).toHaveLength(2);
+                const clearOptions = codeActions[1].command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                const classRange = clearOptions.range as vscode.Range;
+                expect(classRange.start.line).toEqual(7);   // InnerClass starts at line 7
+                expect(classRange.end.line).toEqual(11);    // InnerClass ends at line 11
+                expect(clearOptions.rule).toEqual('pmd:InnerRule2');
             });
         });
     });

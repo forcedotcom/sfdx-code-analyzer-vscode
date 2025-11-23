@@ -9,7 +9,7 @@
 import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './lib/settings';
 import * as targeting from './lib/targeting'
-import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
+import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, ClearDiagnosticsOptions} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import * as Constants from './lib/constants';
 import * as path from 'path';
@@ -198,14 +198,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     registerCodeActionsProvider({language: 'apex'}, pmdSuppressionsCodeActionProvider,
             {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
 
-    // QF_COMMAND_DIAGNOSTICS_IN_RANGE: Invoked by a Quick Fix button that appears on diagnostics
-    // TODO: We need to fix this - because we should be just removing the relevant diagnostics - not all in a specific range
-    registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, (uri: vscode.Uri, range: vscode.Range) =>
-        diagnosticManager.clearDiagnosticsInRange(uri, range));
-    
-    // QF_COMMAND_DIAGNOSTICS_IN_RANGE_BY_RULE: Invoked by PMD class-level suppression to clear only specific rule violations
-    registerCommand(Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE_BY_RULE, (uri: vscode.Uri, range: vscode.Range, engine: string, ruleName: string) =>
-        diagnosticManager.clearDiagnosticsInRangeByRule(uri, range, engine, ruleName));
+    // QF_COMMAND_CLEAR_DIAGNOSTICS: Invoked by Quick Fix button to clear diagnostics from a file
+    // Supports optional range and optional rule filtering
+    registerCommand(Constants.QF_COMMAND_CLEAR_DIAGNOSTICS, (uri: vscode.Uri, clearOptions?: ClearDiagnosticsOptions) =>
+        diagnosticManager.clearDiagnosticsFromFile(uri, clearOptions));
 
 
     // =================================================================================================================
