@@ -141,7 +141,8 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
 
 export type ClearDiagnosticsOptions = {
     range?: vscode.Range;
-    rule?: string;  // Format: <engineName>:<ruleName> or just <ruleName>
+    engineName?: string;  // e.g., 'pmd', 'eslint-lwc'
+    ruleName?: string;    // e.g., 'ApexDoc', 'no-unused-vars'
 }
 
 export interface DiagnosticManager extends vscode.Disposable {
@@ -193,29 +194,24 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
             return;
         }
 
-        const { range, rule } = clearOptions;
-
-        // Parse rule if provided: format is <engineName>:<ruleName> or just <ruleName>
-        let parsedRule: { engine?: string; ruleName: string } | undefined;
-        if (rule) {
-            const parts = rule.split(':');
-            parsedRule = parts.length === 2 
-                ? { engine: parts[0], ruleName: parts[1] }
-                : { engine: undefined, ruleName: parts[0] };
-        }
+        const { range, engineName, ruleName } = clearOptions;
 
         // Remove diagnostics that match the criteria
         const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(d => {
             // Check if diagnostic is in the specified range (or no range specified = entire file)
             const inRange = !range || range.contains(d.range);
             
-            // Check if diagnostic matches the specified rule (or no rule specified = all rules)
-            const matchesRule = !parsedRule || 
-                ((parsedRule.engine === undefined || d.violation.engine === parsedRule.engine) && 
-                 d.violation.rule === parsedRule.ruleName);
+            // Check if diagnostic matches the specified engine and/or rule
+            // - If neither engineName nor ruleName specified, match all rules
+            // - If only engineName specified, match all rules from that engine
+            // - If only ruleName specified, match that rule from any engine
+            // - If both specified, match exact engine + rule combination
+            const matchesEngine = !engineName || d.violation.engine === engineName;
+            const matchesRule = !ruleName || d.violation.rule === ruleName;
+            const matchesFilter = matchesEngine && matchesRule;
             
-            // Keep diagnostics that are either: outside the range OR don't match the rule
-            return !(inRange && matchesRule);
+            // Keep diagnostics that are either: outside the range OR don't match the filter
+            return !(inRange && matchesFilter);
         });
 
         this.setDiagnosticsForFile(uri, updatedDiagnostics);
