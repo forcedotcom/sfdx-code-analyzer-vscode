@@ -63,9 +63,10 @@ function generateLineLevelSuppression(document: vscode.TextDocument, diag: CodeA
     action.edit.insert(document.uri, endOfStartLine, " // NOPMD");
     action.diagnostics = [diag];
     action.command = {
-        command: Constants.QF_COMMAND_CLEAR_DIAGNOSTICS, // TODO: This is wrong. We should only be clearing the PMD violations on this line - not all within the range. This ToDo only seems applicable on multi-line violations though.
-        title: 'Clear Single Diagnostic',
-        arguments: [document.uri, { range: diag.range }]
+        command: Constants.QF_COMMAND_CLEAR_DIAGNOSTICS,
+        title: 'Clear PMD Diagnostics on Line',
+        // Clear only PMD violations in the range, leaving other engine violations intact
+        arguments: [document.uri, { range: diag.range, engineName: 'pmd' }]
     };
 
     return action;
@@ -121,11 +122,14 @@ function generateClassLevelSuppression(document: vscode.TextDocument, diag: Code
     // Find the class range and clear all diagnostics for this specific rule within the class
     // @SuppressWarnings is rule-specific and class-scoped
     const classRange = findRangeOfClassThatContainsStartOfDiag(document, diag);
-    const ruleFilter = `${diag.violation.engine}:${diag.violation.rule}`;
     action.command = {
         command: Constants.QF_COMMAND_CLEAR_DIAGNOSTICS,
         title: 'Remove diagnostics for this rule in this class',
-        arguments: [document.uri, { range: classRange, rule: ruleFilter }]
+        arguments: [document.uri, { 
+            range: classRange, 
+            engineName: diag.violation.engine, 
+            ruleName: diag.violation.rule 
+        }]
     };
 
     return action;
