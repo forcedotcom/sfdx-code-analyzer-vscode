@@ -81,32 +81,8 @@ function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity
  */
 function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
     const config = vscode.workspace.getConfiguration('codeAnalyzer');
-
-    // Map violation severity to configured diagnostic severity
-    let configuredSeverity: string | undefined;
-    switch (violationSeverity) {
-        case 1:
-            configuredSeverity = config.get<string>('severity1');
-            break;
-        case 2:
-            configuredSeverity = config.get<string>('severity2');
-            break;
-        case 3:
-            configuredSeverity = config.get<string>('severity3');
-            break;
-        case 4:
-            configuredSeverity = config.get<string>('severity4');
-            break;
-        case 5:
-            configuredSeverity = config.get<string>('severity5');
-            break;
-        default:
-            // For any severity outside 1-5, default to Warning
-            return vscode.DiagnosticSeverity.Warning;
-    }
-
-    // If this specific severity is configured, use it; otherwise use Warning as default
-    return configuredSeverity ? mapToDiagnosticSeverity(configuredSeverity) : vscode.DiagnosticSeverity.Warning;
+    const configuredSeverity = config.get<string>(`severity ${violationSeverity}`);
+    return mapToDiagnosticSeverity(configuredSeverity);
 }
 
 /**
