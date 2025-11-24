@@ -58,23 +58,55 @@ export type Suggestion = {
 const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
 
 /**
- * Determines the diagnostic severity based on the violation severity and user-configured thresholds.
- * If thresholds are not configured, maintains backward compatibility by returning Warning for all violations.
- * @param violationSeverity The severity number from the violation (lower number = higher severity)
+ * Maps configuration string values to VSCode diagnostic severity
+ */
+function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity {
+    switch (configValue) {
+        case 'Error':
+            return vscode.DiagnosticSeverity.Error;
+        case 'Warning':
+            return vscode.DiagnosticSeverity.Warning;
+        case 'Info':
+            return vscode.DiagnosticSeverity.Information;
+        default:
+            return vscode.DiagnosticSeverity.Warning;
+    }
+}
+
+/**
+ * Determines the diagnostic severity based on the violation severity and user-configured mappings.
+ * If a specific severity is not configured, defaults to Warning.
+ * @param violationSeverity The severity number from the violation (1=highest, 5=lowest)
  * @returns The appropriate VSCode DiagnosticSeverity
  */
 function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
     const config = vscode.workspace.getConfiguration('codeAnalyzer');
-    const errorThreshold: number = config.get('severityErrorThreshold', 0);
-    const warnThreshold: number = config.get('severityWarningThreshold', 5);
 
-    if (violationSeverity <= errorThreshold) {
-        return vscode.DiagnosticSeverity.Error;
-    } else if (violationSeverity <= warnThreshold) {
-        return vscode.DiagnosticSeverity.Warning;
-    } else {
-        return vscode.DiagnosticSeverity.Hint;
+    // Map violation severity to configured diagnostic severity
+    let configuredSeverity: string | undefined;
+    switch (violationSeverity) {
+        case 1:
+            configuredSeverity = config.get<string>('severity1');
+            break;
+        case 2:
+            configuredSeverity = config.get<string>('severity2');
+            break;
+        case 3:
+            configuredSeverity = config.get<string>('severity3');
+            break;
+        case 4:
+            configuredSeverity = config.get<string>('severity4');
+            break;
+        case 5:
+            configuredSeverity = config.get<string>('severity5');
+            break;
+        default:
+            // For any severity outside 1-5, default to Warning
+            return vscode.DiagnosticSeverity.Warning;
     }
+
+    // If this specific severity is configured, use it; otherwise use Warning as default
+    return configuredSeverity ? mapToDiagnosticSeverity(configuredSeverity) : vscode.DiagnosticSeverity.Warning;
 }
 
 /**

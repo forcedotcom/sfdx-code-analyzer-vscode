@@ -147,28 +147,50 @@
                         "default": "Recommended",
                         "markdownDescription": "Selection of rules used to scan your code with Code Analyzer.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
                     },
-                    "codeAnalyzer.severityErrorThreshold": {
-                        "type": "number",
+                    "codeAnalyzer.severity1": {
+                        "type": "string",
                         "enum": [
-                            1,
-                            2,
-                            3,
-                            4,
-                            5
+                            "Error",
+                            "Warning",
+                            "Info"
                         ],
-                        "description": "Determines at what severity level 'errors' will be added. Anything less will be a warning or hint. If not configured, all violations are shown as warnings (default behavior)."
+                        "markdownDescription": "Diagnostic level for severity 1 violations (highest severity). If not configured, all violations are shown as warnings (default behavior)."
                     },
-                    "codeAnalyzer.severityWarningThreshold": {
-                        "type": "number",
+                    "codeAnalyzer.severity2": {
+                        "type": "string",
                         "enum": [
-                            1,
-                            2,
-                            3,
-                            4,
-                            5
+                            "Error",
+                            "Warning",
+                            "Info"
                         ],
-                        "default": 5,
-                        "description": "Determines at what severity level 'warnings' will be added. Anything less will be a hint."
+                        "markdownDescription": "Diagnostic level for severity 2 violations. If not configured, all violations are shown as warnings (default behavior)."
+                    },
+                    "codeAnalyzer.severity3": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "markdownDescription": "Diagnostic level for severity 3 violations. If not configured, all violations are shown as warnings (default behavior)."
+                    },
+                    "codeAnalyzer.severity4": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "markdownDescription": "Diagnostic level for severity 4 violations. If not configured, all violations are shown as warnings (default behavior)."
+                    },
+                    "codeAnalyzer.severity5": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity). If not configured, all violations are shown as warnings (default behavior)."
                     }
                 }
             }

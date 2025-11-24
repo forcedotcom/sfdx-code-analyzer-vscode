@@ -14,8 +14,11 @@ export interface SettingsManager {
     // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
     getCodeAnalyzerRuleSelectors(): string;
-    getSeverityErrorThreshold(): number;
-    getSeverityWarningThreshold(): number;
+    getSeverity1(): string;
+    getSeverity2(): string;
+    getSeverity3(): string;
+    getSeverity4(): string;
+    getSeverity5(): string;
 
     // Other Settings that we may depend on
     getEditorCodeLensEnabled(): boolean;
@@ -44,12 +47,24 @@ export class SettingsManagerImpl implements SettingsManager {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
     }
 
-    public getSeverityErrorThreshold(): number {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severityErrorThreshold');
+    public getSeverity1(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity1');
     }
 
-    public getSeverityWarningThreshold(): number {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severityWarningThreshold');
+    public getSeverity2(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity2');
+    }
+
+    public getSeverity3(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity3');
+    }
+
+    public getSeverity4(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity4');
+    }
+
+    public getSeverity5(): string {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity5');
     }
 
     // =================================================================================================================
