@@ -48,23 +48,23 @@ export class SettingsManagerImpl implements SettingsManager {
     }
 
     public getSeverity1(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity1');
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity 1');
     }
 
     public getSeverity2(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity2');
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity 2');
     }
 
     public getSeverity3(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity3');
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity 3');
     }
 
     public getSeverity4(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity4');
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity 4');
     }
 
     public getSeverity5(): string {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity5');
+        return vscode.workspace.getConfiguration('codeAnalyzer').get('severity 5');
     }
 
     // =================================================================================================================
