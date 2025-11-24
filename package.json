@@ -156,8 +156,7 @@
                             4,
                             5
                         ],
-                        "default": 1,
-                        "description": "Determines at what severity level 'errors' will be added. Anything less will be a warning or hint."
+                        "description": "Determines at what severity level 'errors' will be added. Anything less will be a warning or hint. If not configured, all violations are shown as warnings (default behavior)."
                     },
                     "codeAnalyzer.severityWarningThreshold": {
                         "type": "number",
@@ -168,7 +167,7 @@
                             4,
                             5
                         ],
-                        "default": 3,
+                        "default": 5,
                         "description": "Determines at what severity level 'warnings' will be added. Anything less will be a hint."
                     }
                 }

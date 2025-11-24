@@ -59,13 +59,14 @@ const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
 
 /**
  * Determines the diagnostic severity based on the violation severity and user-configured thresholds.
+ * If thresholds are not configured, maintains backward compatibility by returning Warning for all violations.
  * @param violationSeverity The severity number from the violation (lower number = higher severity)
  * @returns The appropriate VSCode DiagnosticSeverity
  */
 function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
     const config = vscode.workspace.getConfiguration('codeAnalyzer');
-    const errorThreshold: number = config.get('severityErrorThreshold', 1);
-    const warnThreshold: number = config.get('severityWarningThreshold', 3);
+    const errorThreshold: number = config.get('severityErrorThreshold', 0);
+    const warnThreshold: number = config.get('severityWarningThreshold', 5);
 
     if (violationSeverity <= errorThreshold) {
         return vscode.DiagnosticSeverity.Error;

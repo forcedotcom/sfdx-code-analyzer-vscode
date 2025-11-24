@@ -264,13 +264,13 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
-    getSeverityErrorThresholdReturnValue: number = 1;
+    getSeverityErrorThresholdReturnValue: number = 0;
 
     getSeverityErrorThreshold(): number {
         return this.getSeverityErrorThresholdReturnValue;
     }
 
-    getSeverityWarningThresholdReturnValue: number = 3;
+    getSeverityWarningThresholdReturnValue: number = 5;
 
     getSeverityWarningThreshold(): number {
         return this.getSeverityWarningThresholdReturnValue;
