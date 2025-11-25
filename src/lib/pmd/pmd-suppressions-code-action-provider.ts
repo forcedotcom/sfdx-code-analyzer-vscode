@@ -73,8 +73,12 @@ function generateLineLevelSuppression(document: vscode.TextDocument, diag: CodeA
 }
 
 function generateClassLevelSuppression(document: vscode.TextDocument, diag: CodeAnalyzerDiagnostic): vscode.CodeAction {
-    // Find the end-of-line position of the class declaration where the diagnostic is found.
-    const classStartPosition = findClassStartPosition(document, diag);
+    // Find the start position of the class that contains the diagnostic
+    const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(document.getText());
+    const classStartLine: number | undefined = boundaries.getStartLineOfClassThatContainsLine(diag.range.start.line);
+    const classStartPosition = classStartLine !== undefined 
+        ? new vscode.Position(classStartLine, 0)
+        : new vscode.Position(0, 0); // Default to the start of the document if class is not found
 
     const ruleName: string = diag.violation.rule;
     const suppressionTag: string = `PMD.${ruleName}`;
@@ -136,51 +140,6 @@ function generateClassLevelSuppression(document: vscode.TextDocument, diag: Code
 }
 
 /**
- * Finds the start position of the class in the document.
- * Assumes that the class declaration starts with the keyword "class".
- * For nested classes, finds the innermost class containing the diagnostic.
- * Iterates backwards from the diagnostic line to find the nearest class declaration.
- * @returns The position at the start of the class.
- */
-function findClassStartPosition(document: vscode.TextDocument, diag: CodeAnalyzerDiagnostic): vscode.Position {
-    const text = document.getText();
-    const diagnosticLine = diag.range.start.line;
-
-    // Split the text into lines for easier processing
-    const lines = text.split('\n');
-    let classStartLine: number | undefined;
-
-    // Iterate backwards from the diagnostic line to find the nearest class declaration
-    // This ensures we find the innermost class in case of nested classes
-    for (let lineNumber = diagnosticLine; lineNumber >= 0; lineNumber--) {
-        const line = lines[lineNumber];
-
-        // Skip single-line comments
-        if (line.match(PATTERNS.singleLineComment)) {
-            continue;
-        }
-
-        // Skip block comments (both single-line and multi-line)
-        if (line.match(PATTERNS.blockCommentEnd) && line.match(PATTERNS.blockCommentStart)) {
-            continue;
-        }
-
-        const match = line.match(PATTERNS.classDeclaration);
-        if (match && !isWithinQuotes(line, match.index)) {
-            classStartLine = lineNumber;
-            break;
-        }
-    }
-
-    if (classStartLine !== undefined) {
-        return new vscode.Position(classStartLine, 0);
-    }
-
-    // Default to the start of the document if class is not found
-    return new vscode.Position(0, 0);
-}
-
-/**
  * Finds the range of the class that contains the first line of the diagnostic.
  * 
  * This function uses ApexCodeBoundaries to find the innermost class that contains
@@ -222,19 +181,4 @@ function findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position
 
     // Return an empty string if it's the first line of the document
     return '';
-}
-
-/**
- * Helper function to check if match is within quotes
- * @param line
- * @param matchIndex
- * @returns
- */
-function isWithinQuotes(line: string, matchIndex: number): boolean {
-    const beforeMatch = line.slice(0, matchIndex);
-    const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
-    const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
-
-    // Check if the number of quotes before the match is odd (inside quotes)
-    return singleQuotesBefore % 2 !== 0 || doubleQuotesBefore % 2 !== 0
 }

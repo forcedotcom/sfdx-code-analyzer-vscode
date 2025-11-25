@@ -573,6 +573,61 @@ describe('PMDSupressionsCodeActionProvider Tests', () => {
                 expect(clearOptions.engineName).toEqual('pmd');
                 expect(clearOptions.ruleName).toEqual('InnerRule2');
             });
+
+            it('Class level suppression should add annotation to outer class when diagnostic is in method AFTER nested class', () => {
+                // This tests the bug fix: when a method comes after a nested class,
+                // the annotation should be added to the outer class, not the nested class
+                const apexUri: vscode.Uri = vscode.Uri.file('/OuterClass.cls');
+                const apexCode = `public class OuterClass {
+    private String field1;
+    
+    public class InnerClass {
+        private String innerField;
+    }
+    
+    public void methodAfterNestedClass() {
+        // PMD Violation here
+        String unused = 'test';
+    }
+}`;
+                const apexDocument = createTextDocument(apexUri, apexCode, 'apex');
+                
+                // Create diagnostic for line 9 (the unused variable inside methodAfterNestedClass)
+                const diag: vscode.Diagnostic = createSampleCodeAnalyzerDiagnostic(
+                    apexUri,
+                    new vscode.Range(9, 8, 9, 30),
+                    'UnusedLocalVariable',
+                    'pmd'
+                );
+                
+                const context: vscode.CodeActionContext = new StubCodeActionContext({diagnostics: [diag]});
+                const selectedRange: vscode.Range = new vscode.Range(9, 0, 9, 30);
+                
+                const codeActions: vscode.CodeAction[] = actionProvider.provideCodeActions(apexDocument, selectedRange, context);
+                
+                // Should have 2 actions: line-level and class-level
+                expect(codeActions).toHaveLength(2);
+                
+                // Check the class-level suppression (second action)
+                const classLevelAction = codeActions[1];
+                expect(classLevelAction.title).toEqual("Suppress 'pmd.UnusedLocalVariable' on this class");
+                
+                // Verify it inserts the annotation at the OUTER class (line 0), not the inner class (line 3)
+                const edits: vscode.TextEdit[] = classLevelAction.edit.get(apexUri);
+                expect(edits).toHaveLength(1);
+                expect(edits[0].range.start.line).toEqual(0);  // Should insert before OuterClass
+                expect(edits[0].newText).toEqual("@SuppressWarnings('PMD.UnusedLocalVariable')\n");
+                
+                // Verify the command clears diagnostics for the OUTER class range
+                expect(classLevelAction.command.arguments).toHaveLength(2);
+                const clearOptions = classLevelAction.command.arguments[1];
+                expect(clearOptions.range).toBeInstanceOf(vscode.Range);
+                const classRange = clearOptions.range as vscode.Range;
+                expect(classRange.start.line).toEqual(0);   // OuterClass starts at line 0
+                expect(classRange.end.line).toEqual(11);    // OuterClass ends at line 11
+                expect(clearOptions.engineName).toEqual('pmd');
+                expect(clearOptions.ruleName).toEqual('UnusedLocalVariable');
+            });
         });
     });
 });
