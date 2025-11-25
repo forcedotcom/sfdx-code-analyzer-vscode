@@ -249,6 +249,12 @@ export class StubSettingsManager implements SettingsManager {
         return this.getAnalyzeOnSaveReturnValue;
     }
 
+    getFileExtensionsReturnValue: Set<string> = new Set<string>();
+
+    getFileExtensions(): Set<string> {
+        return this.getFileExtensionsReturnValue;
+    }
+
     // =================================================================================================================
     // ==== Configuration Settings
     // =================================================================================================================
