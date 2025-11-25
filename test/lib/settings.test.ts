@@ -41,7 +41,7 @@ describe('Tests for the SettingsManagerImpl class ', () => {
         it('should parse comma-separated fileExtensions', () => {
             const extensionsString = '.cls,.js,.apex';
             getMock.mockReturnValue(extensionsString);
-            const result: Set<string> = settingsManager.getFileExtensions();
+            const result: Set<string> = settingsManager.getAnalyzeAutomaticallyFileExtensions();
             expect(result).toEqual(new Set(['.cls', '.js', '.apex']));
             expect(getMock).toHaveBeenCalledWith('fileTypes');
         });
@@ -49,7 +49,7 @@ describe('Tests for the SettingsManagerImpl class ', () => {
         it('should normalize extensions to lowercase', () => {
             const extensionsString = '.CLS,.JS,.APEX';
             getMock.mockReturnValue(extensionsString);
-            const result: Set<string> = settingsManager.getFileExtensions();
+            const result: Set<string> = settingsManager.getAnalyzeAutomaticallyFileExtensions();
             expect(result).toEqual(new Set(['.cls', '.js', '.apex']));
             expect(getMock).toHaveBeenCalledWith('fileTypes');
         });
@@ -57,7 +57,7 @@ describe('Tests for the SettingsManagerImpl class ', () => {
         it('should remove duplicate extensions', () => {
             const extensionsString = '.cls,.js,.cls,.apex,.js';
             getMock.mockReturnValue(extensionsString);
-            const result: Set<string> = settingsManager.getFileExtensions();
+            const result: Set<string> = settingsManager.getAnalyzeAutomaticallyFileExtensions();
             expect(result).toEqual(new Set(['.cls', '.js', '.apex']));
             expect(getMock).toHaveBeenCalledWith('fileTypes');
         });
@@ -65,7 +65,7 @@ describe('Tests for the SettingsManagerImpl class ', () => {
         it('should remove duplicates after case normalization', () => {
             const extensionsString = '.cls,.CLS,.Cls,.js,.JS';
             getMock.mockReturnValue(extensionsString);
-            const result: Set<string> = settingsManager.getFileExtensions();
+            const result: Set<string> = settingsManager.getAnalyzeAutomaticallyFileExtensions();
             expect(result).toEqual(new Set(['.cls', '.js']));
             expect(getMock).toHaveBeenCalledWith('fileTypes');
         });

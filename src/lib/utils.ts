@@ -1,5 +1,5 @@
 import * as path from 'path';
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 import {randomUUID} from "node:crypto";
 
 export interface UUIDGenerator {

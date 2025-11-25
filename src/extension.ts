@@ -127,7 +127,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             return; // Do nothing if "Analyze On Open" is not enabled
         }
         const isFile: boolean = editor !== undefined && editor.document.uri.scheme === 'file';
-        const isValidFile: boolean = isFile && isValidFileForAnalysis(editor.document.uri, settingsManager.getFileExtensions());
+        const isValidFile: boolean = isFile && isValidFileForAnalysis(editor.document.uri, settingsManager.getAnalyzeAutomaticallyFileExtensions());
         const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
@@ -137,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
         const isFile: boolean = document !== undefined && document.uri.scheme === 'file';
-        const isValidFile: boolean = isFile && isValidFileForAnalysis(document.uri, settingsManager.getFileExtensions());
+        const isValidFile: boolean = isFile && isValidFileForAnalysis(document.uri, settingsManager.getAnalyzeAutomaticallyFileExtensions());
         if (!isValidFile) {
             return;
         }
