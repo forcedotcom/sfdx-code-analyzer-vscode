@@ -124,7 +124,7 @@ function findClassStartPosition(document: vscode.TextDocument, diag: CodeAnalyze
 
     // Split the text into lines for easier processing
     const lines = text.split('\n');
-    let classStartLine: number;
+    let classStartLine: number | undefined;
 
     let inBlockComment = false;
 

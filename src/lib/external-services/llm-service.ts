@@ -1,4 +1,4 @@
-import {LLMServiceInterface} from "@salesforce/vscode-service-provider";
+import {CallLLMOptions, LLMServiceInterface} from "@salesforce/vscode-service-provider";
 import {Logger} from "../logger";
 import {RandomUUIDGenerator, UUIDGenerator} from "../utils";
 
@@ -34,7 +34,7 @@ export class LiveLLMService implements LLMService {
 
     async callLLM(promptText: string, guidedJsonSchema?: string): Promise<string> {
         const promptId: string = this.uuidGenerator.generateUUID();
-        const options = guidedJsonSchema ? {
+        const options: CallLLMOptions | undefined = guidedJsonSchema ? {
             parameters: {
                 guided_json: guidedJsonSchema
             }

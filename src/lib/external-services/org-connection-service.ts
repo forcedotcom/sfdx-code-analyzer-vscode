@@ -89,9 +89,9 @@ export type HttpMethods =
 export interface WorkspaceContext {
     readonly onOrgChange: vscode.Event<OrgUserInfo>;
     getConnection(): Promise<Connection>;
-    get username(): string;
-    get alias(): string;
-    get orgId(): string;
+    get username(): string | undefined;
+    get alias(): string | undefined;
+    get orgId(): string | undefined;
 }
 
 

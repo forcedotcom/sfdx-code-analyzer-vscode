@@ -123,7 +123,7 @@ export class LiveApexGuruService implements ApexGuruService {
     }
 
     private setAvailability(availability: ApexGuruAvailability) {
-        const oldAccess = this.availability?.access;
+        const oldAccess: ApexGuruAccess | undefined = this.availability?.access;
         this.availability = availability;
         if (availability.access !== oldAccess) {
             this.eventEmitter.emit(ACCESS_CHANGED_EVENT, availability.access);
