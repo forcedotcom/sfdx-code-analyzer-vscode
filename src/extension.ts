@@ -12,7 +12,6 @@ import * as targeting from './lib/targeting'
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import * as Constants from './lib/constants';
-import * as path from 'path';
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
@@ -25,7 +24,7 @@ import {Display, VSCodeDisplay} from "./lib/display";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "./lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress";
 import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
-import {getErrorMessage} from "./lib/utils";
+import {getErrorMessage, isValidFileForAnalysis} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 import {Workspace} from "./lib/workspace";
@@ -317,9 +316,7 @@ export function _isValidFileForAnalysis(documentUri: vscode.Uri, settingsManager
     const configuredFileTypes: Set<string> = settingsManager.getFileExtensions();
     // Use configured types if available, otherwise fall back to defaults
     const allowedFileTypesSet = (configuredFileTypes.size > 0) ? configuredFileTypes : defaultFileTypes;
-    // Convert file extension to lowercase for case-insensitive matching
-    const fileExtension = path.extname(documentUri.fsPath).toLowerCase();
-    return allowedFileTypesSet.has(fileExtension);
+    return isValidFileForAnalysis(documentUri, allowedFileTypesSet);
 }
 
 async function getActiveDocument(): Promise<vscode.TextDocument | null> {
