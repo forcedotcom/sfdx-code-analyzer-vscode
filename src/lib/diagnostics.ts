@@ -486,6 +486,6 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
 }
 
 class Adjustment<T = unknown> {
-    newValue: T | null; // null is a way of marking that there is no new value and thus the old should be removed
-    overlapsWithChange: boolean; 
+    newValue?: T;   // undefined means "no new value"
+    overlapsWithChange: boolean;
 }
