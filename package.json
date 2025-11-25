@@ -134,8 +134,10 @@
                     },
                     "codeAnalyzer.analyzeAutomatically.fileTypes": {
                         "type": "string",
-                        "default": ".cls, .js, .apex, .trigger, .ts, .xml, .css, .html, .cmp",
-                        "markdownDescription": "Comma-separated list of file extensions to analyze automatically when opening or saving files.\n\nSpecify the file types that should be scanned by Code Analyzer when the 'Analyze On Save' or 'Analyze On Open' features are enabled. Include the dot (.) prefix for each extension (e.g., '.cls, .js, .html').\n\n**Note:** Invalid extensions will trigger a warning and will be ignored. Leave empty to use the default list."
+                        "default": ".cls,.js,.apex,.trigger,.ts,.xml,.css,.html,.cmp",
+                        "pattern": "^[.][A-Za-z0-9]+(?:,[.][A-Za-z0-9]+)*$",
+                        "patternErrorMessage": "Must be a comma-separated list of file extensions (e.g., '.cls,.js,.html'). Each extension must start with a dot and contain only alphanumeric characters, with no spaces.",
+                        "markdownDescription": "Comma-separated list of file extensions to analyze automatically when opening or saving files.\n\nSpecify the file types that should be scanned by Code Analyzer when the 'Analyze On Save' or 'Analyze On Open' features are enabled. Include the dot (.) prefix for each extension (e.g., `.cls,.js,.html`).\n\n**Format:** `.ext1,.ext2,.ext3`"
                     }
                 }
             },
