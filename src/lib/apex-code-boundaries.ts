@@ -138,18 +138,17 @@ export class ApexCodeBoundaries {
      * @returns The line number where the containing class starts, or undefined if no class contains the line
      */
     getStartLineOfClassThatContainsLine(lineNum: number): number | undefined {
-        // If starting on a closing brace, depth=0 (we're "outside" and need to enter)
-        // Otherwise depth=1 (we're already "inside" a class)
-        let depth = this.isEndOfClass(lineNum) ? 0 : 1;
+        let depth = 0;
 
         for (let i = lineNum; i >= 0; i--) {
+            depth += i < lineNum && this.isEndOfClass(i) ? 1 : 0;
+
             if (this.isStartOfClass(i)) {
-                depth--;
                 if (depth === 0) {
                     return i;
                 }
+                depth--;
             }
-            depth += this.isEndOfClass(i) ? 1 : 0;
         }
 
         return undefined;
@@ -176,12 +175,9 @@ export class ApexCodeBoundaries {
             if (this.isStartOfClass(i)) {
                 nestedClassCount++;
             } else if (this.isEndOfClass(i)) {
-                // If we've seen nested classes, this end belongs to one of them
-                if (nestedClassCount > 0) {
-                    nestedClassCount--;
-                } else {
-                    // This is the end of our containing class
-                    return i;
+                nestedClassCount--;
+                if (nestedClassCount < 0) {
+                    return i; // This is the end of our containing class
                 }
             }
         }
