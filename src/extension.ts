@@ -37,7 +37,6 @@ import {ApexGuruAccess, ApexGuruService, LiveApexGuruService} from './lib/apexgu
 import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
 import {OrgConnectionService} from './lib/external-services/org-connection-service';
 
-
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
 // Ideally, we shouldn't need this anywhere, but it does allow external extensions to be able to get access to this data
 // from the doing:
@@ -82,6 +81,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const logger: Logger = new LoggerImpl(outputChannel);
     const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
+    
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
     const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
@@ -128,7 +128,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             return; // Do nothing if "Analyze On Open" is not enabled
         }
         const isFile: boolean = editor !== undefined && editor.document.uri.scheme === 'file';
-        const isValidFile: boolean = isFile && _isValidFileForAnalysis(editor.document.uri);
+        const isValidFile: boolean = isFile && _isValidFileForAnalysis(editor.document.uri, settingsManager);
         const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
@@ -138,7 +138,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
         const isFile: boolean = document !== undefined && document.uri.scheme === 'file';
-        const isValidFile: boolean = isFile && _isValidFileForAnalysis(document.uri);
+        const isValidFile: boolean = isFile && _isValidFileForAnalysis(document.uri, settingsManager);
         if (!isValidFile) {
             return;
         }
@@ -308,13 +308,18 @@ export async function deactivate(): Promise<void> {
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, false);
 }
 
-// TODO: We either need to give the user control over which files the auto-scan on open/save feature works for...
+// TODO: We are giving user control to select the files...
 //       ... or we need to somehow determine dynamically if the file is relevant for scanning using the
 //       ... --workspace option. I think that regex has situations that work on all
 //       ....files. So we might not be able to get this perfect. Need to discuss this soon.
-export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
-    const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
-    return allowedFileTypes.includes(path.extname(documentUri.fsPath));
+export function _isValidFileForAnalysis(documentUri: vscode.Uri, settingsManager: SettingsManager): boolean {
+    const defaultFileTypes = new Set<string>(['.cls', '.js', '.apex', '.trigger', '.ts', '.xml', '.css', '.html', '.cmp']);
+    const configuredFileTypes: Set<string> = settingsManager.getFileExtensions();
+    // Use configured types if available, otherwise fall back to defaults
+    const allowedFileTypesSet = (configuredFileTypes.size > 0) ? configuredFileTypes : defaultFileTypes;
+    // Convert file extension to lowercase for case-insensitive matching
+    const fileExtension = path.extname(documentUri.fsPath).toLowerCase();
+    return allowedFileTypesSet.has(fileExtension);
 }
 
 async function getActiveDocument(): Promise<vscode.TextDocument | null> {
