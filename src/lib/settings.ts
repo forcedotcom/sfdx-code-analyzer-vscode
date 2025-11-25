@@ -34,12 +34,6 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getFileExtensions(): Set<string> {
         const fileTypesString = vscode.workspace.getConfiguration('codeAnalyzer.analyzeAutomatically').get<string>('fileTypes');
-        
-        // If empty or not provided, return empty set (caller will use defaults)
-        if (!fileTypesString || fileTypesString.trim().length === 0) {
-            return new Set<string>();
-        }
-        
         // Parse comma-separated string, normalize to lowercase, and deduplicate
         // VS Code's pattern validation ensures the format is correct
         const extensions = fileTypesString
