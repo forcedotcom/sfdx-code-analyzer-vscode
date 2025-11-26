@@ -37,29 +37,28 @@
         "@types/jest": "^30.0.0",
         "@types/semver": "^7.7.1",
         "@types/tmp": "^0.2.6",
-        "diff": "^5.2.0",
-        "glob": "^11.0.3",
-        "semver": "^7.7.2",
+        "diff": "^8.0.2",
+        "glob": "^13.0.0",
+        "semver": "^7.7.3",
         "tmp": "^0.2.5"
     },
     "devDependencies": {
-        "@eslint/js": "^9.35.0",
-        "@types/diff": "^5.2.3",
-        "@types/node": "^22.18.5",
+        "@eslint/js": "^9.39.1",
+        "@types/node": "^20.0.0",
         "@types/vscode": "^1.90.0",
-        "@vscode/vsce": "^3.6.0",
-        "esbuild": "^0.25.9",
-        "eslint": "^9.35.0",
+        "@vscode/vsce": "^3.7.1",
+        "esbuild": "^0.27.0",
+        "eslint": "^9.39.1",
         "husky": "^9.1.7",
-        "jest": "^30.1.3",
-        "jest-mock-vscode": "^4.7.0",
-        "ovsx": "^0.10.5",
+        "jest": "^30.2.0",
+        "jest-mock-vscode": "~4.8.0",
+        "ovsx": "^0.10.7",
         "proxyquire": "^2.1.3",
         "rimraf": "*",
-        "ts-jest": "^29.4.2",
+        "ts-jest": "^29.4.5",
         "ts-node": "^10.9.2",
-        "typescript": "^5.9.2",
-        "typescript-eslint": "^8.44.0"
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.48.0"
     },
     "extensionDependencies": [
         "salesforce.salesforcedx-vscode-core"
@@ -131,6 +130,13 @@
                         "type": "boolean",
                         "default": false,
                         "description": "Scan files on open automatically."
+                    },
+                    "codeAnalyzer.analyzeAutomatically.fileTypes": {
+                        "type": "string",
+                        "default": ".cls,.js,.apex,.trigger,.ts,.xml",
+                        "pattern": "^[.][A-Za-z0-9]+(?:,[.][A-Za-z0-9]+)*$",
+                        "patternErrorMessage": "Must be a comma-separated list of file extensions (e.g., '.cls,.js,.html'). Each extension must start with a dot and contain only alphanumeric characters, with no spaces.",
+                        "markdownDescription": "Comma-separated list of file extensions to analyze automatically when opening or saving files.\n\nSpecify the file types that should be scanned by Code Analyzer when the 'Analyze On Save' or 'Analyze On Open' features are enabled. Include the dot (.) prefix for each extension (e.g., `.cls,.js,.html`).\n\n**Format:** `.ext1,.ext2,.ext3`"
                     }
                 }
             },

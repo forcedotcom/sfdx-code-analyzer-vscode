@@ -127,6 +127,62 @@ export class ApexCodeBoundaries {
     isEndOfCode(lineNum: number): boolean {
         return lineNum === (this.lineMarkers.length - 1);
     }
+
+    /**
+     * Finds the start line of the class that contains the given line number.
+     * Increment a counter for each ClassEnd (nested class to skip) and decrement for each ClassStart.
+     * When counter reaches 0 at a ClassStart, that's the containing class.
+     * Time Complexity: O(lineNum)
+     * 
+     * @param lineNum The line number to search from
+     * @returns The line number where the containing class starts, or undefined if no class contains the line
+     */
+    getStartLineOfClassThatContainsLine(lineNum: number): number | undefined {
+        let depth = 0;
+
+        for (let i = lineNum; i >= 0; i--) {
+            depth += i < lineNum && this.isEndOfClass(i) ? 1 : 0;
+
+            if (this.isStartOfClass(i)) {
+                if (depth === 0) {
+                    return i;
+                }
+                depth--;
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Finds the end line of the class that contains the given line number.
+     * Searches forwards from the given line to find the nearest ClassEnd marker that matches
+     * the class depth of the containing class.
+     * 
+     * @param lineNum The line number to search from
+     * @returns The line number where the containing class ends, or undefined if no class contains the line
+     */
+    getEndLineOfClassThatContainsLine(lineNum: number): number | undefined {
+        // First, find the start of the class
+        const classStartLine = this.getStartLineOfClassThatContainsLine(lineNum);
+        if (classStartLine === undefined) {
+            return undefined;
+        }
+
+        // Count nested classes that start after the containing class start
+        let nestedClassCount = 0;
+        for (let i = classStartLine + 1; i < this.lineMarkers.length; i++) {
+            if (this.isStartOfClass(i)) {
+                nestedClassCount++;
+            } else if (this.isEndOfClass(i)) {
+                nestedClassCount--;
+                if (nestedClassCount < 0) {
+                    return i; // This is the end of our containing class
+                }
+            }
+        }
+        return undefined;
+    }
 }
 
 enum ApexLineMarker {
