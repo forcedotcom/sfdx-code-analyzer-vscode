@@ -12,7 +12,6 @@ import * as targeting from './lib/targeting'
 import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, ClearDiagnosticsOptions} from './lib/diagnostics';
 import {messages} from './lib/messages';
 import * as Constants from './lib/constants';
-import * as path from 'path';
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
@@ -25,7 +24,7 @@ import {Display, VSCodeDisplay} from "./lib/display";
 import {CodeAnalyzer, CodeAnalyzerImpl} from "./lib/code-analyzer";
 import {TaskWithProgressRunner, TaskWithProgressRunnerImpl} from "./lib/progress";
 import {CliCommandExecutor, CliCommandExecutorImpl} from "./lib/cli-commands";
-import {getErrorMessage} from "./lib/utils";
+import {getErrorMessage, isValidFileForAnalysis} from "./lib/utils";
 import {FileHandler, FileHandlerImpl} from "./lib/fs-utils";
 import {VscodeWorkspace, VscodeWorkspaceImpl, WindowManager, WindowManagerImpl} from "./lib/vscode-api";
 import {Workspace} from "./lib/workspace";
@@ -36,7 +35,6 @@ import {ViolationSuggestionsHoverProvider} from './lib/violation-suggestions-hov
 import {ApexGuruAccess, ApexGuruService, LiveApexGuruService} from './lib/apexguru/apex-guru-service';
 import {ApexGuruRunAction} from './lib/apexguru/apex-guru-run-action';
 import {OrgConnectionService} from './lib/external-services/org-connection-service';
-
 
 // Object to hold the state of our extension for a specific activation context, to be returned by our activate function
 // Ideally, we shouldn't need this anywhere, but it does allow external extensions to be able to get access to this data
@@ -82,6 +80,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const logger: Logger = new LoggerImpl(outputChannel);
     const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
+    
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
     const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
@@ -128,7 +127,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             return; // Do nothing if "Analyze On Open" is not enabled
         }
         const isFile: boolean = editor !== undefined && editor.document.uri.scheme === 'file';
-        const isValidFile: boolean = isFile && _isValidFileForAnalysis(editor.document.uri);
+        const isValidFile: boolean = isFile && isValidFileForAnalysis(editor.document.uri, settingsManager.getAnalyzeAutomaticallyFileExtensions());
         const isValidFileThatHasNotBeenScannedYet = isValidFile && !scanManager.haveAlreadyScannedFile(editor.document.fileName);
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
@@ -138,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
         const isFile: boolean = document !== undefined && document.uri.scheme === 'file';
-        const isValidFile: boolean = isFile && _isValidFileForAnalysis(document.uri);
+        const isValidFile: boolean = isFile && isValidFileForAnalysis(document.uri, settingsManager.getAnalyzeAutomaticallyFileExtensions());
         if (!isValidFile) {
             return;
         }
@@ -306,15 +305,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 // This method is called when your extension is deactivated
 export async function deactivate(): Promise<void> {
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, false);
-}
-
-// TODO: We either need to give the user control over which files the auto-scan on open/save feature works for...
-//       ... or we need to somehow determine dynamically if the file is relevant for scanning using the
-//       ... --workspace option. I think that regex has situations that work on all
-//       ....files. So we might not be able to get this perfect. Need to discuss this soon.
-export function _isValidFileForAnalysis(documentUri: vscode.Uri): boolean {
-    const allowedFileTypes:string[] = ['.cls', '.js', '.apex', '.trigger', '.ts', '.xml'];
-    return allowedFileTypes.includes(path.extname(documentUri.fsPath));
 }
 
 async function getActiveDocument(): Promise<vscode.TextDocument | null> {
