@@ -257,4 +257,150 @@ describe('Tests for the makeBlankAllCommentsAndStringsFromApexCode helper functi
             '}';
         expect(actual).toEqual(expected);
     });
+
+    describe('Tests for getStartLineOfClassThatContainsLine', () => {
+        it('Should find the class start line for a line inside a simple class', () => {
+            const apexCode: string =
+                'public class MyClass {\n' +         // line 0
+                '    public void doSomething() {\n' + // line 1
+                '        // some code\n' +             // line 2
+                '    }\n' +                            // line 3
+                '}';                                   // line 4
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            expect(boundaries.getStartLineOfClassThatContainsLine(0)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(1)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(2)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(3)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(4)).toBe(0);
+        });
+
+        it('Should find the innermost class start line for nested classes', () => {
+            const apexCode: string =
+                'public class OuterClass {\n' +              // line 0
+                '    public void outerMethod() {\n' +        // line 1
+                '        // outer code\n' +                   // line 2
+                '    }\n' +                                   // line 3
+                '    public class InnerClass {\n' +           // line 4
+                '        public void innerMethod() {\n' +     // line 5
+                '            // inner code\n' +               // line 6
+                '        }\n' +                               // line 7
+                '    }\n' +                                   // line 8
+                '}';                                          // line 9
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            // Lines in outer class only
+            expect(boundaries.getStartLineOfClassThatContainsLine(0)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(1)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(2)).toBe(0);
+            expect(boundaries.getStartLineOfClassThatContainsLine(3)).toBe(0);
+            
+            // Lines in inner class
+            expect(boundaries.getStartLineOfClassThatContainsLine(4)).toBe(4);
+            expect(boundaries.getStartLineOfClassThatContainsLine(5)).toBe(4);
+            expect(boundaries.getStartLineOfClassThatContainsLine(6)).toBe(4);
+            expect(boundaries.getStartLineOfClassThatContainsLine(7)).toBe(4);
+            expect(boundaries.getStartLineOfClassThatContainsLine(8)).toBe(4);
+            
+            // Line at outer class end (closing brace of OuterClass)
+            expect(boundaries.getStartLineOfClassThatContainsLine(9)).toBe(0);
+        });
+
+        it('Should return undefined for a line not in any class', () => {
+            const apexCode: string =
+                '// Some comment\n' +                        // line 0
+                'public class MyClass {\n' +                 // line 1
+                '    public void doSomething() {}\n' +       // line 2
+                '}';                                         // line 3
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            expect(boundaries.getStartLineOfClassThatContainsLine(0)).toBeUndefined();
+            expect(boundaries.getStartLineOfClassThatContainsLine(1)).toBe(1);
+            expect(boundaries.getStartLineOfClassThatContainsLine(2)).toBe(1);
+            expect(boundaries.getStartLineOfClassThatContainsLine(3)).toBe(1);
+        });
+    });
+
+    describe('Tests for getEndLineOfClassThatContainsLine', () => {
+        it('Should find the class end line for a line inside a simple class', () => {
+            const apexCode: string =
+                'public class MyClass {\n' +         // line 0
+                '    public void doSomething() {\n' + // line 1
+                '        // some code\n' +             // line 2
+                '    }\n' +                            // line 3
+                '}';                                   // line 4
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            expect(boundaries.getEndLineOfClassThatContainsLine(0)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(1)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(2)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(3)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(4)).toBe(4);
+        });
+
+        it('Should find the correct end line for nested classes', () => {
+            const apexCode: string =
+                'public class OuterClass {\n' +              // line 0
+                '    public void outerMethod() {\n' +        // line 1
+                '        // outer code\n' +                   // line 2
+                '    }\n' +                                   // line 3
+                '    public class InnerClass {\n' +           // line 4
+                '        public void innerMethod() {\n' +     // line 5
+                '            // inner code\n' +               // line 6
+                '        }\n' +                               // line 7
+                '    }\n' +                                   // line 8
+                '}';                                          // line 9
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            // Lines in outer class only
+            expect(boundaries.getEndLineOfClassThatContainsLine(0)).toBe(9);
+            expect(boundaries.getEndLineOfClassThatContainsLine(1)).toBe(9);
+            expect(boundaries.getEndLineOfClassThatContainsLine(2)).toBe(9);
+            expect(boundaries.getEndLineOfClassThatContainsLine(3)).toBe(9);
+            
+            // Lines in inner class
+            expect(boundaries.getEndLineOfClassThatContainsLine(4)).toBe(8);
+            expect(boundaries.getEndLineOfClassThatContainsLine(5)).toBe(8);
+            expect(boundaries.getEndLineOfClassThatContainsLine(6)).toBe(8);
+            expect(boundaries.getEndLineOfClassThatContainsLine(7)).toBe(8);
+            expect(boundaries.getEndLineOfClassThatContainsLine(8)).toBe(8);
+            
+            // Line at outer class end (correctly identifies it's in OuterClass)
+            expect(boundaries.getEndLineOfClassThatContainsLine(9)).toBe(9);
+        });
+
+        it('Should handle deeply nested classes correctly', () => {
+            const apexCode: string =
+                'public class Outer {\n' +              // line 0
+                '    public class Inner1 {\n' +          // line 1
+                '        public class Inner2 {\n' +      // line 2
+                '            void deepMethod() {}\n' +   // line 3
+                '        }\n' +                          // line 4
+                '    }\n' +                              // line 5
+                '}';                                     // line 6
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            expect(boundaries.getEndLineOfClassThatContainsLine(0)).toBe(6);
+            expect(boundaries.getEndLineOfClassThatContainsLine(1)).toBe(5);
+            expect(boundaries.getEndLineOfClassThatContainsLine(2)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(3)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(4)).toBe(4);
+            expect(boundaries.getEndLineOfClassThatContainsLine(5)).toBe(5); // Closing brace of Inner1
+            expect(boundaries.getEndLineOfClassThatContainsLine(6)).toBe(6); // Closing brace of Outer
+        });
+
+        it('Should return undefined for a line not in any class', () => {
+            const apexCode: string =
+                '// Some comment\n' +                        // line 0
+                'public class MyClass {\n' +                 // line 1
+                '    public void doSomething() {}\n' +       // line 2
+                '}';                                         // line 3
+            const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(apexCode);
+            
+            expect(boundaries.getEndLineOfClassThatContainsLine(0)).toBeUndefined();
+            expect(boundaries.getEndLineOfClassThatContainsLine(1)).toBe(3);
+            expect(boundaries.getEndLineOfClassThatContainsLine(2)).toBe(3);
+            expect(boundaries.getEndLineOfClassThatContainsLine(3)).toBe(3);
+        });
+    });
 });

@@ -278,7 +278,7 @@ describe('Tests for the DiagnosticManager class', () => {
         });
     });
 
-    describe('Tests for clearDiagnosticsInRange', () => {
+    describe('Tests for clearDiagnosticsFromFile', () => {
         it('should remove diagnostics within a specified range', () => {
             const uri = sampleUri1;
             const diag1: CodeAnalyzerDiagnostic = createSampleCodeAnalyzerDiagnostic(uri, new vscode.Range(0, 0, 0, 1));
@@ -286,7 +286,7 @@ describe('Tests for the DiagnosticManager class', () => {
 
             diagnosticManager.addDiagnostics([diag1, diag2]);
             const rangeToClear = new vscode.Range(0, 0, 0, 1);
-            diagnosticManager.clearDiagnosticsInRange(uri, rangeToClear);
+            diagnosticManager.clearDiagnosticsFromFile(uri, { range: rangeToClear });
 
             const diagnostics = diagnosticCollection.get(uri);
             expect(diagnostics).toHaveLength(1);
@@ -300,7 +300,7 @@ describe('Tests for the DiagnosticManager class', () => {
 
             diagnosticManager.addDiagnostics([diag1, diag2]);
             const rangeToClear = new vscode.Range(1, 0, 1, 1);
-            diagnosticManager.clearDiagnosticsInRange(uri, rangeToClear);
+            diagnosticManager.clearDiagnosticsFromFile(uri, { range: rangeToClear });
 
             const diagnostics = diagnosticCollection.get(uri);
             expect(diagnostics).toHaveLength(2); // Both diagnostics should remain
