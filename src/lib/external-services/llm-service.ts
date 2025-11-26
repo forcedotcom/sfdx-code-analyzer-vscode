@@ -17,7 +17,7 @@ export interface LLMServiceProvider {
 
 
 export class LiveLLMService implements LLMService {
-    // Delegates to the "Agentforce for Developers" LLM service
+    // Delegates to the "Agentforce Vibes" LLM service
     private readonly coreLLMService: LLMServiceInterface;
     private readonly logger: Logger;
     private uuidGenerator: UUIDGenerator = new RandomUUIDGenerator();

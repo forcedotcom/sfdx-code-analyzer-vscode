@@ -46,6 +46,10 @@ jobs:
         run: npm ci
       # We'll need to install the CLI tool, since some of the tests
       # are integration tests.
+
+      - name: 'Compile extension'
+        run: npm run build
+
       - name: Install SF CLI
         run: npm install --global @salesforce/cli
       # We'll need to install Salesforce Code Analyzer, since some
