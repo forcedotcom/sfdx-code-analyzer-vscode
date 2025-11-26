@@ -139,12 +139,18 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
 }
 
 
+export type ClearDiagnosticsOptions = {
+    range?: vscode.Range;
+    engineName?: string;  // e.g., 'pmd', 'eslint-lwc'
+    ruleName?: string;    // e.g., 'ApexDoc', 'no-unused-vars'
+}
+
 export interface DiagnosticManager extends vscode.Disposable {
     addDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
     clearAllDiagnostics(): void
     clearDiagnostic(diag: CodeAnalyzerDiagnostic): void
     clearDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
-    clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void
+    clearDiagnosticsFromFile(uri: vscode.Uri, clearOptions?: ClearDiagnosticsOptions): void
     clearDiagnosticsForFiles(uris: vscode.Uri[]): void
     getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
     handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void
@@ -179,6 +185,38 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
         diags.map(d => this.clearDiagnostic(d));
     }
 
+    public clearDiagnosticsFromFile(uri: vscode.Uri, clearOptions?: ClearDiagnosticsOptions): void {
+        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
+        
+        // If no options provided, clear all diagnostics for the file
+        if (!clearOptions) {
+            this.diagnosticCollection.delete(uri);
+            return;
+        }
+
+        const { range, engineName, ruleName } = clearOptions;
+
+        // Remove diagnostics that match the criteria
+        const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(d => {
+            // Check if diagnostic is in the specified range (or no range specified = entire file)
+            const inRange = !range || range.contains(d.range);
+            
+            // Check if diagnostic matches the specified engine and/or rule
+            // - If neither engineName nor ruleName specified, match all rules
+            // - If only engineName specified, match all rules from that engine
+            // - If only ruleName specified, match that rule from any engine
+            // - If both specified, match exact engine + rule combination
+            const matchesEngine = !engineName || d.violation.engine === engineName;
+            const matchesRule = !ruleName || d.violation.rule === ruleName;
+            const matchesFilter = matchesEngine && matchesRule;
+            
+            // Keep diagnostics that are either: outside the range OR don't match the filter
+            return !(inRange && matchesFilter);
+        });
+
+        this.setDiagnosticsForFile(uri, updatedDiagnostics);
+    }
+
     public dispose(): void {
         this.clearAllDiagnostics();
     }
@@ -187,13 +225,6 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
         for (const uri of uris) {
             this.diagnosticCollection.delete(uri);
         }
-    }
-
-    public clearDiagnosticsInRange(uri: vscode.Uri, range: vscode.Range): void {
-        const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
-        // Only keep the diagnostics that aren't within the specified range
-        const updatedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.filter(diagnostic => !range.contains(diagnostic.range));
-        this.setDiagnosticsForFile(uri, updatedDiagnostics);
     }
 
     public getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[] {
@@ -487,5 +518,5 @@ function adjustRangeToChange(origRange: vscode.Range, change: vscode.TextDocumen
 
 class Adjustment<T> {
     newValue: T | null; // null is a way of marking that there is no new value and thus the old should be removed
-    overlapsWithChange: boolean; 
+    overlapsWithChange: boolean;
 }

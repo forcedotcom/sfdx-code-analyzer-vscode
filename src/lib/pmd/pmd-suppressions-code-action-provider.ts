@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { CodeAnalyzerDiagnostic } from "../diagnostics";
 import { messages } from "../messages";
 import * as Constants from '../constants';
+import { ApexCodeBoundaries } from '../apex-code-boundaries';
 
 export class PMDSupressionsCodeActionProvider implements vscode.CodeActionProvider {
     provideCodeActions(document: vscode.TextDocument, selectedRange: vscode.Range | vscode.Selection, context: vscode.CodeActionContext): vscode.CodeAction[] {
@@ -62,17 +63,22 @@ function generateLineLevelSuppression(document: vscode.TextDocument, diag: CodeA
     action.edit.insert(document.uri, endOfStartLine, " // NOPMD");
     action.diagnostics = [diag];
     action.command = {
-        command: Constants.QF_COMMAND_DIAGNOSTICS_IN_RANGE, // TODO: This is wrong. We should only be clearing the PMD violations on this line - not all within the range
-        title: 'Clear Single Diagnostic',
-        arguments: [document.uri, diag.range]
+        command: Constants.QF_COMMAND_CLEAR_DIAGNOSTICS,
+        title: 'Clear PMD Diagnostics on Line',
+        // Clear only PMD violations in the range, leaving other engine violations intact
+        arguments: [document.uri, { range: diag.range, engineName: 'pmd' }]
     };
 
     return action;
 }
 
 function generateClassLevelSuppression(document: vscode.TextDocument, diag: CodeAnalyzerDiagnostic): vscode.CodeAction {
-    // Find the end-of-line position of the class declaration where the diagnostic is found.
-    const classStartPosition = findClassStartPosition(document, diag);
+    // Find the start position of the class that contains the diagnostic
+    const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(document.getText());
+    const classStartLine: number | undefined = boundaries.getStartLineOfClassThatContainsLine(diag.range.start.line);
+    const classStartPosition = classStartLine !== undefined 
+        ? new vscode.Position(classStartLine, 0)
+        : new vscode.Position(0, 0); // Default to the start of the document if class is not found
 
     const ruleName: string = diag.violation.rule;
     const suppressionTag: string = `PMD.${ruleName}`;
@@ -91,82 +97,74 @@ function generateClassLevelSuppression(document: vscode.TextDocument, diag: Code
         if (!existingSuppressionTags.includes(suppressionTag)) {
             // If the rule is not present, add it to the existing @SuppressWarnings
             const updatedSuppressionTagsList = [...existingSuppressionTags, suppressionTag].join(',');
-            const updatedSuppression = `@SuppressWarnings('${updatedSuppressionTagsList}')`;
-            const suppressionStartPosition = document.positionAt(classText.indexOf(suppressionMatch[0]));
-            const suppressionEndPosition = document.positionAt(classText.indexOf(suppressionMatch[0]) + suppressionMatch[0].length);
+            
+            // Extract and preserve the indentation from the original line
+            // This is for handling nested classes
+            const lineBeforeClass = classStartPosition.line - 1;
+            const columnStart = classText.indexOf(suppressionMatch[0]);
+            const indentation = classText.substring(0, columnStart);  // Get leading whitespace
+            const updatedSuppression = `${indentation}@SuppressWarnings('${updatedSuppressionTagsList}')`;
+            
+            // Replace from start of indentation to end of annotation (entire annotation with indentation)
+            const columnEnd = columnStart + suppressionMatch[0].length;
+            const suppressionStartPosition = new vscode.Position(lineBeforeClass, 0);  // Start from beginning of line
+            const suppressionEndPosition = new vscode.Position(lineBeforeClass, columnEnd);
             const suppressionRange = new vscode.Range(suppressionStartPosition, suppressionEndPosition);
             action.edit.replace(document.uri, suppressionRange, updatedSuppression);
         }
     } else {
         // If @SuppressWarnings does not exist, insert a new one
-        const newSuppression = `@SuppressWarnings('${suppressionTag}')\n`;
+        // Get the indentation of the class line to match it
+        const classLine = document.lineAt(classStartPosition.line).text;
+        const indentation = classLine.match(/^\s*/)?.[0] || '';
+        const newSuppression = `${indentation}@SuppressWarnings('${suppressionTag}')\n`;
         action.edit.insert(document.uri, classStartPosition, newSuppression);
     }
 
     action.diagnostics = [diag];
+
+    // Find the class range and clear all diagnostics for this specific rule within the class
+    // @SuppressWarnings is rule-specific and class-scoped
+    const classRange = findRangeOfClassThatContainsStartOfDiag(document, diag);
     action.command = {
-        command: Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, // TODO: This is wrong. It should only clear the PMD diagnostics within the class instead of all diagnostics within the file
-        title: 'Remove diagnostics for this file',
-        arguments: [document.uri]
+        command: Constants.QF_COMMAND_CLEAR_DIAGNOSTICS,
+        title: 'Remove diagnostics for this rule in this class',
+        arguments: [document.uri, { 
+            range: classRange, 
+            engineName: diag.violation.engine, 
+            ruleName: diag.violation.rule 
+        }]
     };
 
     return action;
 }
 
 /**
- * Finds the start position of the class in the document.
- * Assumes that the class declaration starts with the keyword "class".
- * @returns The position at the start of the class.
+ * Finds the range of the class that contains the first line of the diagnostic.
+ * 
+ * This function uses ApexCodeBoundaries to find the innermost class that contains
+ * the start line of the diagnostic. If the diagnostic spans multiple classes (which
+ * would be unusual), this function specifically finds the class containing the
+ * diagnostic's start line.
+ * 
+ * @param document The text document containing the Apex code
+ * @param diag The diagnostic whose start line we want to find the containing class for
+ * @returns A range representing the entire class from start to end. If the diagnostic
+ *          is not within any class, returns the diagnostic's own range as a fallback.
  */
-function findClassStartPosition(document: vscode.TextDocument, diag: CodeAnalyzerDiagnostic): vscode.Position {
-    const text = document.getText();
-    const diagnosticLine = diag.range.start.line;
-
-    // Split the text into lines for easier processing
-    const lines = text.split('\n');
-    let classStartLine: number | undefined;
-
-    let inBlockComment = false;
-
-    // Iterate from the diagnostic line upwards to find the class declaration
-    for (let lineNumber = 0; lineNumber <= diagnosticLine; lineNumber++) {
-        const line = lines[lineNumber];
-
-        // Check if this line is the start of a block comment
-        if (!inBlockComment && line.match(PATTERNS.blockCommentStart)) {
-            inBlockComment = true;
-            continue;
-        }
-
-        // Check if we are in the end of block comment
-        if (inBlockComment && line.match(PATTERNS.blockCommentEnd)) {
-            inBlockComment = false;
-            continue;
-        }
-
-        // Skip single-line comments
-        if (line.match(PATTERNS.singleLineComment)) {
-            continue;
-        }
-
-        // Skip block comment in a single line
-        if (line.match(PATTERNS.blockCommentEnd) && line.match(PATTERNS.blockCommentStart)) {
-            continue;
-        }
-
-        const match = line.match(PATTERNS.classDeclaration);
-        if (!inBlockComment && match && !isWithinQuotes(line, match.index)) {
-            classStartLine = lineNumber;
-            break;
-        }
+function findRangeOfClassThatContainsStartOfDiag(document: vscode.TextDocument, diag: CodeAnalyzerDiagnostic): vscode.Range {
+    const boundaries: ApexCodeBoundaries = ApexCodeBoundaries.forApexCode(document.getText());
+    
+    const classStartLine: number | undefined = boundaries.getStartLineOfClassThatContainsLine(diag.range.start.line);
+    const classEndLine: number | undefined = boundaries.getEndLineOfClassThatContainsLine(diag.range.start.line);
+    
+    // If we found both start and end, create the class range
+    if (classStartLine !== undefined && classEndLine !== undefined) {
+        return new vscode.Range(classStartLine, 0, classEndLine, Number.MAX_SAFE_INTEGER);
     }
-
-    if (classStartLine !== undefined) {
-        return new vscode.Position(classStartLine, 0);
-    }
-
-    // Default to the start of the document if class is not found
-    return new vscode.Position(0, 0);
+    
+    // Fallback: if the diagnostic is not within any class, return the diagnostic's own range
+    return diag.range;
 }
 
 /**
@@ -183,19 +181,4 @@ function findLineBeforeClassStartDeclaration(classStartPosition: vscode.Position
 
     // Return an empty string if it's the first line of the document
     return '';
-}
-
-/**
- * Helper function to check if match is within quotes
- * @param line
- * @param matchIndex
- * @returns
- */
-function isWithinQuotes(line: string, matchIndex: number): boolean {
-    const beforeMatch = line.slice(0, matchIndex);
-    const singleQuotesBefore = (beforeMatch.match(/'/g) || []).length;
-    const doubleQuotesBefore = (beforeMatch.match(/"/g) || []).length;
-
-    // Check if the number of quotes before the match is odd (inside quotes)
-    return singleQuotesBefore % 2 !== 0 || doubleQuotesBefore % 2 !== 0
 }

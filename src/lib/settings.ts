@@ -10,6 +10,7 @@ export interface SettingsManager {
     // General Settings
     getAnalyzeOnOpen(): boolean;
     getAnalyzeOnSave(): boolean;
+    getAnalyzeAutomaticallyFileExtensions(): Set<string>;
 
     // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
@@ -29,6 +30,18 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getAnalyzeOnSave(): boolean {
         return vscode.workspace.getConfiguration('codeAnalyzer.analyzeOnSave').get('enabled');
+    }
+
+    public getAnalyzeAutomaticallyFileExtensions(): Set<string> {
+        const fileTypesString = vscode.workspace.getConfiguration('codeAnalyzer.analyzeAutomatically').get<string>('fileTypes');
+        // Parse comma-separated string, normalize to lowercase, and deduplicate
+        // VS Code's pattern validation ensures the format is correct
+        const extensions = fileTypesString
+            .split(',')
+            .map(ext => ext.trim().toLowerCase())
+            .filter(ext => ext.length > 0);
+        
+        return new Set(extensions);
     }
 
     // =================================================================================================================
