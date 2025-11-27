@@ -59,8 +59,9 @@ const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
 
 /**
  * Maps configuration string values to VSCode diagnostic severity
+ * @returns VSCode diagnostic severity, or null if the severity is set to "None"
  */
-function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity {
+function mapToDiagnosticSeverity(configValue: string | undefined): vscode.DiagnosticSeverity | null {
     switch (configValue) {
         case 'Error':
             return vscode.DiagnosticSeverity.Error;
@@ -68,6 +69,8 @@ function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity
             return vscode.DiagnosticSeverity.Warning;
         case 'Info':
             return vscode.DiagnosticSeverity.Information;
+        case 'None':
+            return null;
         default:
             return vscode.DiagnosticSeverity.Warning;
     }
@@ -77,9 +80,9 @@ function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity
  * Determines the diagnostic severity based on the violation severity and user-configured mappings.
  * If a specific severity is not configured, defaults to Warning.
  * @param violationSeverity The severity number from the violation (1=highest, 5=lowest)
- * @returns The appropriate VSCode DiagnosticSeverity
+ * @returns The appropriate VSCode DiagnosticSeverity, or null if set to "None"
  */
-function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
+function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity | null {
     const config = vscode.workspace.getConfiguration('codeAnalyzer');
     const configuredSeverity = config.get<string>(`severity ${violationSeverity}`);
     return mapToDiagnosticSeverity(configuredSeverity);
@@ -117,12 +120,20 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
      * IMPORTANT: This method assumes that the violation at this point has a primary code location with a file.
      *            Do not call this method on a violation that does not satisfy this assumption.
      * @param violation
+     * @returns CodeAnalyzerDiagnostic or null if the violation severity is configured as "None"
      */
-    static fromViolation(violation: Violation): CodeAnalyzerDiagnostic {
+    static fromViolation(violation: Violation): CodeAnalyzerDiagnostic | null {
         if (violation.locations.length == 0 || !violation.locations[violation.primaryLocationIndex].file) {
             // We should never reach this line of code. It is just here to prevent us from making programming mistakes.
             throw new Error('An attempt to process a violation without a valid file based code location occurred. This should not happen.');
         }
+
+        // Check if the severity is configured as "None" - if so, don't create a diagnostic
+        const severity = getDiagnosticSeverity(violation.severity);
+        if (severity === null) {
+            return null;
+        }
+
         const diagnostic: CodeAnalyzerDiagnostic = new CodeAnalyzerDiagnostic(violation);
 
         // Some violations have ranges that are too noisy, so for now we manually fix them here while we wait on PMD to fix them:
@@ -326,7 +337,11 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
     if (violationAdjustment.newValue === null) {
         return null; // Do not add back a diagnostic if its violation has been marked for removal
     }
-    const newDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
+    const newDiag: CodeAnalyzerDiagnostic | null = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
+
+    if (newDiag === null) {
+        return null; // Do not add back a diagnostic if its severity is configured as "None"
+    }
 
     if (violationAdjustment.overlapsWithChange || diag.isStale()) {
         diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.

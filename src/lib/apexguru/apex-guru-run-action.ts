@@ -22,7 +22,7 @@ export class ApexGuruRunAction {
         this.telemetryService = telemetryService;
         this.display = display;
     }
-    
+
     /**
      * Runs apex guru analysis against the specified file and displays the results.
      * @param commandName The command being run

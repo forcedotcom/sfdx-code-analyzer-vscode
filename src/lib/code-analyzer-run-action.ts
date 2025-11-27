@@ -90,18 +90,19 @@ export class CodeAnalyzerRunAction {
                 // past the length of the line in the editor window).
                 const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation
                     .map(v => normalizeViolation(v)) // <-- Maybe in the future we'll pass in the lineLengths for the primary file
-                    .map(v => CodeAnalyzerDiagnostic.fromViolation(v));
+                    .map(v => CodeAnalyzerDiagnostic.fromViolation(v))
+                    .filter((d): d is CodeAnalyzerDiagnostic => d !== null);
                 const targetedFiles: string[] = await workspace.getTargetedFiles();
-                
-                // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics 
+
+                // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics
                 // except for ApexGuru based diagnostics which are handled separately.
                 for (const file of targetedFiles) {
-                    const diagsToClear: CodeAnalyzerDiagnostic[] = 
+                    const diagsToClear: CodeAnalyzerDiagnostic[] =
                         this.diagnosticManager.getDiagnosticsForFile(vscode.Uri.file(file))
                         .filter(d => d.violation.engine !== APEX_GURU_ENGINE_NAME);
                     this.diagnosticManager.clearDiagnostics(diagsToClear);
                 }
-                
+
                 this.diagnosticManager.addDiagnostics(diagnostics);
                 void this.displayResults(targetedFiles.length, violationsWithFileLocation);
 

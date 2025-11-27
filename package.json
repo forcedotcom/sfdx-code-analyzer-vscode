@@ -152,45 +152,50 @@
                         "enum": [
                             "Error",
                             "Warning",
-                            "Info"
+                            "Info",
+                            "None"
                         ],
-                        "markdownDescription": "Diagnostic level for severity 1 violations (highest severity). If not configured, all violations are shown as warnings (default behavior)."
+                        "markdownDescription": "Diagnostic level for severity 1 violations (highest severity). Select 'None' to hide these violations. If not configured, all violations are shown as warnings (default behavior)."
                     },
                     "codeAnalyzer.severity 2": {
                         "type": "string",
                         "enum": [
                             "Error",
                             "Warning",
-                            "Info"
+                            "Info",
+                            "None"
                         ],
-                        "markdownDescription": "Diagnostic level for severity 2 violations. If not configured, all violations are shown as warnings (default behavior)."
+                        "markdownDescription": "Diagnostic level for severity 2 violations. Select 'None' to hide these violations. If not configured, all violations are shown as warnings (default behavior)."
                     },
                     "codeAnalyzer.severity 3": {
                         "type": "string",
                         "enum": [
                             "Error",
                             "Warning",
-                            "Info"
+                            "Info",
+                            "None"
                         ],
-                        "markdownDescription": "Diagnostic level for severity 3 violations. If not configured, all violations are shown as warnings (default behavior)."
+                        "markdownDescription": "Diagnostic level for severity 3 violations. Select 'None' to hide these violations. If not configured, all violations are shown as warnings (default behavior)."
                     },
                     "codeAnalyzer.severity 4": {
                         "type": "string",
                         "enum": [
                             "Error",
                             "Warning",
-                            "Info"
+                            "Info",
+                            "None"
                         ],
-                        "markdownDescription": "Diagnostic level for severity 4 violations. If not configured, all violations are shown as warnings (default behavior)."
+                        "markdownDescription": "Diagnostic level for severity 4 violations. Select 'None' to hide these violations. If not configured, all violations are shown as warnings (default behavior)."
                     },
                     "codeAnalyzer.severity 5": {
                         "type": "string",
                         "enum": [
                             "Error",
                             "Warning",
-                            "Info"
+                            "Info",
+                            "None"
                         ],
-                        "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity). If not configured, all violations are shown as warnings (default behavior)."
+                        "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity). Select 'None' to hide these violations. If not configured, all violations are shown as warnings (default behavior)."
                     }
                 }
             }
