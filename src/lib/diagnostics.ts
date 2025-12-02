@@ -61,7 +61,7 @@ const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
  * Maps configuration string values to VSCode diagnostic severity
  * @returns VSCode diagnostic severity, or null if the severity is set to "None"
  */
-function mapToDiagnosticSeverity(configValue: string | undefined): vscode.DiagnosticSeverity | null {
+function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity | null {
     switch (configValue) {
         case 'Error':
             return vscode.DiagnosticSeverity.Error;
@@ -78,13 +78,13 @@ function mapToDiagnosticSeverity(configValue: string | undefined): vscode.Diagno
 
 /**
  * Determines the diagnostic severity based on the violation severity and user-configured mappings.
- * If a specific severity is not configured, defaults to Warning.
+ * Defaults to Warning if not configured.
  * @param violationSeverity The severity number from the violation (1=highest, 5=lowest)
  * @returns The appropriate VSCode DiagnosticSeverity, or null if set to "None"
  */
 function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity | null {
     const config = vscode.workspace.getConfiguration('codeAnalyzer');
-    const configuredSeverity = config.get<string>(`severity ${violationSeverity}`);
+    const configuredSeverity = config.get<string>(`severity ${violationSeverity}`, 'Warning');
     return mapToDiagnosticSeverity(configuredSeverity);
 }
 

@@ -264,31 +264,31 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
-    getSeverity1ReturnValue: string;
+    getSeverity1ReturnValue: string = 'Warning';
 
     getSeverity1(): string {
         return this.getSeverity1ReturnValue;
     }
 
-    getSeverity2ReturnValue: string;
+    getSeverity2ReturnValue: string = 'Warning';
 
     getSeverity2(): string {
         return this.getSeverity2ReturnValue;
     }
 
-    getSeverity3ReturnValue: string;
+    getSeverity3ReturnValue: string = 'Warning';
 
     getSeverity3(): string {
         return this.getSeverity3ReturnValue;
     }
 
-    getSeverity4ReturnValue: string;
+    getSeverity4ReturnValue: string = 'Warning';
 
     getSeverity4(): string {
         return this.getSeverity4ReturnValue;
     }
 
-    getSeverity5ReturnValue: string;
+    getSeverity5ReturnValue: string = 'Warning';
 
     getSeverity5(): string {
         return this.getSeverity5ReturnValue;
