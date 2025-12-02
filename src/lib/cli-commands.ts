@@ -9,7 +9,7 @@ export type ExecOptions = {
      * Function that allows you to handle the identifier for the background process (pid)
      * @param pid process identifier
      */
-    pidHandler?: (pid: number | undefined) => void
+    pidHandler?: (pid?: number) => void
 
     /**
      * The log level at which we should log the command and its output.

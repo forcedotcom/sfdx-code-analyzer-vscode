@@ -5,13 +5,17 @@
         "moduleResolution": "NodeNext",
         "target": "ES2022",
         "outDir": "out",
+        "types": [
+            "mocha",
+            "node"
+        ],
         "lib": [
             "ES2022"
         ],
         "sourceMap": true,
-        "rootDir": "src"
+        "rootDir": "tests"
     },
     "include": [
-        "./src/**/*"
+        "tests"
     ]
 }
