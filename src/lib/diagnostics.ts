@@ -5,6 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import {messages} from './messages';
+import {SettingsManager, SettingsManagerImpl} from "./settings";
 import * as vscode from 'vscode';
 
 // For now we attempt to match the JsonViolationOutput schema as much as possible so that we don't need to transform
@@ -56,6 +57,7 @@ export type Suggestion = {
 }
 
 const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
+const SETTINGS_MANAGER: SettingsManager = new SettingsManagerImpl();
 
 /**
  * Maps configuration string values to VSCode diagnostic severity
@@ -83,8 +85,7 @@ function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity
  * @returns The appropriate VSCode DiagnosticSeverity, or null if set to "None"
  */
 function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity | null {
-    const config = vscode.workspace.getConfiguration('codeAnalyzer');
-    const configuredSeverity = config.get<string>(`severity ${violationSeverity}`, 'Warning');
+    const configuredSeverity = SETTINGS_MANAGER.getSeverityLevel(violationSeverity) || 'Warning';
     return mapToDiagnosticSeverity(configuredSeverity);
 }
 
@@ -338,10 +339,6 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
         return null; // Do not add back a diagnostic if its violation has been marked for removal
     }
     const newDiag: CodeAnalyzerDiagnostic | null = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
-
-    if (newDiag === null) {
-        return null; // Do not add back a diagnostic if its severity is configured as "None"
-    }
 
     if (violationAdjustment.overlapsWithChange || diag.isStale()) {
         diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.
