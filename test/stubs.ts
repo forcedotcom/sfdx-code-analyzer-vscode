@@ -270,6 +270,12 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
+    getSeverityLevelReturnValue: string = 'Warning';
+
+    getSeverityLevel(_severity: number): string {
+        return this.getSeverityLevelReturnValue;
+    }
+
     // =================================================================================================================
     // ==== Other Settings that we may depend on
     // =================================================================================================================

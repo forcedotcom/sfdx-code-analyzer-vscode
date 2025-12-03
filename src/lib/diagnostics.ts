@@ -5,6 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import {messages} from './messages';
+import {SettingsManager, SettingsManagerImpl} from "./settings";
 import * as vscode from 'vscode';
 
 // For now we attempt to match the JsonViolationOutput schema as much as possible so that we don't need to transform
@@ -56,6 +57,37 @@ export type Suggestion = {
 }
 
 const STALE_PREFIX: string = messages.staleDiagnosticPrefix + '\n';
+const SETTINGS_MANAGER: SettingsManager = new SettingsManagerImpl();
+
+/**
+ * Maps configuration string values to VSCode diagnostic severity
+ * @returns VSCode diagnostic severity, or null if the severity is set to "None"
+ */
+function mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity | null {
+    switch (configValue) {
+        case 'Error':
+            return vscode.DiagnosticSeverity.Error;
+        case 'Warning':
+            return vscode.DiagnosticSeverity.Warning;
+        case 'Info':
+            return vscode.DiagnosticSeverity.Information;
+        case 'None':
+            return null;
+        default:
+            return vscode.DiagnosticSeverity.Warning;
+    }
+}
+
+/**
+ * Determines the diagnostic severity based on the violation severity and user-configured mappings.
+ * Defaults to Warning if not configured.
+ * @param violationSeverity The severity number from the violation (1=highest, 5=lowest)
+ * @returns The appropriate VSCode DiagnosticSeverity, or null if set to "None"
+ */
+function getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity | null {
+    const configuredSeverity = SETTINGS_MANAGER.getSeverityLevel(violationSeverity) || 'Warning';
+    return mapToDiagnosticSeverity(configuredSeverity);
+}
 
 /**
  * Extended Diagnostic class to hold violation information and uri to make our life easier
@@ -69,7 +101,7 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
         const primaryLocation: CodeLocation = violation.locations[violation.primaryLocationIndex];
         super(toRange(primaryLocation),
             messages.diagnostics.messageGenerator(violation.severity, violation.message.trim()),
-            vscode.DiagnosticSeverity.Warning); // TODO: We should consider using 'Error' for sev 1 instead of always just using 'Warning'. Note that we reserve 'Information' for stale diagnostics.
+            getDiagnosticSeverity(violation.severity));
         this.violation = violation;
         this.uri = vscode.Uri.file(primaryLocation.file);
     }
@@ -89,12 +121,20 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
      * IMPORTANT: This method assumes that the violation at this point has a primary code location with a file.
      *            Do not call this method on a violation that does not satisfy this assumption.
      * @param violation
+     * @returns CodeAnalyzerDiagnostic or null if the violation severity is configured as "None"
      */
-    static fromViolation(violation: Violation): CodeAnalyzerDiagnostic {
+    static fromViolation(violation: Violation): CodeAnalyzerDiagnostic | null {
         if (violation.locations.length == 0 || !violation.locations[violation.primaryLocationIndex].file) {
             // We should never reach this line of code. It is just here to prevent us from making programming mistakes.
             throw new Error('An attempt to process a violation without a valid file based code location occurred. This should not happen.');
         }
+
+        // Check if the severity is configured as "None" - if so, don't create a diagnostic
+        const severity = getDiagnosticSeverity(violation.severity);
+        if (severity === null) {
+            return null;
+        }
+
         const diagnostic: CodeAnalyzerDiagnostic = new CodeAnalyzerDiagnostic(violation);
 
         // Some violations have ranges that are too noisy, so for now we manually fix them here while we wait on PMD to fix them:
@@ -126,7 +166,7 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
                 if (i !== violation.primaryLocationIndex && relatedLocation.file) {
                     const relatedRange = toRange(relatedLocation);
                     const vscodeLocation: vscode.Location = new vscode.Location(vscode.Uri.file(relatedLocation.file), relatedRange);
-                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ?? 
+                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ??
                         messages.diagnostics.defaultAlternativeLocationMessage
                     ));
                 }
@@ -329,7 +369,7 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
     if (violationAdjustment.newValue === null) {
         return null; // Do not add back a diagnostic if its violation has been marked for removal
     }
-    const newDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
+    const newDiag: CodeAnalyzerDiagnostic | null = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
 
     if (violationAdjustment.overlapsWithChange || diag.isStale()) {
         diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.
@@ -388,7 +428,7 @@ function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDoc
             return suggestion;
         }
         const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(suggestion.location, change, replacementLines);
-        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ? 
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ?
             null : {...suggestion, location: locationAdjustment.newValue};
     }).filter(suggestion => suggestion !== null);
 
@@ -409,7 +449,7 @@ function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextD
             startLine: rangeAdjustment.newValue.start.line + 1,
             startColumn: rangeAdjustment.newValue.start.character + 1,
             endLine: rangeAdjustment.newValue.end.line + 1,
-            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ? 
+            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ?
                 undefined : rangeAdjustment.newValue.end.character + 1
         },
         overlapsWithChange: rangeAdjustment.overlapsWithChange
