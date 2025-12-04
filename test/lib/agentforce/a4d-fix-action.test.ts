@@ -40,7 +40,7 @@ describe('Tests for A4DFixAction', () => {
         unifiedDiffService = new stubs.SpyUnifiedDiffService();
         diagnosticCollection = new FakeDiagnosticCollection();
         diagnosticCollection.set(sampleUri, [sampleDiagForSingleLine, sampleDiagThatSpansTwoLines]);
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new stubs.StubSettingsManager());
         telemetryService = new stubs.SpyTelemetryService();
         logger = new stubs.SpyLogger();
         display = new stubs.SpyDisplay();

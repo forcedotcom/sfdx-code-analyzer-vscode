@@ -3,7 +3,7 @@ import * as vscode from "vscode"; // The vscode module is mocked out. See: scrip
 import * as stubs from "../stubs";
 import { createTextDocument } from "jest-mock-vscode";
 import { createSampleViolation } from "../test-utils";
-import { CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl } from "../../src/lib/diagnostics";
+import { CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl } from "../../src/lib/diagnostics";
 import { FakeDiagnosticCollection } from "../vscode-stubs";
 import { ApplyViolationFixesAction } from "../../src/lib/apply-violation-fixes-action";
 import { messages } from "../../src/lib/messages";
@@ -26,14 +26,16 @@ describe('Tests for ApplyViolationFixesAction', () => {
         `}`;
 
     const sampleDocument: vscode.TextDocument = createTextDocument(sampleUri, sampleContent, 'apex');
-    const sampleDiag1: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const testDiagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
+    const sampleDiag1: CodeAnalyzerDiagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru', // Note that these rule names are made up right now
         [{ 
             location: { file: sampleUri.fsPath, startLine: 4, startColumn: 9 },
             fixedCode: 'Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe();'
         }]
     ));
-    const sampleDiag2: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation( // not relevant because it has no fixes
+    if (!sampleDiag1) throw new Error('Failed to create sampleDiag1');
+    const sampleDiag2: CodeAnalyzerDiagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation( // not relevant because it has no fixes
         { file: sampleUri.fsPath, startLine: 9 }, 'AvoidSOQLInLoop', 'apexguru'
     ));
 
@@ -48,8 +50,9 @@ describe('Tests for ApplyViolationFixesAction', () => {
     beforeEach(() => {
         unifiedDiffService = new stubs.SpyUnifiedDiffService();
         diagnosticCollection = new FakeDiagnosticCollection();
+        if (!sampleDiag1 || !sampleDiag2) throw new Error('Failed to create sample diagnostics');
         diagnosticCollection.set(sampleUri, [sampleDiag1, sampleDiag2]);
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new stubs.StubSettingsManager());
         telemetryService = new stubs.SpyTelemetryService();
         logger = new stubs.SpyLogger();
         display = new stubs.SpyDisplay();
@@ -187,7 +190,8 @@ describe('Tests for ApplyViolationFixesAction', () => {
 
     it('When fix suggested is exactly the same as the original code, then show info message saying that no fix was suggested', async () => {
         // this fixed code is exactly the same as lines 2 and 3 - which sampleDiagThatSpansTwoLines's range gets extended to
-        const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        if (!sampleDiag2) throw new Error('Failed to create sampleDiag2');
+        const diag: CodeAnalyzerDiagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleUri.fsPath, startLine: 1, endLine: 5 }, 'SomeRuleName', 'SomeEngine',
             [{ 
                 location: { file: sampleUri.fsPath, startLine: 1, startColumn: 8, endColumn: 13  },

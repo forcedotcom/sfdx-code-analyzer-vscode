@@ -1,9 +1,13 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
-import { CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, toRange } from "../../src/lib/diagnostics";
+import { CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl, toRange } from "../../src/lib/diagnostics";
 import { FakeDiagnosticCollection } from "../vscode-stubs";
 import { ViolationSuggestionsHoverProvider } from "../../src/lib/violation-suggestions-hover-provider";
 import { createTextDocument } from "jest-mock-vscode";
 import { createSampleViolation } from "../test-utils";
+import * as stubs from "../stubs";
+
+// Create a shared DiagnosticFactory for test constants
+const testDiagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
 
 describe('ViolationSuggestionsHoverProvider Tests', () => {
     const sampleApexUri: vscode.Uri = vscode.Uri.file('/someFile.cls');
@@ -42,41 +46,41 @@ describe('ViolationSuggestionsHoverProvider Tests', () => {
         `    }\n` +
         `}`;
     const sampleApexDocument: vscode.TextDocument = createTextDocument(sampleApexUri, sampleApexContent, 'apex');
-    const sampleDiag1: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag1: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru', [],
         [{ 
             location: { file: sampleApexUri.fsPath, startLine: 4 },
             message: 'This is a single line suggestion that uses the same location as the violation'
         }]
     ));
-    const sampleDiag2: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag2: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 9 }, 'AvoidSOQLInLoop', 'apexguru', [], [] // no suggestions
     ));
-    const sampleDiag3: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag3: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 13 }, 'AvoidDMLInLoop', 'apexguru', [], [] // no suggestions
     ));
-    const sampleDiag4: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag4: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 18 }, 'AvoidSOQLWithNegativeExpression', 'apexguru', [],
         [{ 
             location: { file: '/someOtherFile.cls', startLine: 4 },
             message: 'This is suggestion that is associated with a different file'
         }]
     ));
-    const sampleDiag5: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag5: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 22 }, 'AvoidSOQLWithoutWhereClauseOrLimit', 'apexguru', [],
         [{ 
             location: { file: sampleApexUri.fsPath, startLine: 22, startColumn: 22, endLine: 22, endColumn: 33 },
             message: 'This is a multi\nline suggestion\nthat is only part of line 22'
         }]
     ));
-    const sampleDiag6: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag6: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 26 }, 'AvoidUsingSObjectsToInBind', 'apexguru', [],
         [{ 
             location: { file: sampleApexUri.fsPath, startLine: 22, startColumn: 26, endLine: 23, endColumn: 6 },
             message: 'This is a suggestion associated with a violation on line 26 but it shows up between line 22 and 23'
         }]
     ));
-    const sampleDiag7: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+    const sampleDiag7: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
         { file: sampleApexUri.fsPath, startLine: 30 }, 'AvoidSOQLWithWildcardFilters', 'apexguru', [],
         [{ 
             location: { file: sampleApexUri.fsPath, startLine: 30, endLine: 32 },
@@ -94,7 +98,7 @@ describe('ViolationSuggestionsHoverProvider Tests', () => {
 
     beforeEach(() => {
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new stubs.StubSettingsManager());
         hoverProvider = new ViolationSuggestionsHoverProvider(diagnosticManager);
         diagnosticManager.addDiagnostics([sampleDiag1, sampleDiag2, sampleDiag3, sampleDiag4, sampleDiag5, sampleDiag6, sampleDiag7]);
     });

@@ -4,10 +4,12 @@ import { createTextDocument } from "jest-mock-vscode";
 import { StubCodeActionContext } from "../vscode-stubs";
 import { ApplyViolationFixesAction } from "../../src/lib/apply-violation-fixes-action";
 import { ApplyViolationFixesActionProvider } from "../../src/lib/apply-violation-fixes-action-provider";
-import { CodeAnalyzerDiagnostic } from "../../src/lib/diagnostics";
+import { CodeAnalyzerDiagnostic, DiagnosticFactory } from "../../src/lib/diagnostics";
+import * as stubs from "../stubs";
 
 describe('ApplyViolationFixesActionProvider Tests', () => {
     let actionProvider: ApplyViolationFixesActionProvider;
+    const testDiagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
 
     beforeEach(() => {
         actionProvider = new ApplyViolationFixesActionProvider();
@@ -51,26 +53,31 @@ describe('ApplyViolationFixesActionProvider Tests', () => {
             `}`;
 
         const sampleApexDocument: vscode.TextDocument = createTextDocument(sampleApexUri, sampleApexContent, 'apex');
-        const sampleDiag1: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        const sampleDiag1: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru', // Note that these rule names are made up right now
             [{ 
                 location: { file: sampleApexUri.fsPath, startLine: 4, startColumn: 9 },
                 fixedCode: 'Schema.DescribeSObjectResult opportunityDescribe = Opportunity.sObjectType.getDescribe()'
             }]
-        ))
-        const sampleDiag2: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        ));
+        if (!sampleDiag1) throw new Error('Failed to create sampleDiag1');
+        const sampleDiag2: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 9 }, 'AvoidSOQLInLoop', 'apexguru'
-        ))
-        const sampleDiag3: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        ));
+        if (!sampleDiag2) throw new Error('Failed to create sampleDiag2');
+        const sampleDiag3: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 13 }, 'AvoidDMLInLoop', 'apexguru'
-        ))
-        const sampleDiag4: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        ));
+        if (!sampleDiag3) throw new Error('Failed to create sampleDiag3');
+        const sampleDiag4: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 18 }, 'AvoidSOQLWithNegativeExpression', 'apexguru'
-        ))
-        const sampleDiag5: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        ));
+        if (!sampleDiag4) throw new Error('Failed to create sampleDiag4');
+        const sampleDiag5: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 22 }, 'AvoidSOQLWithoutWhereClauseOrLimit', 'apexguru'
-        ))
-        const sampleDiag6: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        ));
+        if (!sampleDiag5) throw new Error('Failed to create sampleDiag5');
+        const sampleDiag6: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 26 }, 'AvoidUsingSObjectsToInBind', 'apexguru',
             [{ 
                 location: { file: sampleApexUri.fsPath, startLine: 26 },
@@ -78,10 +85,12 @@ describe('ApplyViolationFixesActionProvider Tests', () => {
                     `//Inside the SOQL: convert "accounts" into "accountsMap.keySet()"`
             }]
 
-        ))
-        const sampleDiag7: vscode.Diagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+        ));
+        if (!sampleDiag6) throw new Error('Failed to create sampleDiag6');
+        const sampleDiag7: vscode.Diagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
             { file: sampleApexUri.fsPath, startLine: 30 }, 'AvoidSOQLWithWildcardFilters', 'apexguru'
-        ))
+        ));
+        if (!sampleDiag7) throw new Error('Failed to create sampleDiag7');
 
 
         // TODO: This test is temporary (as it is tied to the apex guru pilot code) and will be generalized soon.
@@ -109,7 +118,7 @@ describe('ApplyViolationFixesActionProvider Tests', () => {
         });
 
         it('stale diagnostics are filtered out', () => {
-            const staleDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(createSampleViolation(
+            const staleDiag: CodeAnalyzerDiagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
                 { file: sampleApexUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru',
                 [{ 
                     location: { file: sampleApexUri.fsPath, startLine: 4, startColumn: 9 },
