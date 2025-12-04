@@ -5,6 +5,7 @@
  * For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
  */
 import {messages} from './messages';
+import {SettingsManager} from "./settings";
 import * as vscode from 'vscode';
 
 // For now we attempt to match the JsonViolationOutput schema as much as possible so that we don't need to transform
@@ -65,11 +66,11 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
     readonly uri: vscode.Uri;
 
     // Private - see the fromViolation method below to see assumptions made on this constructor
-    private constructor(violation: Violation) {
+    private constructor(violation: Violation, severity: vscode.DiagnosticSeverity) {
         const primaryLocation: CodeLocation = violation.locations[violation.primaryLocationIndex];
         super(toRange(primaryLocation),
             messages.diagnostics.messageGenerator(violation.severity, violation.message.trim()),
-            vscode.DiagnosticSeverity.Warning); // TODO: We should consider using 'Error' for sev 1 instead of always just using 'Warning'. Note that we reserve 'Information' for stale diagnostics.
+            severity);
         this.violation = violation;
         this.uri = vscode.Uri.file(primaryLocation.file);
     }
@@ -84,18 +85,71 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
             this.severity = vscode.DiagnosticSeverity.Information;
         }
     }
+5
+    /**
+     * @internal
+     * This method is for internal use by DiagnosticFactory only.
+     * Use DiagnosticFactory.fromViolation() instead.
+     */
+    static create(violation: Violation, severity: vscode.DiagnosticSeverity): CodeAnalyzerDiagnostic {
+        return new CodeAnalyzerDiagnostic(violation, severity);
+    }
+}
+
+
+export type ClearDiagnosticsOptions = {
+    range?: vscode.Range;
+    engineName?: string;  // e.g., 'pmd', 'eslint-lwc'
+    ruleName?: string;    // e.g., 'ApexDoc', 'no-unused-vars'
+}
+
+export interface DiagnosticManager extends vscode.Disposable {
+    addDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
+    clearAllDiagnostics(): void
+    clearDiagnostic(diag: CodeAnalyzerDiagnostic): void
+    clearDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
+    clearDiagnosticsFromFile(uri: vscode.Uri, clearOptions?: ClearDiagnosticsOptions): void
+    clearDiagnosticsForFiles(uris: vscode.Uri[]): void
+    getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
+    handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void
+}
+
+/**
+ * Factory class for creating CodeAnalyzerDiagnostic instances.
+ * Uses dependency injection for SettingsManager to enable testability.
+ */
+export class DiagnosticFactory {
+    constructor(private readonly settingsManager: SettingsManager) {}
+
+    /**
+     * Determines the diagnostic severity based on the violation severity and user-configured mappings.
+     * Defaults to Warning if not configured.
+     * @param violationSeverity The severity number from the violation (1=highest, 5=lowest)
+     * @returns The appropriate VSCode DiagnosticSeverity, or null if set to "None"
+     */
+    private getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity | null {
+        return this.settingsManager.getSeverityLevel(violationSeverity);
+    }
 
     /**
      * IMPORTANT: This method assumes that the violation at this point has a primary code location with a file.
      *            Do not call this method on a violation that does not satisfy this assumption.
      * @param violation
+     * @returns CodeAnalyzerDiagnostic or null if the violation severity is configured as "None"
      */
-    static fromViolation(violation: Violation): CodeAnalyzerDiagnostic {
+    fromViolation(violation: Violation): CodeAnalyzerDiagnostic | null {
         if (violation.locations.length == 0 || !violation.locations[violation.primaryLocationIndex].file) {
             // We should never reach this line of code. It is just here to prevent us from making programming mistakes.
             throw new Error('An attempt to process a violation without a valid file based code location occurred. This should not happen.');
         }
-        const diagnostic: CodeAnalyzerDiagnostic = new CodeAnalyzerDiagnostic(violation);
+
+        // Check if the severity is configured as "None" - if so, don't create a diagnostic
+        const severity = this.getDiagnosticSeverity(violation.severity);
+        if (severity === null) {
+            return null;
+        }
+
+        const diagnostic: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.create(violation, severity);
 
         // Some violations have ranges that are too noisy, so for now we manually fix them here while we wait on PMD to fix them:
         const rulesToReduceViolationsToSingleLine: string[] = [
@@ -126,7 +180,7 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
                 if (i !== violation.primaryLocationIndex && relatedLocation.file) {
                     const relatedRange = toRange(relatedLocation);
                     const vscodeLocation: vscode.Location = new vscode.Location(vscode.Uri.file(relatedLocation.file), relatedRange);
-                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ?? 
+                    relatedLocations.push(new vscode.DiagnosticRelatedInformation(vscodeLocation, relatedLocation.comment ??
                         messages.diagnostics.defaultAlternativeLocationMessage
                     ));
                 }
@@ -138,29 +192,13 @@ export class CodeAnalyzerDiagnostic extends vscode.Diagnostic {
     }
 }
 
-
-export type ClearDiagnosticsOptions = {
-    range?: vscode.Range;
-    engineName?: string;  // e.g., 'pmd', 'eslint-lwc'
-    ruleName?: string;    // e.g., 'ApexDoc', 'no-unused-vars'
-}
-
-export interface DiagnosticManager extends vscode.Disposable {
-    addDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
-    clearAllDiagnostics(): void
-    clearDiagnostic(diag: CodeAnalyzerDiagnostic): void
-    clearDiagnostics(diags: CodeAnalyzerDiagnostic[]): void
-    clearDiagnosticsFromFile(uri: vscode.Uri, clearOptions?: ClearDiagnosticsOptions): void
-    clearDiagnosticsForFiles(uris: vscode.Uri[]): void
-    getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
-    handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void
-}
-
 export class DiagnosticManagerImpl implements DiagnosticManager {
     private readonly diagnosticCollection: vscode.DiagnosticCollection;
+    public readonly diagnosticFactory: DiagnosticFactory;
 
-    public constructor(diagnosticCollection: vscode.DiagnosticCollection) {
+    public constructor(diagnosticCollection: vscode.DiagnosticCollection, settingsManager: SettingsManager) {
         this.diagnosticCollection = diagnosticCollection;
+        this.diagnosticFactory = new DiagnosticFactory(settingsManager);
     }
 
     public addDiagnostics(diags: CodeAnalyzerDiagnostic[]) {
@@ -243,7 +281,7 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
             const replacementLines: string[] = change.text.split('\n');
 
             const updatedDiagnostics: CodeAnalyzerDiagnostic[] = diags
-                .map(diag => adjustDiagnosticToChange(diag, change, replacementLines))
+                .map(diag => adjustDiagnosticToChange(diag, change, replacementLines, this.diagnosticFactory))
                 .filter(d => d !== null); // Removes the diagnostics that were marked for removal via null
             this.setDiagnosticsForFile(event.document.uri, updatedDiagnostics);
         }
@@ -323,13 +361,13 @@ function adjustToZeroBased(value: number): number {
 
 
 function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.TextDocumentContentChangeEvent,
-                                  replacementLines: string[]): CodeAnalyzerDiagnostic | null {
+                                  replacementLines: string[], diagnosticFactory: DiagnosticFactory): CodeAnalyzerDiagnostic | null {
 
     const violationAdjustment: Adjustment<Violation> = adjustViolationToChange(diag.violation, change, replacementLines);
     if (violationAdjustment.newValue === null) {
         return null; // Do not add back a diagnostic if its violation has been marked for removal
     }
-    const newDiag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(diag.violation);
+    const newDiag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(diag.violation);
 
     if (violationAdjustment.overlapsWithChange || diag.isStale()) {
         diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.
@@ -388,7 +426,7 @@ function adjustViolationToChange(oldViolation: Violation, change: vscode.TextDoc
             return suggestion;
         }
         const locationAdjustment: Adjustment<CodeLocation> = adjustLocationToChange(suggestion.location, change, replacementLines);
-        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ? 
+        return locationAdjustment.newValue === null || locationAdjustment.overlapsWithChange ?
             null : {...suggestion, location: locationAdjustment.newValue};
     }).filter(suggestion => suggestion !== null);
 
@@ -409,7 +447,7 @@ function adjustLocationToChange(origLocation: CodeLocation, change: vscode.TextD
             startLine: rangeAdjustment.newValue.start.line + 1,
             startColumn: rangeAdjustment.newValue.start.character + 1,
             endLine: rangeAdjustment.newValue.end.line + 1,
-            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ? 
+            endColumn: rangeAdjustment.newValue.end.character >= Number.MAX_SAFE_INTEGER ?
                 undefined : rangeAdjustment.newValue.end.character + 1
         },
         overlapsWithChange: rangeAdjustment.overlapsWithChange

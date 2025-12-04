@@ -84,7 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
     const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
-    const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+    const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     context.subscriptions.push(diagnosticManager);
     const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
@@ -100,7 +100,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const fileHandler: FileHandler = new FileHandlerImpl();
     const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
 
-    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, telemetryService, logger, display, windowManager);
+    const diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
+    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, diagnosticFactory, telemetryService, logger, display, windowManager);
 
     // For performance reasons, it's best to kick this off in the background instead of await the promise.
     void performValidationAndCaching(codeAnalyzer, display);
@@ -244,7 +245,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // ==  Apex Guru Integration Functionality
     // =================================================================================================================
     const apexGuruService: ApexGuruService = new LiveApexGuruService(orgConnectionService, fileHandler, logger);
-    const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
+    const apexGuruRunAction: ApexGuruRunAction = new ApexGuruRunAction(taskWithProgressRunner, apexGuruService, diagnosticManager, diagnosticFactory, telemetryService, display);
     apexGuruService.onAccessChange((access: ApexGuruAccess) => {
         logger.debug(`Access to ApexGuru has been set '${access}'.`);
         void vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_SHOULD_SHOW_APEX_GURU_BUTTONS, 

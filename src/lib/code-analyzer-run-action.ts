@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import {Logger} from "./logger";
-import {CodeAnalyzerDiagnostic, DiagnosticManager, normalizeViolation, Violation} from "./diagnostics";
+import {CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, normalizeViolation, Violation} from "./diagnostics";
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
 import * as Constants from './constants';
@@ -18,16 +18,18 @@ export class CodeAnalyzerRunAction {
     private readonly taskWithProgressRunner: TaskWithProgressRunner;
     private readonly codeAnalyzer: CodeAnalyzer;
     private readonly diagnosticManager: DiagnosticManager;
+    private readonly diagnosticFactory: DiagnosticFactory;
     private readonly telemetryService: TelemetryService;
     private readonly logger: Logger;
     private readonly display: Display;
     private readonly windowManager: WindowManager;
     private suppressedErrors: Set<string> = new Set();
 
-    constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, logger: Logger, display: Display, windowManager: WindowManager) {
+    constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, diagnosticFactory: DiagnosticFactory, telemetryService: TelemetryService, logger: Logger, display: Display, windowManager: WindowManager) {
         this.taskWithProgressRunner = taskWithProgressRunner;
         this.codeAnalyzer = codeAnalyzer;
         this.diagnosticManager = diagnosticManager;
+        this.diagnosticFactory = diagnosticFactory;
         this.telemetryService = telemetryService;
         this.logger = logger;
         this.display = display;
@@ -90,18 +92,19 @@ export class CodeAnalyzerRunAction {
                 // past the length of the line in the editor window).
                 const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation
                     .map(v => normalizeViolation(v)) // <-- Maybe in the future we'll pass in the lineLengths for the primary file
-                    .map(v => CodeAnalyzerDiagnostic.fromViolation(v));
+                    .map(v => this.diagnosticFactory.fromViolation(v))
+                    .filter((d): d is CodeAnalyzerDiagnostic => d !== null);
                 const targetedFiles: string[] = await workspace.getTargetedFiles();
-                
-                // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics 
+
+                // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics
                 // except for ApexGuru based diagnostics which are handled separately.
                 for (const file of targetedFiles) {
-                    const diagsToClear: CodeAnalyzerDiagnostic[] = 
+                    const diagsToClear: CodeAnalyzerDiagnostic[] =
                         this.diagnosticManager.getDiagnosticsForFile(vscode.Uri.file(file))
                         .filter(d => d.violation.engine !== APEX_GURU_ENGINE_NAME);
                     this.diagnosticManager.clearDiagnostics(diagsToClear);
                 }
-                
+
                 this.diagnosticManager.addDiagnostics(diagnostics);
                 void this.displayResults(targetedFiles.length, violationsWithFileLocation);
 

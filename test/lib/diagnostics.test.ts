@@ -1,16 +1,23 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 
-import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
+import {CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
 import {messages} from "../../src/lib/messages";
+import * as stubs from "../stubs";
 
 const sampleUri1: vscode.Uri = vscode.Uri.file('/path/to/file1');
 const sampleUri2: vscode.Uri = vscode.Uri.file('/path/to/file2');
 const sampleUri3: vscode.Uri = vscode.Uri.file('/path/to/file3');
 
 describe('Tests for the CodeAnalyzerDiagnostic class', () => {
-    describe('Tests for the fromViolation static constructor method', () => {
+    describe('Tests for DiagnosticFactory.fromViolation method', () => {
+        let diagnosticFactory: DiagnosticFactory;
+
+        beforeEach(() => {
+            diagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
+        });
+
         it('When a violation does not have a valid primary code location, then error', () => {
             const violation: Violation = {
                 rule: 'dummyRule',
@@ -22,9 +29,9 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                 tags: [],
                 resources: []
             }
-            expect(() => CodeAnalyzerDiagnostic.fromViolation(violation)).toThrow();
+            expect(() => diagnosticFactory.fromViolation(violation)).toThrow();
             violation.locations = [{}] // Case 2 - everything is undefined
-            expect(() => CodeAnalyzerDiagnostic.fromViolation(violation)).toThrow();
+            expect(() => diagnosticFactory.fromViolation(violation)).toThrow();
         });
 
         it('When a violation with a single code location is given, then all the fields should be filled out correctly', () => {
@@ -45,7 +52,8 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                 resources: ['https://hello.com', 'https://world.com']
             };
 
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            expect(diag).not.toBeNull();
             expect(diag.violation).toEqual(violation);
             expect(diag.uri).toEqual(vscode.Uri.file('/path/to/some/someFile.cls'));
             expect(diag.code).toEqual({
@@ -91,7 +99,8 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                 resources: [] // Also test when there are no resources
             };
 
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            expect(diag).not.toBeNull();
             expect(diag.violation).toEqual(violation);
             expect(diag.uri).toEqual(vscode.Uri.file('/path/to/some/someFileWithSomeLineInfo.cls'));
             expect(diag.code).toEqual('dummyRule');
@@ -136,7 +145,8 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                 resources: []
             };
 
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            expect(diag).not.toBeNull();
             expect(diag.range).toEqual(new vscode.Range(2, 4, 2, Number.MAX_SAFE_INTEGER));
         });
 
@@ -155,7 +165,8 @@ describe('Tests for the CodeAnalyzerDiagnostic class', () => {
                 resources: []
             };
 
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            expect(diag).not.toBeNull();
             expect(diag.range.start.line).toEqual(0);
         });
     });
@@ -203,7 +214,7 @@ describe('Tests for the DiagnosticManager class', () => {
 
     beforeEach(() => {
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new stubs.StubSettingsManager());
     });
 
     describe('Tests for addDiagnostics', () => {
