@@ -270,9 +270,9 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
-    getSeverityLevelReturnValue: vscode.DiagnosticSeverity | null = vscode.DiagnosticSeverity.Warning;
+    getSeverityLevelReturnValue: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Warning;
 
-    getSeverityLevel(_severity: number): vscode.DiagnosticSeverity | null {
+    getSeverityLevel(_severity: number): vscode.DiagnosticSeverity {
         return this.getSeverityLevelReturnValue;
     }
 

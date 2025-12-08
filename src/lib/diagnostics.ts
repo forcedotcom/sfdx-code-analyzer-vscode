@@ -112,6 +112,7 @@ export interface DiagnosticManager extends vscode.Disposable {
     clearDiagnosticsForFiles(uris: vscode.Uri[]): void
     getDiagnosticsForFile(uri: vscode.Uri): readonly CodeAnalyzerDiagnostic[]
     handleTextDocumentChangeEvent(event: vscode.TextDocumentChangeEvent): void
+    refreshDiagnostics(): void
 }
 
 /**
@@ -125,9 +126,9 @@ export class DiagnosticFactory {
      * Determines the diagnostic severity based on the violation severity and user-configured mappings.
      * Defaults to Warning if not configured.
      * @param violationSeverity The severity number from the violation (1=highest, 5=lowest)
-     * @returns The appropriate VSCode DiagnosticSeverity, or null if set to "None"
+     * @returns The appropriate VSCode DiagnosticSeverity
      */
-    private getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity | null {
+    private getDiagnosticSeverity(violationSeverity: number): vscode.DiagnosticSeverity {
         return this.settingsManager.getSeverityLevel(violationSeverity);
     }
 
@@ -135,20 +136,15 @@ export class DiagnosticFactory {
      * IMPORTANT: This method assumes that the violation at this point has a primary code location with a file.
      *            Do not call this method on a violation that does not satisfy this assumption.
      * @param violation
-     * @returns CodeAnalyzerDiagnostic or null if the violation severity is configured as "None"
+     * @returns CodeAnalyzerDiagnostic
      */
-    fromViolation(violation: Violation): CodeAnalyzerDiagnostic | null {
+    fromViolation(violation: Violation): CodeAnalyzerDiagnostic {
         if (violation.locations.length == 0 || !violation.locations[violation.primaryLocationIndex].file) {
             // We should never reach this line of code. It is just here to prevent us from making programming mistakes.
             throw new Error('An attempt to process a violation without a valid file based code location occurred. This should not happen.');
         }
 
-        // Check if the severity is configured as "None" - if so, don't create a diagnostic
         const severity = this.getDiagnosticSeverity(violation.severity);
-        if (severity === null) {
-            return null;
-        }
-
         const diagnostic: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.create(violation, severity);
 
         // Some violations have ranges that are too noisy, so for now we manually fix them here while we wait on PMD to fix them:
@@ -282,8 +278,39 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
 
             const updatedDiagnostics: CodeAnalyzerDiagnostic[] = diags
                 .map(diag => adjustDiagnosticToChange(diag, change, replacementLines, this.diagnosticFactory))
-                .filter(d => d !== null); // Removes the diagnostics that were marked for removal via null
+                .filter((d): d is CodeAnalyzerDiagnostic => d !== null); // Removes the diagnostics that were marked for removal via null
             this.setDiagnosticsForFile(event.document.uri, updatedDiagnostics);
+        }
+    }
+
+    /**
+     * Refreshes all existing diagnostics by re-evaluating their severity based on current settings.
+     * This is called when severity settings change to update all displayed diagnostics.
+     */
+    public refreshDiagnostics(): void {
+        const allUris: vscode.Uri[] = [];
+        this.diagnosticCollection.forEach((uri, _diagnostics) => {
+            allUris.push(uri);
+        });
+
+        for (const uri of allUris) {
+            const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
+            if (currentDiagnostics.length === 0) {
+                continue;
+            }
+
+            // Recreate diagnostics with updated severity based on current settings
+            const refreshedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.map(diag => {
+                // Recreate the diagnostic with the current severity setting
+                const refreshedDiag = this.diagnosticFactory.fromViolation(diag.violation);
+                // Preserve stale state if the original diagnostic was stale
+                if (diag.isStale()) {
+                    refreshedDiag.markStale();
+                }
+                return refreshedDiag;
+            });
+
+            this.setDiagnosticsForFile(uri, refreshedDiagnostics);
         }
     }
 
@@ -367,7 +394,7 @@ function adjustDiagnosticToChange(diag: CodeAnalyzerDiagnostic, change: vscode.T
     if (violationAdjustment.newValue === null) {
         return null; // Do not add back a diagnostic if its violation has been marked for removal
     }
-    const newDiag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(diag.violation);
+    const newDiag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(diag.violation);
 
     if (violationAdjustment.overlapsWithChange || diag.isStale()) {
         diag.markStale(); // Not really needed, but added for safety just in case somehow the old diagnostic doesn't properly get thrown away.

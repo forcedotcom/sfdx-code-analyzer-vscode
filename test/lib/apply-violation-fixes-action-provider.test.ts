@@ -118,7 +118,7 @@ describe('ApplyViolationFixesActionProvider Tests', () => {
         });
 
         it('stale diagnostics are filtered out', () => {
-            const staleDiag: CodeAnalyzerDiagnostic | null = testDiagnosticFactory.fromViolation(createSampleViolation(
+            const staleDiag: CodeAnalyzerDiagnostic = testDiagnosticFactory.fromViolation(createSampleViolation(
                 { file: sampleApexUri.fsPath, startLine: 4 }, 'AvoidUsingSchemaGetGlobalDescribe', 'apexguru',
                 [{ 
                     location: { file: sampleApexUri.fsPath, startLine: 4, startColumn: 9 },

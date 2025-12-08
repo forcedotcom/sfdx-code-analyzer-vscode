@@ -876,7 +876,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
             if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
@@ -920,7 +920,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
             if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
@@ -962,7 +962,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
             if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
@@ -1013,7 +1013,7 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
             if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 

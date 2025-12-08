@@ -86,6 +86,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
+    
+    // Listen for severity setting changes and refresh diagnostics
+    vscode.workspace.onDidChangeConfiguration(e => {
+        if (e.affectsConfiguration('codeAnalyzer.severity 1') ||
+            e.affectsConfiguration('codeAnalyzer.severity 2') ||
+            e.affectsConfiguration('codeAnalyzer.severity 3') ||
+            e.affectsConfiguration('codeAnalyzer.severity 4') ||
+            e.affectsConfiguration('codeAnalyzer.severity 5')) {
+            diagnosticManager.refreshDiagnostics();
+        }
+    });
+    
     context.subscriptions.push(diagnosticManager);
     const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
     context.subscriptions.push(scanManager);

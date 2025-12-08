@@ -162,56 +162,46 @@
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning",
-                            "Info",
-                            "None"
+                            "Warning"
                         ],
                         "default": "Warning",
-                        "markdownDescription": "Diagnostic level for severity 1 violations (highest severity). Select 'None' to hide these violations."
+                        "markdownDescription": "Diagnostic level for severity 1 violations (highest severity)."
                     },
                     "codeAnalyzer.severity 2": {
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning",
-                            "Info",
-                            "None"
+                            "Warning"
                         ],
                         "default": "Warning",
-                        "markdownDescription": "Diagnostic level for severity 2 violations. Select 'None' to hide these violations."
+                        "markdownDescription": "Diagnostic level for severity 2 violations."
                     },
                     "codeAnalyzer.severity 3": {
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning",
-                            "Info",
-                            "None"
+                            "Warning"
                         ],
                         "default": "Warning",
-                        "markdownDescription": "Diagnostic level for severity 3 violations. Select 'None' to hide these violations."
+                        "markdownDescription": "Diagnostic level for severity 3 violations."
                     },
                     "codeAnalyzer.severity 4": {
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning",
-                            "Info",
-                            "None"
+                            "Warning"
                         ],
                         "default": "Warning",
-                        "markdownDescription": "Diagnostic level for severity 4 violations. Select 'None' to hide these violations."
+                        "markdownDescription": "Diagnostic level for severity 4 violations."
                     },
                     "codeAnalyzer.severity 5": {
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning",
-                            "Info",
-                            "None"
+                            "Warning"
                         ],
                         "default": "Warning",
-                        "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity). Select 'None' to hide these violations."
+                        "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity)."
                     }
                 }
             }

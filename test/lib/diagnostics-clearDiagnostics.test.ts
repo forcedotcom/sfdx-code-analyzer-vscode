@@ -234,10 +234,6 @@ function createDiagnostic(uri: vscode.Uri, range: vscode.Range, engine: string, 
         resources: []
     };
     const diagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
-    const diagnostic = diagnosticFactory.fromViolation(violation);
-    if (!diagnostic) {
-        throw new Error('Failed to create diagnostic - severity may be set to None');
-    }
-    return diagnostic;
+    return diagnosticFactory.fromViolation(violation);
 }
 

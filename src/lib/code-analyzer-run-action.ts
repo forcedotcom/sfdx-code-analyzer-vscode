@@ -92,8 +92,7 @@ export class CodeAnalyzerRunAction {
                 // past the length of the line in the editor window).
                 const diagnostics: CodeAnalyzerDiagnostic[] = violationsWithFileLocation
                     .map(v => normalizeViolation(v)) // <-- Maybe in the future we'll pass in the lineLengths for the primary file
-                    .map(v => this.diagnosticFactory.fromViolation(v))
-                    .filter((d): d is CodeAnalyzerDiagnostic => d !== null);
+                    .map(v => this.diagnosticFactory.fromViolation(v));
                 const targetedFiles: string[] = await workspace.getTargetedFiles();
 
                 // Before adding in the new code analyzer diagnostics, we clear all the old code analyzer diagnostics

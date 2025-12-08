@@ -7,7 +7,7 @@ import * as stubs from "./stubs";
 const testDiagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
 
 export function createSampleCodeAnalyzerDiagnostic(uri: vscode.Uri, range: vscode.Range, ruleName: string = 'someRule', engineName: string = 'pmd'): CodeAnalyzerDiagnostic {
-    const diagnostic = testDiagnosticFactory.fromViolation(createSampleViolation({
+    return testDiagnosticFactory.fromViolation(createSampleViolation({
         file: uri.fsPath,
         startLine: range.start.line + 1, // Violations are 1 based while ranges are 0 based, so adjusting for this
         startColumn: range.start.character + 1,
@@ -16,10 +16,6 @@ export function createSampleCodeAnalyzerDiagnostic(uri: vscode.Uri, range: vscod
     },
     ruleName,
     engineName));
-    if (!diagnostic) {
-        throw new Error('Failed to create diagnostic - severity may be set to None');
-    }
-    return diagnostic;
 }
 
 export function createSampleViolation(location: CodeLocation, ruleName: string = 'someRule', engineName: string = 'pmd', fixes?: Fix[], suggestions?: Suggestion[]) {
