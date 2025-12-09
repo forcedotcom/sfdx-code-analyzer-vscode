@@ -288,18 +288,13 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
      * This is called when severity settings change to update all displayed diagnostics.
      */
     public refreshDiagnostics(): void {
-        const allUris: vscode.Uri[] = [];
-        this.diagnosticCollection.forEach((uri, _diagnostics) => {
-            allUris.push(uri);
-        });
-
-        for (const uri of allUris) {
-            const currentDiagnostics: readonly CodeAnalyzerDiagnostic[] = this.getDiagnosticsForFile(uri);
-            if (currentDiagnostics.length === 0) {
-                continue;
+        this.diagnosticCollection.forEach((uri, diagnostics) => {
+            if (diagnostics.length === 0) {
+                return;
             }
 
-            // Recreate diagnostics with updated severity based on current settings
+            // Cast to CodeAnalyzerDiagnostic and recreate with updated severity
+            const currentDiagnostics = diagnostics as CodeAnalyzerDiagnostic[];
             const refreshedDiagnostics: CodeAnalyzerDiagnostic[] = currentDiagnostics.map(diag => {
                 // Recreate the diagnostic with the current severity setting
                 const refreshedDiag = this.diagnosticFactory.fromViolation(diag.violation);
@@ -311,7 +306,7 @@ export class DiagnosticManagerImpl implements DiagnosticManager {
             });
 
             this.setDiagnosticsForFile(uri, refreshedDiagnostics);
-        }
+        });
     }
 
     private addDiagnosticsForFile(uri: vscode.Uri, newDiags: CodeAnalyzerDiagnostic[]): void {
