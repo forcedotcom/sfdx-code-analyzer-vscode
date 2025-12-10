@@ -100,6 +100,13 @@ describe('Tests for the SettingsManagerImpl class ', () => {
             expect(getMock).toHaveBeenCalledWith('severity 2');
         });
 
+        it('should map "Info" to DiagnosticSeverity.Information', () => {
+            getMock.mockReturnValue('Info');
+            const result = settingsManager.getSeverityLevel(3);
+            expect(result).toBe(vscode.DiagnosticSeverity.Information);
+            expect(getMock).toHaveBeenCalledWith('severity 3');
+        });
+
         it('should default to Warning for unknown values', () => {
             getMock.mockReturnValue('UnknownValue');
             const result = settingsManager.getSeverityLevel(5);
