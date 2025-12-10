@@ -6,8 +6,9 @@
  */
 
 import * as vscode from "vscode";
-import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
+import {CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
+import * as stubs from "../stubs";
 
 describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
     let diagnosticManager: DiagnosticManager;
@@ -16,7 +17,7 @@ describe('DiagnosticManager.clearDiagnosticsFromFile', () => {
 
     beforeEach(() => {
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, new stubs.StubSettingsManager());
     });
 
     describe('When no options provided', () => {
@@ -232,6 +233,7 @@ function createDiagnostic(uri: vscode.Uri, range: vscode.Range, engine: string, 
         tags: [],
         resources: []
     };
-    return CodeAnalyzerDiagnostic.fromViolation(violation);
+    const diagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
+    return diagnosticFactory.fromViolation(violation);
 }
 

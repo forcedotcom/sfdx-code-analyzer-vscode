@@ -15,6 +15,7 @@ export interface SettingsManager {
     // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
     getCodeAnalyzerRuleSelectors(): string;
+    getSeverityLevel(severity: number): vscode.DiagnosticSeverity;
 
     // Other Settings that we may depend on
     getEditorCodeLensEnabled(): boolean;
@@ -53,6 +54,29 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getCodeAnalyzerRuleSelectors(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
+    }
+
+    // =================================================================================================================
+    // ==== Diagnostic Levels Settings
+    // =================================================================================================================
+    /**
+     * Maps configuration string values to VSCode diagnostic severity
+     * @returns VSCode diagnostic severity (Error or Warning)
+     */
+    private mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity {
+        switch (configValue) {
+            case 'Error':
+                return vscode.DiagnosticSeverity.Error;
+            case 'Warning':
+                return vscode.DiagnosticSeverity.Warning;
+            default:
+                return vscode.DiagnosticSeverity.Warning;
+        }
+    }
+
+    public getSeverityLevel(severity: number): vscode.DiagnosticSeverity {
+        const configValue = vscode.workspace.getConfiguration('codeAnalyzer').get<string>(`severity ${severity}`) || 'Warning';
+        return this.mapToDiagnosticSeverity(configValue);
     }
 
     // =================================================================================================================

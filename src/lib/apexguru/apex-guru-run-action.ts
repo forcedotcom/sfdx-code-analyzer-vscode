@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as Constants from "../constants"
 import { ProgressReporter, TaskWithProgressRunner } from "../progress";
-import { CodeAnalyzerDiagnostic, DiagnosticManager, Violation } from "../diagnostics";
+import { CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, Violation } from "../diagnostics";
 import { TelemetryService } from "../external-services/telemetry-service";
 import { Display } from "../display";
 import { messages } from "../messages";
@@ -12,17 +12,19 @@ export class ApexGuruRunAction {
     private readonly taskWithProgressRunner: TaskWithProgressRunner;
     private readonly apexGuruService: ApexGuruService;
     private readonly diagnosticManager: DiagnosticManager;
+    private readonly diagnosticFactory: DiagnosticFactory;
     private readonly telemetryService: TelemetryService;
     private readonly display: Display;
 
-    constructor(taskWithProgressRunner: TaskWithProgressRunner, apexGuruService: ApexGuruService, diagnosticManager: DiagnosticManager, telemetryService: TelemetryService, display: Display) {
+    constructor(taskWithProgressRunner: TaskWithProgressRunner, apexGuruService: ApexGuruService, diagnosticManager: DiagnosticManager, diagnosticFactory: DiagnosticFactory, telemetryService: TelemetryService, display: Display) {
         this.taskWithProgressRunner = taskWithProgressRunner;
         this.apexGuruService = apexGuruService;
         this.diagnosticManager = diagnosticManager;
+        this.diagnosticFactory = diagnosticFactory;
         this.telemetryService = telemetryService;
         this.display = display;
     }
-    
+
     /**
      * Runs apex guru analysis against the specified file and displays the results.
      * @param commandName The command being run
@@ -54,7 +56,7 @@ export class ApexGuruRunAction {
                     increment: 90
                 });
 
-                const diagnostics: CodeAnalyzerDiagnostic[] = violations.map(v => CodeAnalyzerDiagnostic.fromViolation(v));
+                const diagnostics: CodeAnalyzerDiagnostic[] = violations.map(v => this.diagnosticFactory.fromViolation(v));
 
                 const oldApexGuruDiagnostics: CodeAnalyzerDiagnostic[] = this.diagnosticManager.getDiagnosticsForFile(fileUri)
                     .filter(d => d.violation.engine === APEX_GURU_ENGINE_NAME);

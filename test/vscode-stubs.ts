@@ -42,8 +42,11 @@ export class FakeDiagnosticCollection implements vscode.DiagnosticCollection {
         return this.diagMap.has(uri.fsPath);
     }
 
-    forEach(_callback: (uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[], collection: vscode.DiagnosticCollection) => unknown, _thisArg?: unknown): void {
-        throw new Error("Method not implemented.");
+    forEach(callback: (uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[], collection: vscode.DiagnosticCollection) => unknown, _thisArg?: unknown): void {
+        for (const [fsPath, diagnostics] of this.diagMap.entries()) {
+            const uri = vscode.Uri.file(fsPath);
+            callback(uri, diagnostics, this);
+        }
     }
 
     [Symbol.iterator](): Iterator<[uri: vscode.Uri, diagnostics: readonly vscode.Diagnostic[]], unknown, unknown> {
