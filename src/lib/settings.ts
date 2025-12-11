@@ -61,7 +61,7 @@ export class SettingsManagerImpl implements SettingsManager {
     // =================================================================================================================
     /**
      * Maps configuration string values to VSCode diagnostic severity
-     * @returns VSCode diagnostic severity (Error or Warning)
+     * @returns VSCode diagnostic severity (Error, Warning, or Information)
      */
     private mapToDiagnosticSeverity(configValue: string): vscode.DiagnosticSeverity {
         switch (configValue) {
@@ -69,6 +69,8 @@ export class SettingsManagerImpl implements SettingsManager {
                 return vscode.DiagnosticSeverity.Error;
             case 'Warning':
                 return vscode.DiagnosticSeverity.Warning;
+            case 'Info':
+                return vscode.DiagnosticSeverity.Information;
             default:
                 return vscode.DiagnosticSeverity.Warning;
         }

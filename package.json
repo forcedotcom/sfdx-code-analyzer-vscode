@@ -162,7 +162,8 @@
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning"
+                            "Warning",
+                            "Info"
                         ],
                         "default": "Warning",
                         "markdownDescription": "Diagnostic level for severity 1 violations (highest severity)."
@@ -171,7 +172,8 @@
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning"
+                            "Warning",
+                            "Info"
                         ],
                         "default": "Warning",
                         "markdownDescription": "Diagnostic level for severity 2 violations."
@@ -180,7 +182,8 @@
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning"
+                            "Warning",
+                            "Info"
                         ],
                         "default": "Warning",
                         "markdownDescription": "Diagnostic level for severity 3 violations."
@@ -189,7 +192,8 @@
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning"
+                            "Warning",
+                            "Info"
                         ],
                         "default": "Warning",
                         "markdownDescription": "Diagnostic level for severity 4 violations."
@@ -198,7 +202,8 @@
                         "type": "string",
                         "enum": [
                             "Error",
-                            "Warning"
+                            "Warning",
+                            "Info"
                         ],
                         "default": "Warning",
                         "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity)."
