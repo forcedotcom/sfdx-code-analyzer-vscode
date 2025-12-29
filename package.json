@@ -15,7 +15,7 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "1.13.0",
+    "version": "1.14.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
@@ -152,6 +152,61 @@
                         "type": "string",
                         "default": "Recommended",
                         "markdownDescription": "Selection of rules used to scan your code with Code Analyzer.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
+                    }
+                }
+            },
+            {
+                "title": "Diagnostic Levels",
+                "properties": {
+                    "codeAnalyzer.severity 1": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "default": "Warning",
+                        "markdownDescription": "Diagnostic level for severity 1 violations (highest severity)."
+                    },
+                    "codeAnalyzer.severity 2": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "default": "Warning",
+                        "markdownDescription": "Diagnostic level for severity 2 violations."
+                    },
+                    "codeAnalyzer.severity 3": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "default": "Warning",
+                        "markdownDescription": "Diagnostic level for severity 3 violations."
+                    },
+                    "codeAnalyzer.severity 4": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "default": "Warning",
+                        "markdownDescription": "Diagnostic level for severity 4 violations."
+                    },
+                    "codeAnalyzer.severity 5": {
+                        "type": "string",
+                        "enum": [
+                            "Error",
+                            "Warning",
+                            "Info"
+                        ],
+                        "default": "Warning",
+                        "markdownDescription": "Diagnostic level for severity 5 violations (lowest severity)."
                     }
                 }
             }

@@ -1,9 +1,13 @@
 import * as vscode from "vscode";
-import {CodeAnalyzerDiagnostic, CodeLocation, Fix, Suggestion} from "../src/lib/diagnostics";
+import {CodeAnalyzerDiagnostic, DiagnosticFactory, CodeLocation, Fix, Suggestion} from "../src/lib/diagnostics";
 import { getErrorMessageWithStack } from "../src/lib/utils";
+import * as stubs from "./stubs";
+
+// Create a shared DiagnosticFactory with StubSettingsManager for test utilities
+const testDiagnosticFactory = new DiagnosticFactory(new stubs.StubSettingsManager());
 
 export function createSampleCodeAnalyzerDiagnostic(uri: vscode.Uri, range: vscode.Range, ruleName: string = 'someRule', engineName: string = 'pmd'): CodeAnalyzerDiagnostic {
-    return CodeAnalyzerDiagnostic.fromViolation(createSampleViolation({
+    return testDiagnosticFactory.fromViolation(createSampleViolation({
         file: uri.fsPath,
         startLine: range.start.line + 1, // Violations are 1 based while ranges are 0 based, so adjusting for this
         startColumn: range.start.character + 1,

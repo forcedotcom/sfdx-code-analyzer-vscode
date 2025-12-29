@@ -1,7 +1,7 @@
 import * as vscode from "vscode";// The vscode module is mocked out. See: scripts/setup.jest.ts
 
 import * as stubs from "../../stubs";
-import { CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, Violation } from "../../../src/lib/diagnostics";
+import { CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl, Violation } from "../../../src/lib/diagnostics";
 import { FakeDiagnosticCollection } from "../../vscode-stubs";
 import { ApexGuruRunAction } from "../../../src/lib/apexguru/apex-guru-run-action";
 import { createSampleCodeAnalyzerDiagnostic } from "../../test-utils";
@@ -18,6 +18,7 @@ describe("Tests for ApexGuruRunAction", () => {
     let apexGuruService: stubs.StubApexGuruService;
     let diagnosticCollection: vscode.DiagnosticCollection;
     let diagnosticManager: DiagnosticManager;
+    let diagnosticFactory: DiagnosticFactory;
     let telemetryService: stubs.SpyTelemetryService;
     let display: stubs.SpyDisplay;
     let apexGuruRunAction: ApexGuruRunAction;
@@ -26,17 +27,22 @@ describe("Tests for ApexGuruRunAction", () => {
         taskWithProgressRunner = new stubs.FakeTaskWithProgressRunner();
         apexGuruService = new stubs.StubApexGuruService();
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        const settingsManager = new stubs.StubSettingsManager();
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
+        diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
         diagnosticManager.addDiagnostics([samplePmdDiag, sampleApexGuruDiag]); // Start with some sample diagnostics
         telemetryService = new stubs.SpyTelemetryService();
         display = new stubs.SpyDisplay();
         apexGuruRunAction = new ApexGuruRunAction(
-            taskWithProgressRunner, apexGuruService, diagnosticManager, telemetryService, display);
+            taskWithProgressRunner, apexGuruService, diagnosticManager, diagnosticFactory, telemetryService, display);
     });
 
     it("When ApexGuru scan throws error, then display error in error window and send exception telemetry event", async () => {
+        const throwingService = new stubs.ThrowingScanApexGuruService();
+        const throwingDiagnosticManager = new DiagnosticManagerImpl(new FakeDiagnosticCollection(), new stubs.StubSettingsManager());
+        const throwingDiagnosticFactory = throwingDiagnosticManager.diagnosticFactory;
         apexGuruRunAction = new ApexGuruRunAction(
-            taskWithProgressRunner, new stubs.ThrowingScanApexGuruService(), diagnosticManager, telemetryService, display);
+            taskWithProgressRunner, throwingService, throwingDiagnosticManager, throwingDiagnosticFactory, telemetryService, display);
         
         await apexGuruRunAction.run('SomeCommandName', sampleUri);
 
@@ -226,8 +232,12 @@ describe("Tests for ApexGuruRunAction", () => {
 
         // Also validate that we removed the old apexguru diagnostic(s) but kept the other(s)
         const actDiags: readonly CodeAnalyzerDiagnostic[] = diagnosticManager.getDiagnosticsForFile(sampleUri);
-        const expDiags: CodeAnalyzerDiagnostic[] = [samplePmdDiag, CodeAnalyzerDiagnostic.fromViolation(violation1),
-            CodeAnalyzerDiagnostic.fromViolation(violation2), CodeAnalyzerDiagnostic.fromViolation(violation3)];
+        const expDiags: CodeAnalyzerDiagnostic[] = [
+            samplePmdDiag, 
+            diagnosticFactory.fromViolation(violation1),
+            diagnosticFactory.fromViolation(violation2), 
+            diagnosticFactory.fromViolation(violation3)
+        ].filter((d): d is CodeAnalyzerDiagnostic => d !== null);
         expectEquivalentDiagnostics(actDiags, expDiags);
     });
 });

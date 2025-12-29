@@ -85,6 +85,60 @@ describe('Tests for the SettingsManagerImpl class ', () => {
         });
     });
 
+    describe('Diagnostic Levels Settings', () => {
+        it('should map "Error" to DiagnosticSeverity.Error', () => {
+            getMock.mockReturnValue('Error');
+            const result = settingsManager.getSeverityLevel(1);
+            expect(result).toBe(vscode.DiagnosticSeverity.Error);
+            expect(getMock).toHaveBeenCalledWith('severity 1');
+        });
+
+        it('should map "Warning" to DiagnosticSeverity.Warning', () => {
+            getMock.mockReturnValue('Warning');
+            const result = settingsManager.getSeverityLevel(2);
+            expect(result).toBe(vscode.DiagnosticSeverity.Warning);
+            expect(getMock).toHaveBeenCalledWith('severity 2');
+        });
+
+        it('should map "Info" to DiagnosticSeverity.Information', () => {
+            getMock.mockReturnValue('Info');
+            const result = settingsManager.getSeverityLevel(3);
+            expect(result).toBe(vscode.DiagnosticSeverity.Information);
+            expect(getMock).toHaveBeenCalledWith('severity 3');
+        });
+
+        it('should default to Warning for unknown values', () => {
+            getMock.mockReturnValue('UnknownValue');
+            const result = settingsManager.getSeverityLevel(5);
+            expect(result).toBe(vscode.DiagnosticSeverity.Warning);
+            expect(getMock).toHaveBeenCalledWith('severity 5');
+        });
+
+        it('should default to Warning when config value is null', () => {
+            getMock.mockReturnValue(null);
+            const result = settingsManager.getSeverityLevel(1);
+            expect(result).toBe(vscode.DiagnosticSeverity.Warning);
+            expect(getMock).toHaveBeenCalledWith('severity 1');
+        });
+
+        it('should default to Warning when config value is undefined', () => {
+            getMock.mockReturnValue(undefined);
+            const result = settingsManager.getSeverityLevel(2);
+            expect(result).toBe(vscode.DiagnosticSeverity.Warning);
+            expect(getMock).toHaveBeenCalledWith('severity 2');
+        });
+
+        it('should handle different severity numbers', () => {
+            getMock.mockReturnValue('Error');
+            expect(settingsManager.getSeverityLevel(1)).toBe(vscode.DiagnosticSeverity.Error);
+            expect(settingsManager.getSeverityLevel(2)).toBe(vscode.DiagnosticSeverity.Error);
+            expect(settingsManager.getSeverityLevel(5)).toBe(vscode.DiagnosticSeverity.Error);
+            expect(getMock).toHaveBeenCalledWith('severity 1');
+            expect(getMock).toHaveBeenCalledWith('severity 2');
+            expect(getMock).toHaveBeenCalledWith('severity 5');
+        });
+    });
+
     describe('Editor Settings', () => {
         it('should get codeLens setting', () => {
             getMock.mockReturnValue(true);

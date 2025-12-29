@@ -6,9 +6,9 @@ import {
     SpyLogger,
     SpyTelemetryService,
     SpyWindowManager,
-    StubCodeAnalyzer, StubFileHandler, StubVscodeWorkspace
+    StubCodeAnalyzer, StubFileHandler, StubSettingsManager, StubVscodeWorkspace
 } from "../stubs";
-import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
+import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {CodeAnalyzerRunAction, UNINSTANTIABLE_ENGINE_RULE} from "../../src/lib/code-analyzer-run-action";
 import {messages} from "../../src/lib/messages";
@@ -34,13 +34,15 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         taskWithProgressRunner = new FakeTaskWithProgressRunner();
         codeAnalyzer = new StubCodeAnalyzer();
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        const settingsManager = new StubSettingsManager();
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
+        const diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
         telemetryService = new SpyTelemetryService();
         logger = new SpyLogger();
         display = new SpyDisplay();
         windowManager = new SpyWindowManager();
         codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager,
-            telemetryService, logger, display, windowManager);
+            diagnosticFactory, telemetryService, logger, display, windowManager);
     });
 
     it('When scan results in violations that are not associated with a file location, then show violation as display messages', async () => {
@@ -90,8 +92,9 @@ describe('Tests for CodeAnalyzerRunAction', () => {
     });
 
     it('When scan happens, it should clear old Code Analyzer diagnostics before setting new ones but keep existing ApexGuru diagnostics', async () => {
-        diagnosticManager.addDiagnostics([
-            CodeAnalyzerDiagnostic.fromViolation({
+        const testDiagnosticFactory = new DiagnosticFactory(new StubSettingsManager());
+        const diags = [
+            testDiagnosticFactory.fromViolation({
                 rule: 'dummyRule1',
                 engine: APEX_GURU_ENGINE_NAME,
                 message: 'messageFromApexGuru',
@@ -101,7 +104,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
                 tags: [],
                 resources: []
             }),
-            CodeAnalyzerDiagnostic.fromViolation({
+            testDiagnosticFactory.fromViolation({
                 rule: 'dummyRule1',
                 engine: 'pmd',
                 message: 'messageFromPmd',
@@ -111,7 +114,8 @@ describe('Tests for CodeAnalyzerRunAction', () => {
                 tags: [],
                 resources: []
             })
-        ]);
+        ].filter((d): d is CodeAnalyzerDiagnostic => d !== null);
+        diagnosticManager.addDiagnostics(diags);
         codeAnalyzer.scanReturnValue = [
             createSampleViolation('New', 2, [{file: 'someFile.cls'}]), // Is sufficient to make this into a diagnostic
         ];

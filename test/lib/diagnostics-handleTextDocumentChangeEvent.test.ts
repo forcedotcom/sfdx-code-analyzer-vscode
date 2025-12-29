@@ -1,8 +1,9 @@
 import * as vscode from "vscode"; // The vscode module is mocked out. See: scripts/setup.jest.ts
 import {createTextDocument} from "jest-mock-vscode";
 import {FakeDiagnosticCollection} from "../vscode-stubs";
-import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
+import {CodeAnalyzerDiagnostic, CodeLocation, DiagnosticFactory, DiagnosticManager, DiagnosticManagerImpl, Violation} from "../../src/lib/diagnostics";
 import {createSampleCodeAnalyzerDiagnostic} from "../test-utils";
+import * as stubs from "../stubs";
 
 /*
     NOTE: Putting the tests for handleTextDocumentChangeEvent in its own file because it is a tricky algorithm and so
@@ -23,10 +24,13 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
 
     let diagnosticCollection: FakeDiagnosticCollection;
     let diagnosticManager: DiagnosticManager;
+    let diagnosticFactory: DiagnosticFactory;
 
     beforeEach(() => {
         diagnosticCollection = new FakeDiagnosticCollection();
-        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection);
+        const settingsManager = new stubs.StubSettingsManager();
+        diagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
+        diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
     });
 
     // Helper function to easily make an event for testing with a changeRange and replacementText
@@ -872,7 +876,8 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
+            if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
             const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
@@ -915,7 +920,8 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
+            if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
             const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
@@ -956,7 +962,8 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
+            if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
             const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
@@ -1006,7 +1013,8 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                 fixes: [],
                 suggestions: []
             }
-            const diag: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation);
+            const diag: CodeAnalyzerDiagnostic = diagnosticFactory.fromViolation(violation);
+            if (!diag) throw new Error('Failed to create diagnostic');
             diagnosticManager.addDiagnostics([diag]);
 
             const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
@@ -1104,8 +1112,9 @@ describe(`Tests for the the DiagnosticManager class's handleTextDocumentChangeEv
                     },
                 ]
             };
-            const diag1: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation1);
-            const diag2: CodeAnalyzerDiagnostic = CodeAnalyzerDiagnostic.fromViolation(violation2);
+            const diag1: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation1);
+            const diag2: CodeAnalyzerDiagnostic | null = diagnosticFactory.fromViolation(violation2);
+            if (!diag1 || !diag2) throw new Error('Failed to create diagnostics');
             diagnosticManager.addDiagnostics([diag1, diag2]);
 
             const docChangeEvent: vscode.TextDocumentChangeEvent = createTextDocumentChangeEventWith(
