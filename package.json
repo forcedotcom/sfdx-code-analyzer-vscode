@@ -4,6 +4,7 @@
     "description": "Salesforce Code Analyzer is a unified tool for source code analysis. Run Code Analyzer to scan multiple languages in your code and add diagnostic info to your code that describes the violations.",
     "o11yUploadEndpoint": "https://794testsite.my.site.com/byolwr/webruntime/log/metrics",
     "enableO11y": "true",
+    "productFeatureId": "aJCEE0000000mDK4AY",
     "bugs": {
         "url": "https://github.com/forcedotcom/code-analyzer/issues"
     },
