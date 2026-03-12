@@ -7,11 +7,36 @@ const SAMPLE_WORKSPACE = path.join(__dirname, '..', 'sampleWorkspace');
 const sampleFileUri1: vscode.Uri = vscode.Uri.file(path.join(SAMPLE_WORKSPACE, 'folder a', 'MyClassA1.cls'));
 const sampleFileUri2: vscode.Uri = vscode.Uri.file(path.join(SAMPLE_WORKSPACE, 'folder a', 'MyClassA2.cls'));
 
+const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
+const ACTIVATION_WAIT_TIMEOUT_MS = 30_000;
+const ACTIVATION_POLL_INTERVAL_MS = 100;
+
+/**
+ * Waits for the Code Analyzer extension to register its commands before running tests that execute them.
+ * In CI, Core 66.1.1 can take longer to install/activate; without this wait, tests may run before
+ * our extension has finished activating and commands are "not found".
+ */
+async function waitForCodeAnalyzerCommands(): Promise<void> {
+    const start = Date.now();
+    while (Date.now() - start < ACTIVATION_WAIT_TIMEOUT_MS) {
+        const commands = await vscode.commands.getCommands();
+        if (commands.includes(COMMAND_RUN_ON_ACTIVE_FILE)) {
+            return;
+        }
+        await new Promise(resolve => setTimeout(resolve, ACTIVATION_POLL_INTERVAL_MS));
+    }
+    throw new Error(
+        `Code Analyzer command '${COMMAND_RUN_ON_ACTIVE_FILE}' did not register within ${ACTIVATION_WAIT_TIMEOUT_MS}ms. ` +
+        'Extension may not have finished activating.'
+    );
+}
+
 suite('E2E Extension tests', function () {
     this.timeout(90000); // 90 seconds timeout for all tests in this suite
 
     setup(async () => {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+        await waitForCodeAnalyzerCommands();
     });
 
     test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', () => {
