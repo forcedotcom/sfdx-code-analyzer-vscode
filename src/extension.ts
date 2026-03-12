@@ -56,6 +56,26 @@ export type SFCAExtensionData = {
 export async function activate(context: vscode.ExtensionContext): Promise<SFCAExtensionData> {
     const highResStartTime: number = globalThis.performance.now();
 
+    // Prepare utilities (logger first so we can log activation progress for CI diagnostics)
+    const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
+    outputChannel.clear();
+    const logger: Logger = new LoggerImpl(outputChannel);
+    logger.log('[activation] Code Analyzer activate() started');
+
+    try {
+        return await activateInternal(context, highResStartTime, outputChannel, logger);
+    } catch (err) {
+        logger.error(`[activation] activate() failed: ${getErrorMessage(err)}`);
+        throw err;
+    }
+}
+
+async function activateInternal(
+    context: vscode.ExtensionContext,
+    highResStartTime: number,
+    outputChannel: vscode.LogOutputChannel,
+    logger: Logger
+): Promise<SFCAExtensionData> {
     // Helpers to keep the below code clean and so that we don't forget to push the disposables onto the context
     const registerCommand = (command: string, callback: (...args: unknown[]) => unknown): void => {
         context.subscriptions.push(vscode.commands.registerCommand(command, callback));
@@ -73,17 +93,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(listener));
     }
 
-    // Prepare utilities
-    const outputChannel: vscode.LogOutputChannel = vscode.window.createOutputChannel('Salesforce Code Analyzer', {log: true});
-    outputChannel.clear();
     const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
-    const logger: Logger = new LoggerImpl(outputChannel);
     const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
     
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
     const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
+    logger.log('[activation] external services (telemetry, org connection) resolved');
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
     
@@ -133,6 +150,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         const workspace: Workspace = await Workspace.fromTargetPaths([document.fileName], vscodeWorkspace, fileHandler);
         return codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
     });
+    logger.log('[activation] registered command: sfca.runOnActiveFile');
 
     // "Analyze On Open" and "Analyze on Save" functionality:
     onDidChangeActiveTextEditor(async (editor: vscode.TextEditor) => {
@@ -175,6 +193,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
         await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_SELECTED, workspace);
     });
+    logger.log('[activation] registered command: sfca.runOnSelected');
 
 
     // =================================================================================================================
@@ -305,7 +324,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
 
     telemetryService.sendExtensionActivationEvent(highResStartTime);
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
-    logger.log('Extension sfdx-code-analyzer-vscode activated.');
+    logger.log('[activation] Extension sfdx-code-analyzer-vscode activated.');
     return {
         logger: logger,
         settingsManager: settingsManager,

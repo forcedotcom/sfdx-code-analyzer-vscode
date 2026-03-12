@@ -11,6 +11,24 @@ const COMMAND_RUN_ON_ACTIVE_FILE = 'sfca.runOnActiveFile';
 const ACTIVATION_WAIT_TIMEOUT_MS = 30_000;
 const ACTIVATION_POLL_INTERVAL_MS = 100;
 
+const CODE_ANALYZER_EXTENSION_ID = 'salesforce.sfdx-code-analyzer-vscode';
+
+/**
+ * Gathers diagnostic info about the Code Analyzer extension and commands for CI failure analysis.
+ */
+function getActivationDiagnostics(): string {
+    const ext = vscode.extensions.getExtension(CODE_ANALYZER_EXTENSION_ID);
+    const extPath = ext?.extensionPath ?? '(extension not found)';
+    const isActive = ext?.isActive ?? false;
+    const pkg = ext?.packageJSON as { version?: string } | undefined;
+    const packageJsonVersion = pkg?.version ?? '(no version)';
+    return [
+        `extensionPath: ${extPath}`,
+        `isActive: ${isActive}`,
+        `packageJson.version: ${packageJsonVersion}`,
+    ].join(', ');
+}
+
 /**
  * Waits for the Code Analyzer extension to register its commands before running tests that execute them.
  * In CI, Core 66.1.1 can take longer to install/activate; without this wait, tests may run before
@@ -21,13 +39,17 @@ async function waitForCodeAnalyzerCommands(): Promise<void> {
     while (Date.now() - start < ACTIVATION_WAIT_TIMEOUT_MS) {
         const commands = await vscode.commands.getCommands();
         if (commands.includes(COMMAND_RUN_ON_ACTIVE_FILE)) {
+            console.log(`[E2E activation] Command registered after ${Date.now() - start}ms. ${getActivationDiagnostics()}`);
             return;
         }
         await new Promise(resolve => setTimeout(resolve, ACTIVATION_POLL_INTERVAL_MS));
     }
+    const diagnostics = getActivationDiagnostics();
+    const sfcaCommands = (await vscode.commands.getCommands()).filter((id: string) => id.startsWith('sfca.'));
     throw new Error(
         `Code Analyzer command '${COMMAND_RUN_ON_ACTIVE_FILE}' did not register within ${ACTIVATION_WAIT_TIMEOUT_MS}ms. ` +
-        'Extension may not have finished activating.'
+        `Extension may not have finished activating. Diagnostics: ${diagnostics}. ` +
+        `Commands starting with 'sfca.': ${sfcaCommands.length > 0 ? sfcaCommands.join(', ') : '(none)'}`
     );
 }
 
