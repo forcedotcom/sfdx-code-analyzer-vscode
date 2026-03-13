@@ -31,8 +31,12 @@ export default defineConfig({
      * A list of vscode extensions to install prior to running the tests.
      * Can be specified as 'owner.extension', 'owner.extension@2.3.15',
      * 'owner.extension@prerelease', or the path to a vsix file (/path/to/extension.vsix)
+     * Services is a required dependency of Core; installing it explicitly ensures Core can activate.
      */
-    installExtensions: ['salesforce.salesforcedx-vscode-core', 'salesforce.salesforcedx-vscode-services'],
+    installExtensions: [
+        'salesforce.salesforcedx-vscode-core',
+        'salesforce.salesforcedx-vscode-services'
+    ],
     
     /**
      * A list of launch arguments passed to VS Code executable, in addition to `--extensionDevelopmentPath`
