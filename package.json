@@ -62,7 +62,8 @@
         "typescript-eslint": "^8.56.0"
     },
     "extensionDependencies": [
-        "salesforce.salesforcedx-vscode-core"
+        "salesforce.salesforcedx-vscode-core",
+        "salesforce.salesforcedx-vscode-services"
     ],
     "scripts": {
         "postinstall": "cd end-to-end && npm install && cd ..",
