@@ -4,7 +4,9 @@ node_modules
 .vscode-test/
 *.vsix
 # Allow VSIXs in end-to-end/.vsix/ so PRs can commit them for E2E to use unpublished builds
-!end-to-end/.vsix/*.vsix
+!end-to-end/.vsix/
+!end-to-end/.vsix/salesforcedx-vscode-core.vsix
+!end-to-end/.vsix/salesforcedx-vscode-services.vsix
 .sfdx
 .idea
 **/.DS_Store
