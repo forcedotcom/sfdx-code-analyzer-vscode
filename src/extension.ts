@@ -83,7 +83,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // In E2E (sampleWorkspace), tee logs to a file so the test runner can read and print them in GHA CI.
     // Use workspace folder if it contains sampleWorkspace; else use path under extension (workspaceFolders can be empty at activation time).
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-    const fallbackE2eDir = context.extensionPath ? path.join(context.extensionPath, 'end-to-end', 'sampleWorkspace') : undefined;
+    const extRoot = context.extensionUri?.fsPath ?? context.extensionPath;
+    const fallbackE2eDir = extRoot ? path.join(extRoot, 'end-to-end', 'sampleWorkspace') : undefined;
     const e2eLogDir = workspaceFolder?.uri.fsPath.includes('sampleWorkspace')
         ? workspaceFolder.uri.fsPath
         : (fallbackE2eDir && fs.existsSync(fallbackE2eDir) ? fallbackE2eDir : undefined);

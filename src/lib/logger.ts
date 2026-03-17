@@ -92,6 +92,8 @@ export class E2ELogTee implements Logger {
 
     private append(level: string, msg: string): void {
         try {
+            const dir = path.dirname(this.logFilePath);
+            fs.mkdirSync(dir, { recursive: true });
             const line = `[${new Date().toISOString()}] [${level}] ${msg}\n`;
             fs.appendFileSync(this.logFilePath, line);
         } catch {
