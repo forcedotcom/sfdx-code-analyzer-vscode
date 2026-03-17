@@ -8,6 +8,17 @@ fs.mkdirSync(extensionsDir, { recursive: true });
 
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),'sfca-'));
 
+// Optional: use unpublished VSIXs from workflow (e.g. download-artifact to end-to-end/.vsix/).
+// Set paths in workflow or leave unset to use marketplace extensions.
+const vsixDir = path.resolve(import.meta.dirname, '.vsix');
+const servicesVsix = process.env.SERVICES_VSIX_PATH ?? (fs.existsSync(path.join(vsixDir, 'salesforcedx-vscode-services.vsix')) ? path.join(vsixDir, 'salesforcedx-vscode-services.vsix') : null);
+const coreVsix = process.env.CORE_VSIX_PATH ?? (fs.existsSync(path.join(vsixDir, 'salesforcedx-vscode-core.vsix')) ? path.join(vsixDir, 'salesforcedx-vscode-core.vsix') : null);
+
+const installExtensions = [
+    servicesVsix ?? 'salesforce.salesforcedx-vscode-services',
+    coreVsix ?? 'salesforce.salesforcedx-vscode-core'
+];
+
 export default defineConfig({
     /**
      * A file or list of files in which to find tests. Non-absolute paths will
@@ -29,14 +40,10 @@ export default defineConfig({
 
     /**
      * A list of vscode extensions to install prior to running the tests.
-     * Can be specified as 'owner.extension', 'owner.extension@2.3.15',
-     * 'owner.extension@prerelease', or the path to a vsix file (/path/to/extension.vsix)
-     * List order: install Services first (Core's dependency), then Core, so the dependency is ready when Core activates.
+     * Uses unpublished VSIXs from .vsix/ or env SERVICES_VSIX_PATH/CORE_VSIX_PATH when present;
+     * otherwise installs from marketplace. List order: Services first, then Core.
      */
-    installExtensions: [
-        'salesforce.salesforcedx-vscode-services',
-        'salesforce.salesforcedx-vscode-core'
-    ],
+    installExtensions,
     
     /**
      * A list of launch arguments passed to VS Code executable, in addition to `--extensionDevelopmentPath`
