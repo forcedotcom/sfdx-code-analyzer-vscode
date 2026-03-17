@@ -80,9 +80,16 @@ export class FixSuggestion {
         const beforeLines: string[] = originalLines.slice(0, range.start.line);
         const afterLines: string[] = originalLines.slice(range.end.line + 1);
 
+        // When range starts at char 0 (full-line replacement), use getFixedCode() which applies
+        // indentation normalization. For partial-range replacements, use fixedCode directly since
+        // beforeText already provides the correct positioning.
+        const replacementCode: string = range.start.character === 0
+            ? this.getFixedCode()
+            : this.codeFixData.fixedCode;
+
         return [
             ...beforeLines,
-            beforeText + this.codeFixData.fixedCode + afterText,
+            beforeText + replacementCode + afterText,
             ...afterLines
         ].join(this.getNewLine());
     }
