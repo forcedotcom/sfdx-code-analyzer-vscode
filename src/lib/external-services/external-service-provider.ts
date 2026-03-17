@@ -149,9 +149,13 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
         } catch (err) {
             const msg = `Could not establish Org Connection service due to unexpected error:\n${getErrorMessageWithStack(err)}`;
             this.logger.error(msg);
-            // Log to stderr so CI (e.g. GHA) shows the reason when activation fails or falls back to NoOp.
-            console.error(`[sfdx-code-analyzer-vscode] ${msg}`);
-            return new NoOpOrgConnectionService();
+            // Extension host stderr is often not forwarded to CI; write to workspace so E2E tests can surface it.
+            const wf = vscode.workspace.workspaceFolders?.[0];
+            if (wf) {
+                const uri = vscode.Uri.joinPath(wf.uri, '.sfca-activation-error.txt');
+                void vscode.workspace.fs.writeFile(uri, Buffer.from(msg, 'utf8')).then(() => {}, () => {});
+            }
+            throw err;
         }
     }
 
