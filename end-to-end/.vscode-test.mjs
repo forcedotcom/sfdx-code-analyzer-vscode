@@ -19,6 +19,10 @@ const installExtensions = [
     coreVsix ?? 'salesforce.salesforcedx-vscode-core'
 ];
 
+// Log source so CI logs show whether local VSIX or marketplace is used
+console.log('[E2E] Core:', coreVsix ? `local VSIX (${coreVsix})` : 'marketplace');
+console.log('[E2E] Services:', servicesVsix ? `local VSIX (${servicesVsix})` : 'marketplace');
+
 export default defineConfig({
     /**
      * A file or list of files in which to find tests. Non-absolute paths will
