@@ -152,6 +152,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "-w", "/my/project/dummyFile2.cls",
                     "-w", "/my/project/subfolder", // Should not be expanded to files - should stay as raw folder
                     "-r", "Recommended",
+                    "--include-fixes",
+                    "--include-suggestions",
                     "-f", prePopulatedResultsJsonFile
                 ]);
 
@@ -182,6 +184,8 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "-t", "/my/project/dummyFile1.cls",
                     "-t", "/my/project/dummyFile2.cls",
                     "-r", "Recommended",
+                    "--include-fixes",
+                    "--include-suggestions",
                     "-f", prePopulatedResultsJsonFile
                 ]);
 
@@ -213,10 +217,36 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "-t", "/my/project/dummyFile2.cls",
                     "-t", "/my/project/subfolder",
                     "-r", "Recommended",
+                    "--include-fixes",
+                    "--include-suggestions",
                     "-f", prePopulatedResultsJsonFile
                 ]);
 
                 expect(violations).toEqual([expectedViolation1, expectedViolation2]);
+            });
+
+            it('When scan results contain fixes and suggestions with relative paths, then their locations are made absolute', async () => {
+                vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
+
+                const prePopulatedResultsWithFixesJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output-with-fixes.json');
+                fileHandler.createTempFileReturnValue = prePopulatedResultsWithFixesJsonFile;
+
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/dummyFile1.js'], vscodeWorkspace, fileHandler);
+
+                const violations: Violation[] = await codeAnalyzer.scan(workspace);
+
+                // The first violation should have fixes and suggestions with absolute paths
+                expect(violations[0].fixes).toHaveLength(1);
+                expect(violations[0].fixes[0].location.file).toEqual(path.normalize("/my/project/dummyFile1.js"));
+
+                expect(violations[0].suggestions).toHaveLength(1);
+                expect(violations[0].suggestions[0].location.file).toEqual(path.normalize("/my/project/dummyFile1.js"));
+
+                // The second violation should have no fixes or suggestions
+                expect(violations[1].fixes).toBeUndefined();
+                expect(violations[1].suggestions).toBeUndefined();
             });
 
             // TODO: More tests coming soon...
