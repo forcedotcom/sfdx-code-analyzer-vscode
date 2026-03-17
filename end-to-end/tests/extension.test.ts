@@ -59,13 +59,11 @@ suite('E2E Extension tests', function () {
     });
 
     test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', async () => {
-        const extension: vscode.Extension<unknown>  = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
-        // if (!extension) {
-        //     throw new Error('salesforce.sfdx-code-analyzer-vscode extension not found');
-        // }
-        // await extension.activate();
-        console.log('extension',JSON.stringify(extension, null, 2));
-        console.log('extension.isActive', extension.isActive);
+        const extension = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        if (!extension) {
+            throw new Error('salesforce.sfdx-code-analyzer-vscode extension not found');
+        }
+        await extension.activate();
         expect(extension.isActive).equals(true);
     });
 

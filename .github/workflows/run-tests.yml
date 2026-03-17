@@ -3,15 +3,15 @@ on:
   workflow_call:
     inputs:
       use-tarballs:
-        description: 'If true, install via tarball'
+        description: "If true, install via tarball"
         required: false
         type: boolean
         default: false
       tarball-suffix:
-        description: 'The suffix attached to the name of the code-analyzer tarball'
+        description: "The suffix attached to the name of the code-analyzer tarball"
         required: false
         type: string
-        default: 'dev'
+        default: "dev"
       target-branch:
         description: "What branch should be checked out?"
         required: false
@@ -26,28 +26,28 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: 'Check out the code'
+      - name: "Check out the code"
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target-branch }}
-      - name: 'Set up NodeJS'
+      - name: "Set up NodeJS"
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*' # Node LTS should always be fine.
-      - name: 'Install Java v11'
+          node-version: "lts/*" # Node LTS should always be fine.
+      - name: "Install Java v11"
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '11' # Always use Java v11 for running tests.
+          distribution: "temurin"
+          java-version: "11" # Always use Java v11 for running tests.
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
-      - name: 'Install node module dependencies'
+      - name: "Install node module dependencies"
         run: npm ci
       # We'll need to install the CLI tool, since some of the tests
       # are integration tests.
 
-      - name: 'Compile extension'
+      - name: "Compile extension"
         run: npm run build
 
       - name: Install SF CLI
@@ -85,14 +85,16 @@ jobs:
         if: ${{ inputs.use-tarballs == false }}
         run: sf plugins install code-analyzer
       # Run the tests. (Linux and non-Linux need slightly different commands.)
-      - name: 'Run Tests (Linux)'
+      - name: "Run Tests (Linux)"
         run: xvfb-run -a npm run test
         if: runner.os == 'Linux'
-      - name: 'Run Tests (non-Linux)'
+      - name: "Run Tests (non-Linux)"
         run: npm run test
         if: runner.os != 'Linux'
       # Print extension E2E log so activation/extension logs are visible in GHA (extension host stdout is not captured).
-      - name: 'Print extension E2E log'
+      # When the Core dependency fails to activate, our extension's activate() never runs, so there is no .sfca-e2e.log;
+      # VS Code writes extension-host (and dependency) errors to user-data-dir/logs/ — we print that next.
+      - name: "Print extension E2E log"
         if: always()
         shell: bash
         run: |
@@ -101,10 +103,30 @@ jobs:
           echo "##[group]Extension log / activation error (if present)"
           if [ -f "$E2E_LOG" ]; then echo "--- .sfca-e2e.log ---"; cat "$E2E_LOG"; fi
           if [ -f "$ACTIVATION_ERR" ]; then echo "--- .sfca-activation-error.txt ---"; cat "$ACTIVATION_ERR"; fi
-          if [ ! -f "$E2E_LOG" ] && [ ! -f "$ACTIVATION_ERR" ]; then echo "(no extension log or activation error file)"; fi
+          if [ ! -f "$E2E_LOG" ] && [ ! -f "$ACTIVATION_ERR" ]; then echo "(no .sfca-e2e.log — extension activate() did not run; see VS Code extension-host logs below)"; fi
+          echo "##[endgroup]"
+      # When Core ("Salesforce CLI") fails to activate, VS Code never runs our extension; extension-host logs show why.
+      - name: "Print VS Code extension-host logs"
+        if: always()
+        shell: bash
+        run: |
+          LOGS_DIR="end-to-end/sampleWorkspace/.vscode-test-user-data/logs"
+          echo "##[group]VS Code logs (extension host / dependency activation)"
+          if [ -d "$LOGS_DIR" ]; then
+            LATEST=$(find "$LOGS_DIR" -maxdepth 1 -type d -name '20*' | sort -r | head -1)
+            if [ -n "$LATEST" ]; then
+              find "$LATEST" -name '*.log' -type f | sort | while read -r f; do
+                echo "--- $f ---"; cat "$f"
+              done
+            else
+              echo "(no timestamped log session under $LOGS_DIR)"
+            fi
+          else
+            echo "(no VS Code logs dir: $LOGS_DIR)"
+          fi
           echo "##[endgroup]"
       # Lint, to make sure we're following best practices.
-      - name: 'Lint'
+      - name: "Lint"
         run: npm run lint
       # Upload the code coverage from the test as an artifact with
       # the name 'code-coverage-[whatever the OS is]'.
@@ -114,4 +136,3 @@ jobs:
         with:
           name: code-coverage-${{ runner.os }}
           path: ./coverage
-

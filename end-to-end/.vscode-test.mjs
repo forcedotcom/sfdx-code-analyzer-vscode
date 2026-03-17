@@ -9,7 +9,9 @@ process.env.SFCA_E2E_LOG_DIR = path.resolve(import.meta.dirname, 'sampleWorkspac
 const extensionsDir = path.resolve(import.meta.dirname, '.vscode-test', 'extensions');
 fs.mkdirSync(extensionsDir, { recursive: true });
 
-const tempDir = fs.mkdtempSync(path.join(os.tmpdir(),'sfca-'));
+// Use a path under the repo so GHA can cat VS Code extension-host logs when the Core dependency fails to activate.
+const userDataDir = path.join(import.meta.dirname, 'sampleWorkspace', '.vscode-test-user-data');
+fs.mkdirSync(userDataDir, { recursive: true });
 
 // Optional: use unpublished VSIXs from workflow (e.g. download-artifact to end-to-end/.vsix/).
 // Set paths in workflow or leave unset to use marketplace extensions.
@@ -64,6 +66,6 @@ export default defineConfig({
      */
     launchArgs: [
         `--extensions-dir=${extensionsDir}`,
-        `--user-data-dir=${tempDir}`
+        `--user-data-dir=${userDataDir}`
     ]
 });

@@ -10,6 +10,8 @@ node_modules
 .sfdx
 .sfca-activation-error.txt
 .sfca-e2e.log
+# VS Code user-data-dir used by E2E so we can cat extension-host logs in CI
+end-to-end/sampleWorkspace/.vscode-test-user-data/
 .idea
 **/.DS_Store
 coverage
