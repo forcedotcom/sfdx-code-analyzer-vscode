@@ -17,14 +17,28 @@ suite('E2E Extension tests', function () {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     });
 
-    suiteTeardown(() => {
+    suiteTeardown(async () => {
         // Extension host stdout may not be captured in GHA; extension tees logs to globalStorageUri.
-        // Read and print so extension logs appear in CI.
+        // Read and print so extension logs appear in CI. Prefer path from extension command so we don't depend on exports shape.
         const lines: string[] = ['[E2E] Suite teardown — extension log / activation error:'];
-        const ext = vscode.extensions.getExtension<{ context: vscode.ExtensionContext }>('salesforce.sfdx-code-analyzer-vscode');
-        const logDir = ext?.exports?.context?.globalStorageUri?.fsPath;
-        const logPath = logDir ? path.join(logDir, E2E_LOG_FILENAME) : null;
-        if (logPath && fs.existsSync(logPath)) {
+        let logPath: string | null = null;
+        try {
+            const fromCommand = await vscode.commands.executeCommand<string>('sfca.getE2eLogPath');
+            if (fromCommand && fs.existsSync(fromCommand)) {
+                logPath = fromCommand;
+            }
+        } catch {
+            // command may not exist in non-E2E runs
+        }
+        if (!logPath) {
+            const ext = vscode.extensions.getExtension<{ context: vscode.ExtensionContext }>('salesforce.sfdx-code-analyzer-vscode');
+            const logDir = ext?.exports?.context?.globalStorageUri?.fsPath;
+            const fallbackPath = logDir ? path.join(logDir, E2E_LOG_FILENAME) : null;
+            if (fallbackPath && fs.existsSync(fallbackPath)) {
+                logPath = fallbackPath;
+            }
+        }
+        if (logPath) {
             lines.push(fs.readFileSync(logPath, 'utf8'));
         } else {
             lines.push('(no .sfca-e2e.log)');

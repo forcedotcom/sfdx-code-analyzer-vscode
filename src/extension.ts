@@ -14,7 +14,7 @@ import {CodeAnalyzerDiagnostic, DiagnosticManager, DiagnosticManagerImpl, ClearD
 import {messages} from './lib/messages';
 import * as Constants from './lib/constants';
 import {ExternalServiceProvider} from "./lib/external-services/external-service-provider";
-import {Logger, LoggerImpl, E2ELogTee} from "./lib/logger";
+import {Logger, LoggerImpl, E2ELogTee, E2E_LOG_FILENAME} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {CodeAnalyzerRunAction} from "./lib/code-analyzer-run-action";
 import {A4DFixActionProvider} from "./lib/agentforce/a4d-fix-action-provider";
@@ -86,10 +86,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const fallbackE2eDir = extRoot ? path.join(extRoot, 'end-to-end', 'sampleWorkspace') : undefined;
     const isE2e = workspaceFolder?.uri.fsPath.includes('sampleWorkspace') || !!fallbackE2eDir;
     const e2eLogDir = isE2e && context.globalStorageUri ? context.globalStorageUri.fsPath : undefined;
+    const e2eLogPath = e2eLogDir ? path.join(e2eLogDir, E2E_LOG_FILENAME) : undefined;
     if (e2eLogDir) {
         logger = new E2ELogTee(logger, e2eLogDir);
         logger.log('activate() started (E2E log tee active)');
     }
+    registerCommand('sfca.getE2eLogPath', (): string | undefined => e2eLogPath);
     const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
     

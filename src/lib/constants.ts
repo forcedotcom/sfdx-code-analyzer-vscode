@@ -21,6 +21,8 @@ export const COMMAND_RUN_APEX_GURU_ON_ACTIVE_FILE = 'sfca.runApexGuruAnalysisOnC
 
 // other command names (which do not have to be in the package.json):
 export const COMMAND_COPY_SUGGESTION = 'sfca.copySuggestion';
+/** E2E only: returns path to .sfca-e2e.log for CI log capture */
+export const COMMAND_GET_E2E_LOG_PATH = 'sfca.getE2eLogPath';
 
 // commands that are only invoked by quick fixes (which do not need to be declared in package.json since they can be registered dynamically)
 export const QF_COMMAND_CLEAR_DIAGNOSTICS = 'sfca.clearDiagnostics';
