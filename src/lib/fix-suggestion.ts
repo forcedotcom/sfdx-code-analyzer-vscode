@@ -8,7 +8,6 @@ export type CodeFixData = {
     diagnostic: vscode.Diagnostic
 
     // The range of the original context within the document that is suggested to be replaced with a code fix
-    // IMPORTANT: It is assumed that this range includes the entire start and end lines and not partial
     rangeToBeFixed: vscode.Range
 
     // The fixed code that should replace the original context to be replaced
@@ -69,14 +68,22 @@ export class FixSuggestion {
     }
 
     getFixedDocumentCode(): string {
-        const originalLines: string[] = this.getOriginalDocumentCode().split(/\r?\n/);
-        const originalBeforeLines: string[] = originalLines.slice(0, this.codeFixData.rangeToBeFixed.start.line);
-        const originalAfterLines: string[] = originalLines.slice(this.codeFixData.rangeToBeFixed.end.line+1);
+        const range: vscode.Range = this.codeFixData.rangeToBeFixed;
+        const originalText: string = this.getOriginalDocumentCode();
+        const originalLines: string[] = originalText.split(/\r?\n/);
+
+        // Get the text before the range on the start line
+        const beforeText: string = originalLines[range.start.line].substring(0, range.start.character);
+        // Get the text after the range on the end line
+        const afterText: string = originalLines[range.end.line].substring(range.end.character);
+
+        const beforeLines: string[] = originalLines.slice(0, range.start.line);
+        const afterLines: string[] = originalLines.slice(range.end.line + 1);
 
         return [
-            ... originalBeforeLines,
-            ... this.getFixedCodeLines(),
-            ... originalAfterLines
+            ...beforeLines,
+            beforeText + this.codeFixData.fixedCode + afterText,
+            ...afterLines
         ].join(this.getNewLine());
     }
 
