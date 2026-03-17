@@ -147,8 +147,11 @@ export class ExternalServiceProvider implements LLMServiceProvider, TelemetrySer
             return new LiveOrgConnectionService(workspaceContext);
 
         } catch (err) {
-            this.logger.error(`Could not establish Org Connection service due to unexpected error:\n${getErrorMessageWithStack(err)}`);
-            throw err;
+            const msg = `Could not establish Org Connection service due to unexpected error:\n${getErrorMessageWithStack(err)}`;
+            this.logger.error(msg);
+            // Log to stderr so CI (e.g. GHA) shows the reason when activation fails or falls back to NoOp.
+            console.error(`[sfdx-code-analyzer-vscode] ${msg}`);
+            return new NoOpOrgConnectionService();
         }
     }
 
