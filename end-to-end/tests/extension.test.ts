@@ -16,7 +16,7 @@ suite('E2E Extension tests', function () {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
     });
 
-    after(() => {
+    suiteTeardown(() => {
         // Extension host stdout is not captured in GHA; extension tees logs to this file.
         // Printing it here makes extension logs visible in CI.
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
