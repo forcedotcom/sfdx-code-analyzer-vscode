@@ -1,8 +1,10 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import {expect} from 'chai';
 
 const SAMPLE_WORKSPACE = path.join(__dirname, '..', 'sampleWorkspace');
+const E2E_LOG_FILENAME = '.sfca-e2e.log';
 
 const sampleFileUri1: vscode.Uri = vscode.Uri.file(path.join(SAMPLE_WORKSPACE, 'folder a', 'MyClassA1.cls'));
 const sampleFileUri2: vscode.Uri = vscode.Uri.file(path.join(SAMPLE_WORKSPACE, 'folder a', 'MyClassA2.cls'));
@@ -12,6 +14,17 @@ suite('E2E Extension tests', function () {
 
     setup(async () => {
         await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+    });
+
+    after(() => {
+        // Extension host stdout is not captured in GHA; extension tees logs to this file.
+        // Printing it here makes extension logs visible in CI.
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
+        const logPath = path.join(workspaceRoot, E2E_LOG_FILENAME);
+        if (fs.existsSync(logPath)) {
+            const content = fs.readFileSync(logPath, 'utf8');
+            console.log('[E2E] Extension log (.sfca-e2e.log):\n' + content);
+        }
     });
 
     test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', () => {

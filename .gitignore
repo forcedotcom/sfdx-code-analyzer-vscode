@@ -9,6 +9,7 @@ node_modules
 !end-to-end/.vsix/salesforcedx-vscode-services.vsix
 .sfdx
 .sfca-activation-error.txt
+.sfca-e2e.log
 .idea
 **/.DS_Store
 coverage
