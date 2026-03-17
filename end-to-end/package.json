@@ -15,6 +15,6 @@
     },
     "scripts": {
         "pretest": "tsc -p .",
-        "test": "vscode-test"
+        "test": "node run-e2e.mjs"
     }
 }
