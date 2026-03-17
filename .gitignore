@@ -3,6 +3,8 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+# Allow VSIXs in end-to-end/.vsix/ so PRs can commit them for E2E to use unpublished builds
+!end-to-end/.vsix/*.vsix
 .sfdx
 .idea
 **/.DS_Store
