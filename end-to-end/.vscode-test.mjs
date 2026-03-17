@@ -3,6 +3,9 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { defineConfig } from '@vscode/test-cli';
 
+// So the extension can write E2E logs to a path the workflow can cat (extension host inherits env).
+process.env.SFCA_E2E_LOG_DIR = path.resolve(import.meta.dirname, 'sampleWorkspace');
+
 const extensionsDir = path.resolve(import.meta.dirname, '.vscode-test', 'extensions');
 fs.mkdirSync(extensionsDir, { recursive: true });
 
