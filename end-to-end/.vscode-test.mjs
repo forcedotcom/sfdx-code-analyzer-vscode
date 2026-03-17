@@ -18,16 +18,18 @@ fs.mkdirSync(userDataDir, { recursive: true });
 const vsixDir = path.resolve(import.meta.dirname, '.vsix');
 const servicesVsix = process.env.SERVICES_VSIX_PATH ?? (fs.existsSync(path.join(vsixDir, 'salesforcedx-vscode-services.vsix')) ? path.join(vsixDir, 'salesforcedx-vscode-services.vsix') : null);
 const coreVsix = process.env.CORE_VSIX_PATH ?? (fs.existsSync(path.join(vsixDir, 'salesforcedx-vscode-core.vsix')) ? path.join(vsixDir, 'salesforcedx-vscode-core.vsix') : null);
+const metadataVsix = process.env.METADATA_VSIX_PATH ?? (fs.existsSync(path.join(vsixDir, 'salesforcedx-vscode-metadata.vsix')) ? path.join(vsixDir, 'salesforcedx-vscode-metadata.vsix') : null);
 
 const installExtensions = [
     servicesVsix ?? 'salesforce.salesforcedx-vscode-services',
-    coreVsix ?? 'salesforce.salesforcedx-vscode-core'
+    coreVsix ?? 'salesforce.salesforcedx-vscode-core',
+    metadataVsix ?? 'salesforce.salesforcedx-vscode-metadata'
 ];
 
 // Log source so CI logs show whether local VSIX or marketplace is used
 console.log('[E2E] Core:', coreVsix ? `local VSIX (${coreVsix})` : 'marketplace');
 console.log('[E2E] Services:', servicesVsix ? `local VSIX (${servicesVsix})` : 'marketplace');
-
+console.log('[E2E] Metadata:', metadataVsix ? `local VSIX (${metadataVsix})` : 'marketplace');
 export default defineConfig({
     /**
      * A file or list of files in which to find tests. Non-absolute paths will

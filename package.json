@@ -63,8 +63,8 @@
     },
     "extensionDependencies": [
         "salesforce.salesforcedx-vscode-services",
+        "salesforce.salesforcedx-vscode-metadata",
         "salesforce.salesforcedx-vscode-core"
-        
     ],
     "scripts": {
         "postinstall": "cd end-to-end && npm install && cd ..",

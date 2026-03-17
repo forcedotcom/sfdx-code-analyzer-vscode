@@ -7,6 +7,7 @@ node_modules
 !end-to-end/.vsix/
 !end-to-end/.vsix/salesforcedx-vscode-core.vsix
 !end-to-end/.vsix/salesforcedx-vscode-services.vsix
+!end-to-end/.vsix/salesforcedx-vscode-metadata.vsix
 .sfdx
 .sfca-activation-error.txt
 .sfca-e2e.log
