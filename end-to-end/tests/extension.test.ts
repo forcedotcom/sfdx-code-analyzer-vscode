@@ -18,8 +18,9 @@ suite('E2E Extension tests', function () {
     });
 
     suiteTeardown(async () => {
-        // Extension host stdout may not be captured in GHA; extension tees logs to globalStorageUri.
+        // Extension host stdout may not be captured in GHA; extension tees logs to globalStorageUri and/or workspace.
         // Read and print so extension logs appear in CI. Prefer path from extension command so we don't depend on exports shape.
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
         const lines: string[] = ['[E2E] Suite teardown — extension log / activation error:'];
         let logPath: string | null = null;
         try {
@@ -38,12 +39,17 @@ suite('E2E Extension tests', function () {
                 logPath = fallbackPath;
             }
         }
+        if (!logPath) {
+            const workspaceLogPath = path.join(workspaceRoot, E2E_LOG_FILENAME);
+            if (fs.existsSync(workspaceLogPath)) {
+                logPath = workspaceLogPath;
+            }
+        }
         if (logPath) {
             lines.push(fs.readFileSync(logPath, 'utf8'));
         } else {
             lines.push('(no .sfca-e2e.log)');
         }
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
         const activationErrorPath = path.join(workspaceRoot, ACTIVATION_ERROR_FILENAME);
         if (fs.existsSync(activationErrorPath)) {
             lines.push('Activation error file (.sfca-activation-error.txt):');
@@ -52,8 +58,12 @@ suite('E2E Extension tests', function () {
         console.log(lines.join('\n'));
     });
 
-    test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', () => {
-        const extension: vscode.Extension<unknown> = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+    test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', async () => {
+        const extension = vscode.extensions.getExtension('salesforce.sfdx-code-analyzer-vscode');
+        if (!extension) {
+            throw new Error('salesforce.sfdx-code-analyzer-vscode extension not found');
+        }
+        await extension.activate();
         expect(extension.isActive).equals(true);
     });
 
