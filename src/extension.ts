@@ -6,7 +6,6 @@
  */
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import {SettingsManager, SettingsManagerImpl} from './lib/settings';
@@ -82,12 +81,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     let logger: Logger = new LoggerImpl(outputChannel);
     // In E2E (sampleWorkspace), tee logs to a file so the test runner can read and print them in GHA CI.
     // Use workspace folder if it contains sampleWorkspace; else use path under extension (workspaceFolders can be empty at activation time).
+    // E2ELogTee creates the log dir if needed, so we always use the fallback when we have an extension path.
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     const extRoot = context.extensionUri?.fsPath ?? context.extensionPath;
     const fallbackE2eDir = extRoot ? path.join(extRoot, 'end-to-end', 'sampleWorkspace') : undefined;
     const e2eLogDir = workspaceFolder?.uri.fsPath.includes('sampleWorkspace')
         ? workspaceFolder.uri.fsPath
-        : (fallbackE2eDir && fs.existsSync(fallbackE2eDir) ? fallbackE2eDir : undefined);
+        : fallbackE2eDir;
     if (e2eLogDir) {
         logger = new E2ELogTee(logger, e2eLogDir);
         logger.log('activate() started (E2E log tee active)');
