@@ -5,6 +5,7 @@ import {expect} from 'chai';
 
 const SAMPLE_WORKSPACE = path.join(__dirname, '..', 'sampleWorkspace');
 const E2E_LOG_FILENAME = '.sfca-e2e.log';
+const ACTIVATION_ERROR_FILENAME = '.sfca-activation-error.txt';
 
 const sampleFileUri1: vscode.Uri = vscode.Uri.file(path.join(SAMPLE_WORKSPACE, 'folder a', 'MyClassA1.cls'));
 const sampleFileUri2: vscode.Uri = vscode.Uri.file(path.join(SAMPLE_WORKSPACE, 'folder a', 'MyClassA2.cls'));
@@ -17,14 +18,22 @@ suite('E2E Extension tests', function () {
     });
 
     suiteTeardown(() => {
-        // Extension host stdout is not captured in GHA; extension tees logs to this file.
-        // Printing it here makes extension logs visible in CI.
+        // Extension host stdout may not be captured in GHA; extension tees logs to a file.
+        // Reading and printing here can make extension logs visible in CI (if runner forwards extension host stdout).
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
         const logPath = path.join(workspaceRoot, E2E_LOG_FILENAME);
+        const activationErrorPath = path.join(workspaceRoot, ACTIVATION_ERROR_FILENAME);
+        const lines: string[] = ['[E2E] Suite teardown — extension log / activation error:'];
         if (fs.existsSync(logPath)) {
-            const content = fs.readFileSync(logPath, 'utf8');
-            console.log('[E2E] Extension log (.sfca-e2e.log):\n' + content);
+            lines.push(fs.readFileSync(logPath, 'utf8'));
+        } else {
+            lines.push('(no .sfca-e2e.log)');
         }
+        if (fs.existsSync(activationErrorPath)) {
+            lines.push('Activation error file (.sfca-activation-error.txt):');
+            lines.push(fs.readFileSync(activationErrorPath, 'utf8'));
+        }
+        console.log(lines.join('\n'));
     });
 
     test('Extension should be activated (since the sampleWorkspace has sfdx-project.json file)', () => {

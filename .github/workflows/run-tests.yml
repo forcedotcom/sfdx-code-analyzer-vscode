@@ -91,6 +91,18 @@ jobs:
       - name: 'Run Tests (non-Linux)'
         run: npm run test
         if: runner.os != 'Linux'
+      # Print extension E2E log so activation/extension logs are visible in GHA (extension host stdout is not captured).
+      - name: 'Print extension E2E log'
+        if: always()
+        shell: bash
+        run: |
+          E2E_LOG="end-to-end/sampleWorkspace/.sfca-e2e.log"
+          ACTIVATION_ERR="end-to-end/sampleWorkspace/.sfca-activation-error.txt"
+          echo "##[group]Extension log / activation error (if present)"
+          if [ -f "$E2E_LOG" ]; then echo "--- .sfca-e2e.log ---"; cat "$E2E_LOG"; fi
+          if [ -f "$ACTIVATION_ERR" ]; then echo "--- .sfca-activation-error.txt ---"; cat "$ACTIVATION_ERR"; fi
+          if [ ! -f "$E2E_LOG" ] && [ ! -f "$ACTIVATION_ERR" ]; then echo "(no extension log or activation error file)"; fi
+          echo "##[endgroup]"
       # Lint, to make sure we're following best practices.
       - name: 'Lint'
         run: npm run lint

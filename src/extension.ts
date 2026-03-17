@@ -82,6 +82,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     if (workspaceFolder?.uri.fsPath.includes('sampleWorkspace')) {
         logger = new E2ELogTee(logger, workspaceFolder.uri.fsPath);
+        logger.log('activate() started (E2E log tee active)');
     }
     const display: VSCodeDisplay = new VSCodeDisplay(logger);
     const settingsManager = new SettingsManagerImpl();
