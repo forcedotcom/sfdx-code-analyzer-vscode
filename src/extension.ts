@@ -79,15 +79,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     outputChannel.clear();
     const diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('sfca');
     let logger: Logger = new LoggerImpl(outputChannel);
-    // In E2E (sampleWorkspace), tee logs to a file so the test runner can read and print them in GHA CI.
-    // Prefer SFCA_E2E_LOG_DIR (set by E2E config) so the path matches what the workflow cats; else use workspace or extension path.
+    // In E2E (sampleWorkspace), tee logs to globalStorageUri so the test can read and print them in GHA CI.
+    // Workspace/env paths often aren't writable or visible to the extension host; globalStorageUri is always writable.
     const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
     const extRoot = context.extensionUri?.fsPath ?? context.extensionPath;
     const fallbackE2eDir = extRoot ? path.join(extRoot, 'end-to-end', 'sampleWorkspace') : undefined;
-    const envE2eLogDir = process.env.SFCA_E2E_LOG_DIR;
-    const e2eLogDir = envE2eLogDir
-        ? (path.isAbsolute(envE2eLogDir) ? envE2eLogDir : path.join(extRoot ?? '', envE2eLogDir))
-        : (workspaceFolder?.uri.fsPath.includes('sampleWorkspace') ? workspaceFolder.uri.fsPath : fallbackE2eDir);
+    const isE2e = workspaceFolder?.uri.fsPath.includes('sampleWorkspace') || !!fallbackE2eDir;
+    const e2eLogDir = isE2e && context.globalStorageUri ? context.globalStorageUri.fsPath : undefined;
     if (e2eLogDir) {
         logger = new E2ELogTee(logger, e2eLogDir);
         logger.log('activate() started (E2E log tee active)');

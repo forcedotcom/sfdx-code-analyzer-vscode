@@ -18,17 +18,19 @@ suite('E2E Extension tests', function () {
     });
 
     suiteTeardown(() => {
-        // Extension host stdout may not be captured in GHA; extension tees logs to a file.
-        // Reading and printing here can make extension logs visible in CI (if runner forwards extension host stdout).
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
-        const logPath = path.join(workspaceRoot, E2E_LOG_FILENAME);
-        const activationErrorPath = path.join(workspaceRoot, ACTIVATION_ERROR_FILENAME);
+        // Extension host stdout may not be captured in GHA; extension tees logs to globalStorageUri.
+        // Read and print so extension logs appear in CI.
         const lines: string[] = ['[E2E] Suite teardown — extension log / activation error:'];
-        if (fs.existsSync(logPath)) {
+        const ext = vscode.extensions.getExtension<{ context: vscode.ExtensionContext }>('salesforce.sfdx-code-analyzer-vscode');
+        const logDir = ext?.exports?.context?.globalStorageUri?.fsPath;
+        const logPath = logDir ? path.join(logDir, E2E_LOG_FILENAME) : null;
+        if (logPath && fs.existsSync(logPath)) {
             lines.push(fs.readFileSync(logPath, 'utf8'));
         } else {
             lines.push('(no .sfca-e2e.log)');
         }
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? SAMPLE_WORKSPACE;
+        const activationErrorPath = path.join(workspaceRoot, ACTIVATION_ERROR_FILENAME);
         if (fs.existsSync(activationErrorPath)) {
             lines.push('Activation error file (.sfca-activation-error.txt):');
             lines.push(fs.readFileSync(activationErrorPath, 'utf8'));
