@@ -83,10 +83,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     
     const externalServiceProvider: ExternalServiceProvider = new ExternalServiceProvider(logger, context);
     const telemetryService: TelemetryService = await externalServiceProvider.getTelemetryService();
+    console.log('telemetryService is available');
     const orgConnectionService: OrgConnectionService = await externalServiceProvider.getOrgConnectionService();
+    console.log('orgConnectionService is available');
     const diagnosticManager: DiagnosticManager = new DiagnosticManagerImpl(diagnosticCollection, settingsManager);
+    console.log('diagnosticManager is available');
     vscode.workspace.onDidChangeTextDocument(e => diagnosticManager.handleTextDocumentChangeEvent(e));
-    
+    console.log('onDidChangeTextDocument is registered');
     // Listen for severity setting changes and refresh diagnostics
     vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('codeAnalyzer.severity 1') ||
@@ -97,28 +100,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             diagnosticManager.refreshDiagnostics();
         }
     });
-    
+    console.log('onDidChangeConfiguration is registered');
     context.subscriptions.push(diagnosticManager);
     const scanManager: ScanManager = new ScanManager(); // TODO: We will be moving more of scanning stuff into the scan manager soon
     context.subscriptions.push(scanManager);
-
+    console.log('scanManager is registered');
     const windowManager: WindowManager = new WindowManagerImpl(outputChannel);
     const vscodeWorkspace: VscodeWorkspace = new VscodeWorkspaceImpl();
-
+    console.log('vscodeWorkspace is registered');
     const taskWithProgressRunner: TaskWithProgressRunner = new TaskWithProgressRunnerImpl();
-
+    console.log('taskWithProgressRunner is registered');
 
     const cliCommandExecutor: CliCommandExecutor = new CliCommandExecutorImpl(logger);
     const fileHandler: FileHandler = new FileHandlerImpl();
     const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
-
+    console.log('codeAnalyzer is registered');
     const diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
     const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, diagnosticFactory, telemetryService, logger, display, windowManager);
 
+    console.log('codeAnalyzerRunAction is registered');
     // For performance reasons, it's best to kick this off in the background instead of await the promise.
     void performValidationAndCaching(codeAnalyzer, display);
 
-
+    console.log('performValidationAndCaching is done');
     // =================================================================================================================
     // ==  Code Analyzer Run Functionality
     // =================================================================================================================
@@ -133,7 +137,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         const workspace: Workspace = await Workspace.fromTargetPaths([document.fileName], vscodeWorkspace, fileHandler);
         return codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
     });
-
+    console.log('COMMAND_RUN_ON_ACTIVE_FILE is registered');
     // "Analyze On Open" and "Analyze on Save" functionality:
     onDidChangeActiveTextEditor(async (editor: vscode.TextEditor) => {
         if (!settingsManager.getAnalyzeOnOpen()) {
@@ -148,6 +152,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
         }
     });
+    console.log('onDidChangeActiveTextEditor is registered');
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
         const isFile: boolean = document !== undefined && document.uri.scheme === 'file';
         const isValidFile: boolean = isFile && isValidFileForAnalysis(document.uri, settingsManager.getAnalyzeAutomaticallyFileExtensions());
@@ -164,7 +169,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
             await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
         }
     });
-
+    console.log('onDidSaveTextDocument is registered');
     // COMMAND_RUN_ON_SELECTED: Invokable by 'explorer/context' menu always.
     registerCommand(Constants.COMMAND_RUN_ON_SELECTED, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
         const selection: vscode.Uri[] = (multiSelection && multiSelection.length > 0) ? multiSelection : [singleSelection];
@@ -175,7 +180,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
         await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_SELECTED, workspace);
     });
-
+    console.log('COMMAND_RUN_ON_SELECTED is registered');
 
     // =================================================================================================================
     // ==  Diagnostic Management Functionality
@@ -193,7 +198,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         }
         diagnosticManager.clearDiagnosticsForFiles([document.uri]);
     });
-
+    console.log('COMMAND_REMOVE_DIAGNOSTICS_ON_ACTIVE_FILE is registered');
     // COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE: Invokable by 'explorer/context' always
     // ... and also invoked by a Quick Fix button that appears on diagnostics. TODO: This should change because we should only be suppressing diagnostics of a specific type - not all of them.
     registerCommand(Constants.COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE, async (singleSelection: vscode.Uri, multiSelection?: vscode.Uri[]) => {
@@ -201,7 +206,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         const selectedFiles: string[] = await targeting.getFilesFromSelection(selection);
         diagnosticManager.clearDiagnosticsForFiles(selectedFiles.map(f => vscode.Uri.file(f)));
     });
-
+    console.log('COMMAND_REMOVE_DIAGNOSTICS_ON_SELECTED_FILE is registered');
 
     // =================================================================================================================
     // ==  Code Analyzer PMD Quick-Fix Functionality for Line or Class Level Suppressions
@@ -209,12 +214,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const pmdSuppressionsCodeActionProvider: PMDSupressionsCodeActionProvider = new PMDSupressionsCodeActionProvider();
     registerCodeActionsProvider({language: 'apex'}, pmdSuppressionsCodeActionProvider,
             {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
-
+    console.log('PMDSupressionsCodeActionProvider is registered');
     // QF_COMMAND_CLEAR_DIAGNOSTICS: Invoked by Quick Fix button to clear diagnostics from a file
     // Supports optional range and optional rule filtering
     registerCommand(Constants.QF_COMMAND_CLEAR_DIAGNOSTICS, (uri: vscode.Uri, clearOptions?: ClearDiagnosticsOptions) =>
         diagnosticManager.clearDiagnosticsFromFile(uri, clearOptions));
-
+    console.log('QF_COMMAND_CLEAR_DIAGNOSTICS is registered');
 
     // =================================================================================================================
     // ==  Unified Diff Service
@@ -222,7 +227,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const unifiedDiffService: UnifiedDiffService = new UnifiedDiffServiceImpl(settingsManager, display);
     unifiedDiffService.register();
     context.subscriptions.push(unifiedDiffService);
-
+    console.log('unifiedDiffService is registered');
 
     // =================================================================================================================
     // ==  Apply Violation Fixes Functionality
@@ -235,7 +240,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     });
     registerCodeActionsProvider({pattern: '**/**'}, applyViolationFixesActionProvider,
         {providedCodeActionKinds: [vscode.CodeActionKind.QuickFix]});
-
+    console.log('ApplyViolationFixesActionProvider is registered');
 
     // =================================================================================================================
     // ==  Violation Suggestions Functionality
