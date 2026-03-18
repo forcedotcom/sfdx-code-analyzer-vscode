@@ -131,8 +131,12 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             args.push('-c', configFile);
         }
 
-        args.push('--include-fixes');
-        args.push('--include-suggestions');
+        if (this.settingsManager.getIncludeFixes()) {
+            args.push('--include-fixes');
+        }
+        if (this.settingsManager.getIncludeSuggestions()) {
+            args.push('--include-suggestions');
+        }
 
         const outputFile: string = await this.fileHandler.createTempFile('.json');
         args.push('-f', outputFile);
