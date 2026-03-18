@@ -185,5 +185,199 @@ describe('Tests for the FixSuggestion class', () => {
                 `}`
             );
         });
+
+        it('When multi-line fixedCode replaces full lines (char 0), then indentation normalization is applied', () => {
+            // Simulates A4D fix: "for without braces" → adds braces (1 line becomes 3 lines)
+            const content: string =
+                `function example() {\n` +
+                `    for (Integer i = 0; i < 10; i++)\n` +
+                `        System.debug(i);\n` +
+                `    return;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range covers both lines fully (line 1 char 0 to line 2 end)
+            const range: vscode.Range = new vscode.Range(1, 0, 2, 26);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: '    for (Integer i = 0; i < 10; i++) {\n        System.debug(i);\n    }'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            expect(result).toEqual(
+                `function example() {\n` +
+                `    for (Integer i = 0; i < 10; i++) {\n` +
+                `        System.debug(i);\n` +
+                `    }\n` +
+                `    return;\n` +
+                `}`
+            );
+        });
+
+        it('When multi-line fixedCode with partial range has proper indentation, then it is spliced in correctly', () => {
+            // Simulates: replacing a function call with a multi-line version
+            // fixedCode already has the correct absolute indentation
+            const content: string =
+                `function example() {\n` +
+                `    const x = singleCall(arg1);\n` +
+                `    return x;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range covers "singleCall(arg1)" on line 1 (chars 14 to 30)
+            const range: vscode.Range = new vscode.Range(1, 14, 1, 30);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: 'multiCall(\n        arg1,\n        arg2\n    )'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // beforeText="    const x = ", afterText=";", fixedCode used raw (partial range)
+            // The fixedCode's internal newlines are preserved as-is
+            expect(result).toEqual(
+                `function example() {\n` +
+                `    const x = multiCall(\n` +
+                `        arg1,\n` +
+                `        arg2\n` +
+                `    );\n` +
+                `    return x;\n` +
+                `}`
+            );
+        });
+
+        it('When single line is expanded to multiple lines via full-line range, then indentation is normalized', () => {
+            // Simulates: OneDeclarationPerLine fix (1 line → 3 lines)
+            const content: string =
+                `function example() {\n` +
+                `    Integer a, b, c;\n` +
+                `    return a;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range covers entire line 1 ("    Integer a, b, c;" = 20 chars)
+            const range: vscode.Range = new vscode.Range(1, 0, 1, 20);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: '    Integer a;\n    Integer b;\n    Integer c;'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            expect(result).toEqual(
+                `function example() {\n` +
+                `    Integer a;\n` +
+                `    Integer b;\n` +
+                `    Integer c;\n` +
+                `    return a;\n` +
+                `}`
+            );
+        });
+
+        it('When multiple lines are collapsed to single line, then surrounding text is preserved', () => {
+            // Simulates: collapsing a multi-line expression into one line
+            const content: string =
+                `function example() {\n` +
+                `    const result = someCall(\n` +
+                `        arg1,\n` +
+                `        arg2\n` +
+                `    );\n` +
+                `    return result;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range covers lines 1-4 fully (char 0)
+            const range: vscode.Range = new vscode.Range(1, 0, 4, 6);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: '    const result = someCall(arg1, arg2);'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            expect(result).toEqual(
+                `function example() {\n` +
+                `    const result = someCall(arg1, arg2);\n` +
+                `    return result;\n` +
+                `}`
+            );
+        });
+
+        it('When multi-line fixedCode replaces a partial multi-line range, then before/after text is preserved', () => {
+            // Range starts and ends mid-line, fixedCode spans multiple lines
+            const content: string =
+                `line0 content\n` +
+                `prefix START_REPLACE\n` +
+                `END_REPLACE suffix\n` +
+                `line3 content`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range from line 1 char 7 to line 2 char 11
+            const range: vscode.Range = new vscode.Range(1, 7, 2, 11);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: 'FIXED_LINE_1\nFIXED_LINE_2\nFIXED_LINE_3'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // beforeText="prefix ", afterText=" suffix", fixedCode used raw (partial range)
+            // Result: "prefix " + "FIXED_LINE_1\nFIXED_LINE_2\nFIXED_LINE_3" + " suffix"
+            expect(result).toEqual(
+                `line0 content\n` +
+                `prefix FIXED_LINE_1\n` +
+                `FIXED_LINE_2\n` +
+                `FIXED_LINE_3 suffix\n` +
+                `line3 content`
+            );
+        });
+
+        it('When empty fixedCode with full-line range (char 0), then the line content is removed but whitespace may remain', () => {
+            const content: string =
+                `line0\n` +
+                `    removable line\n` +
+                `line2`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range covers entire line 1 starting at char 0
+            const range: vscode.Range = new vscode.Range(1, 0, 1, 18);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: ''
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // char 0 path → getFixedCode() which normalizes indentation:
+            // fixedCode="" → fixedLines=[""] → commonIndentation="" → trimmedFixedLines=[""]
+            // originalLineAtStartOfFix="    removable line" → indentation="    "
+            // indentToAdd = removeSuffix("    ", "") = "    "
+            // getFixedCode() returns "    " (just whitespace)
+            // beforeText="" + "    " + afterText="" = "    "
+            expect(result).toEqual(
+                `line0\n` +
+                `    \n` +
+                `line2`
+            );
+        });
     });
 });
