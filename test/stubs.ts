@@ -270,6 +270,18 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
+    getIncludeFixesReturnValue: boolean = true;
+
+    getIncludeFixes(): boolean {
+        return this.getIncludeFixesReturnValue;
+    }
+
+    getIncludeSuggestionsReturnValue: boolean = true;
+
+    getIncludeSuggestions(): boolean {
+        return this.getIncludeSuggestionsReturnValue;
+    }
+
     getSeverityLevelReturnValue: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Warning;
 
     getSeverityLevel(_severity: number): vscode.DiagnosticSeverity {

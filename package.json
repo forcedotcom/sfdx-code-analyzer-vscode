@@ -138,6 +138,16 @@
                         "pattern": "^[.][A-Za-z0-9]+(?:,[.][A-Za-z0-9]+)*$",
                         "patternErrorMessage": "Must be a comma-separated list of file extensions (e.g., '.cls,.js,.html'). Each extension must start with a dot and contain only alphanumeric characters, with no spaces.",
                         "markdownDescription": "Comma-separated list of file extensions to analyze automatically when opening or saving files.\n\nSpecify the file types that should be scanned by Code Analyzer when the 'Analyze On Save' or 'Analyze On Open' features are enabled. Include the dot (.) prefix for each extension (e.g., `.cls,.js,.html`).\n\n**Format:** `.ext1,.ext2,.ext3`"
+                    },
+                    "codeAnalyzer.includeFixes": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "When enabled, scan results will include code fixes for violations that support them.\n\nFixes appear as **Quick Fix** actions (lightbulb icon) on violations, allowing you to preview and apply the fix.\n\nDisabling this setting may improve scan performance since engines can skip the additional processing needed to generate fix information."
+                    },
+                    "codeAnalyzer.includeSuggestions": {
+                        "type": "boolean",
+                        "default": true,
+                        "markdownDescription": "When enabled, scan results will include suggestions for violations that support them.\n\nSuggestions appear on **hover** over the violation and can be copied for reference.\n\nDisabling this setting may improve scan performance since engines can skip the additional processing needed to generate suggestion information."
                     }
                 }
             },
