@@ -4,10 +4,10 @@ on:
   schedule:
     # Cron syntax is "minute[0-59] hour[0-23] date[1-31] month[1-12] day[0-6]". '*' is 'any value', and multiple values
     # can be specified with comma-separated lists. All times are UTC.
-    # So this expression means "run at 45 minutes past 1, 5, and 9 AM/PM UTC". The hours were chosen so that
-    # the jobs run only close to business hours of Central Time.
+    # So this expression means "run at 30 minutes past 3, 7, and 11 AM UTC". The hours were chosen so that
+    # the jobs run during IST business hours (9:00 AM, 1:00 PM, 5:00 PM IST) with 4-hour gaps.
     # Days were chosen to run only from Monday through Friday.
-    - cron: '45 13,17,21 * * 1,2,3,4,5'
+    - cron: '30 3,7,11 * * 1,2,3,4,5'
 jobs:
   production-heartbeat:
     strategy:

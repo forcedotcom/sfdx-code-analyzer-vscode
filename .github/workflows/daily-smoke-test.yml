@@ -4,9 +4,9 @@ on:
   schedule:
     # Cron syntax is "minute[0-59] hour[0-23] date[1-31] month[1-12] day[0-6]". '*' is 'any value', and multiple values
     # can be specified with comma-separated lists. All times are UTC.
-    # So this expression means "run at 17:30 UTC every day". This time was chosen because it corresponds to
-    # 9:30AM PST, meaning that any issues will be surfaced on working days when people are likely to be awake and online.
-    - cron: "30 17 * * 1-5"
+    # So this expression means "run at 04:00 UTC every weekday". This time was chosen because it corresponds to
+    # 9:30 AM IST, meaning that any issues will be surfaced on working days when people are likely to be awake and online.
+    - cron: "0 4 * * 1-5"
 
 jobs:
   # Step 1: Build the tarballs so they can be installed locally.
