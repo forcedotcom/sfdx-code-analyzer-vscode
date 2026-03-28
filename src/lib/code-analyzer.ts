@@ -1,4 +1,4 @@
-import {Violation} from "./diagnostics";
+import {CodeLocation, Violation} from "./diagnostics";
 import {SettingsManager} from "./settings";
 import {Display} from "./display";
 import {messages} from './messages';
@@ -131,6 +131,13 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             args.push('-c', configFile);
         }
 
+        if (this.settingsManager.getIncludeFixes()) {
+            args.push('--include-fixes');
+        }
+        if (this.settingsManager.getIncludeSuggestions()) {
+            args.push('--include-suggestions');
+        }
+
         const outputFile: string = await this.fileHandler.createTempFile('.json');
         args.push('-f', outputFile);
 
@@ -148,15 +155,23 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
         const processedViolations: Violation[] = [];
         for (const violation of resultsJson.violations) {
             for (const location of violation.locations) {
-                // If the path isn't already absolute, it needs to be made absolute.
-                if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
-                    // Relative paths are relative to the RunDir results property.
-                    location.file = path.join(resultsJson.runDir, location.file);
-                }
+                this.makeLocationFileAbsolute(location, resultsJson.runDir);
+            }
+            for (const fix of violation.fixes ?? []) {
+                this.makeLocationFileAbsolute(fix.location, resultsJson.runDir);
+            }
+            for (const suggestion of violation.suggestions ?? []) {
+                this.makeLocationFileAbsolute(suggestion.location, resultsJson.runDir);
             }
             processedViolations.push(violation);
         }
         return processedViolations;
+    }
+
+    private makeLocationFileAbsolute(location: CodeLocation, runDir: string): void {
+        if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+            location.file = path.join(runDir, location.file);
+        }
     }
 
     private async createRuleDescriptionMap(): Promise<Map<string, string>> {
