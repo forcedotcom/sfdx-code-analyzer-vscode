@@ -142,12 +142,12 @@
                     "codeAnalyzer.includeFixes": {
                         "type": "boolean",
                         "default": true,
-                        "markdownDescription": "When enabled, scan results will include code fixes for violations that support them.\n\nFixes appear as **Quick Fix** actions (lightbulb icon) on violations, allowing you to preview and apply the fix.\n\nDisabling this setting may improve scan performance since engines can skip the additional processing needed to generate fix information."
+                        "markdownDescription": "Enabling this option includes code fixes for applicable violations."
                     },
                     "codeAnalyzer.includeSuggestions": {
                         "type": "boolean",
                         "default": true,
-                        "markdownDescription": "When enabled, scan results will include suggestions for violations that support them.\n\nSuggestions appear on **hover** over the violation and can be copied for reference.\n\nDisabling this setting may improve scan performance since engines can skip the additional processing needed to generate suggestion information."
+                        "markdownDescription": "Enabling this option includes code suggestions for applicable violations."
                     }
                 }
             },
