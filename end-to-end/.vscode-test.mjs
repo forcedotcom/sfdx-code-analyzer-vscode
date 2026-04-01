@@ -33,7 +33,7 @@ export default defineConfig({
      * 'owner.extension@prerelease', or the path to a vsix file (/path/to/extension.vsix)
      */
     installExtensions: ['salesforce.salesforcedx-vscode-core'],
-
+    
     /**
      * A list of launch arguments passed to VS Code executable, in addition to `--extensionDevelopmentPath`
      * and `--extensionTestsPath` which are provided by `extensionDevelopmentPath` and `extensionTestsPath`
