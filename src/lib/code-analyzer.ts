@@ -48,6 +48,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
     private cliIsInstalled: boolean = false;
     private version?: semver.SemVer;
     private ruleDescriptionMap?: Map<string, string>;
+    private supportsFixesAndSuggestions?: boolean;
 
     constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
                 fileHandler: FileHandler = new FileHandlerImpl()) {
@@ -85,6 +86,9 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
                 + messages.codeAnalyzer.installLatestVersion);
         }
         this.version = installedVersion;
+
+        // Detect if CLI supports fixes/suggestions flags (once per session)
+        this.supportsFixesAndSuggestions = await this.detectFixesAndSuggestionsSupport();
     }
 
     public async getVersion(): Promise<string> {
@@ -110,7 +114,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
     public async scan(workspace: Workspace): Promise<Violation[]> {
         await this.validateEnvironment();
-        
+
         const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
         const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
 
@@ -131,11 +135,14 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             args.push('-c', configFile);
         }
 
-        if (this.settingsManager.getIncludeFixes()) {
-            args.push('--include-fixes');
-        }
-        if (this.settingsManager.getIncludeSuggestions()) {
-            args.push('--include-suggestions');
+        // Add flags if CLI supports them (detected during validateEnvironment)
+        if (this.supportsFixesAndSuggestions) {
+            if (this.settingsManager.getIncludeFixes()) {
+                args.push('--include-fixes');
+            }
+            if (this.settingsManager.getIncludeSuggestions()) {
+                args.push('--include-suggestions');
+            }
         }
 
         const outputFile: string = await this.fileHandler.createTempFile('.json');
@@ -169,8 +176,46 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
     }
 
     private makeLocationFileAbsolute(location: CodeLocation, runDir: string): void {
-        if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+        // Only process if we have both a file location and a valid runDir
+        if (!location.file || !runDir) {
+            return;
+        }
+
+        // Check if the file path is not already absolute (case-insensitive comparison for cross-platform)
+        if (path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
             location.file = path.join(runDir, location.file);
+        }
+    }
+
+    /**
+     * Detect if the CLI supports --include-fixes and --include-suggestions flags
+     * by checking the help output. This is called once per session and cached.
+     */
+    private async detectFixesAndSuggestionsSupport(): Promise<boolean> {
+        try {
+            const helpOutput: CommandOutput = await this.cliCommandExecutor.exec(
+                'sf',
+                ['code-analyzer', 'run', '--help'],
+                {logLevel: vscode.LogLevel.Off}
+            );
+
+            if (helpOutput.exitCode !== 0) {
+                return false;
+            }
+
+            // Extract the FLAGS section from help output for more robust matching
+            // This avoids false positives from deprecation notices or other text
+            const flagsSectionMatch = helpOutput.stdout.match(/FLAGS\s+([\s\S]*?)(?=\n\n[A-Z]|$)/);
+            const flagsSection = flagsSectionMatch ? flagsSectionMatch[1] : helpOutput.stdout;
+
+            // Check if flags are defined in the FLAGS section
+            const hasFixes = flagsSection.includes('--include-fixes');
+            const hasSuggestions = flagsSection.includes('--include-suggestions');
+
+            return hasFixes && hasSuggestions;
+        } catch (_err) {
+            // If help command fails, assume flags are not supported (safe default)
+            return false;
         }
     }
 

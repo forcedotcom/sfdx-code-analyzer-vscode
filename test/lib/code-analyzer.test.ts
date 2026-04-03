@@ -20,6 +20,21 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         settingsManager = new stubs.StubSettingsManager();
         display = new stubs.SpyDisplay();
         fileHandler = new stubs.StubFileHandler();
+
+        // Mock exec to handle --help calls for feature detection
+        cliCommandExecutor.execReturnValueCallback = (_command: string, args: string[]) => {
+            if (args.includes('--help')) {
+                // By default, mock CLI as supporting fixes/suggestions
+                return {
+                    stdout: 'Usage: sf code-analyzer run [OPTIONS]\n--include-fixes\n--include-suggestions',
+                    stderr: '',
+                    exitCode: 0
+                };
+            }
+            // Default return for other calls
+            return { stdout: '', stderr: '', exitCode: 0 };
+        };
+
         codeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
     });
 
@@ -143,10 +158,13 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 // Call scan
                 const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
-                // First check that we are passing the correct arguments to the cli
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
-                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
+                // Check that we made the CLI calls (--help for feature detection + actual scan)
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
+                // Find the actual scan command (not --help)
+                const scanCommand = cliCommandExecutor.execCallHistory.find(call => !call.args.includes('--help'));
+                expect(scanCommand).toBeDefined();
+                expect(scanCommand!.command).toEqual('sf');
+                expect(scanCommand!.args).toEqual([
                     "code-analyzer", "run",
                     "-w", "/my/project/dummyFile1.cls",
                     "-w", "/my/project/dummyFile2.cls",
@@ -172,10 +190,13 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls'], vscodeWorkspace, fileHandler);
                 const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
-                // First check that we are passing the correct arguments to the cli
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
-                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
+                // Check that we made the CLI calls (--help for feature detection + actual scan)
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
+                // Find the actual scan command (not --help)
+                const scanCommand = cliCommandExecutor.execCallHistory.find(call => !call.args.includes('--help'));
+                expect(scanCommand).toBeDefined();
+                expect(scanCommand!.command).toEqual('sf');
+                expect(scanCommand!.args).toEqual([
                     "code-analyzer", "run",
                     "-w", "/my/project", // Should always include the workspace folders
                     "-w", "/my/project2",
@@ -205,10 +226,13 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     vscodeWorkspace, fileHandler);
                 const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
-                // First check that we are passing the correct arguments to the cli
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
-                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
+                // Check that we made the CLI calls (--help for feature detection + actual scan)
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
+                // Find the actual scan command (not --help)
+                const scanCommand = cliCommandExecutor.execCallHistory.find(call => !call.args.includes('--help'));
+                expect(scanCommand).toBeDefined();
+                expect(scanCommand!.command).toEqual('sf');
+                expect(scanCommand!.args).toEqual([
                     "code-analyzer", "run",
                     "-w", "/my/project/dummyFile1.cls",
                     "-w", "/my/project/dummyFile2.cls",
@@ -247,6 +271,71 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 // The second violation should have no fixes or suggestions
                 expect(violations[1].fixes).toBeUndefined();
                 expect(violations[1].suggestions).toBeUndefined();
+            });
+
+            it('When CLI supports fixes/suggestions flags, then they are included in scan command', async () => {
+                vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+
+                const prePopulatedResultsJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output.json');
+                fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
+
+                // Mock exec to return different values based on args
+                cliCommandExecutor.execReturnValueCallback = (_command: string, args: string[]) => {
+                    if (args.includes('--help')) {
+                        // Help command - show support for fixes/suggestions
+                        return {
+                            stdout: 'Usage: sf code-analyzer run [OPTIONS]\n--include-fixes\n--include-suggestions',
+                            stderr: '',
+                            exitCode: 0
+                        };
+                    }
+                    // Actual scan command
+                    return { stdout: '', stderr: '', exitCode: 0 };
+                };
+
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/test.js'], vscodeWorkspace, fileHandler);
+
+                await codeAnalyzer.scan(workspace);
+
+                // First call should be --help, second call should include the flags
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(2);
+                const scanCommand = cliCommandExecutor.execCallHistory[1];
+                expect(scanCommand.args).toContain('--include-fixes');
+                expect(scanCommand.args).toContain('--include-suggestions');
+            });
+
+            it('When CLI does not support fixes/suggestions flags, then they are not included in scan command', async () => {
+                vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+
+                const prePopulatedResultsJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output.json');
+                fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
+
+                // Mock exec to return different values based on args
+                cliCommandExecutor.execReturnValueCallback = (_command: string, args: string[]) => {
+                    if (args.includes('--help')) {
+                        // Help command - show no support for fixes/suggestions (old CLI)
+                        return {
+                            stdout: 'Usage: sf code-analyzer run [OPTIONS]\n--workspace\n--target',
+                            stderr: '',
+                            exitCode: 0
+                        };
+                    }
+                    // Actual scan command
+                    return { stdout: '', stderr: '', exitCode: 0 };
+                };
+
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/test.js'], vscodeWorkspace, fileHandler);
+
+                await codeAnalyzer.scan(workspace);
+
+                // Scan command should NOT include the flags
+                const scanCommand = cliCommandExecutor.execCallHistory[1];
+                expect(scanCommand.args).not.toContain('--include-fixes');
+                expect(scanCommand.args).not.toContain('--include-suggestions');
             });
 
             // TODO: More tests coming soon...
