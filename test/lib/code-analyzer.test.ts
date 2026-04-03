@@ -358,9 +358,10 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 const ruleDescription1: string = await codeAnalyzer.getRuleDescriptionFor('someEngine', 'someRule1');
 
                 // First check that we are passing the correct arguments to the cli
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
-                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
+                // Note: There are 2 calls - first is "sf code-analyzer run --help" from detectFixesAndSuggestionsSupport()
+                expect(cliCommandExecutor.execCallHistory).toHaveLength(2);
+                expect(cliCommandExecutor.execCallHistory[1].command).toEqual('sf');
+                expect(cliCommandExecutor.execCallHistory[1].args).toEqual([
                     "code-analyzer", "rules",
                     "-r", "all",
                     "-f", prePopulatedRuleDescriptionJsonFile
@@ -370,7 +371,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 expect(ruleDescription1).toEqual('some description for someRule1');
 
                 // Lastly, confirm that if we call getRuleDescriptionFor again that we do not call the CLI again
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(1); // Should still be 1
+                expect(cliCommandExecutor.execCallHistory).toHaveLength(2); // Should still be 2
                 const ruleDescription2: string = await codeAnalyzer.getRuleDescriptionFor('someEngine', 'someRule2');
                 expect(ruleDescription2).toEqual('some description for someRule2');
 
@@ -383,9 +384,10 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 const ruleDescription: string = await codeAnalyzer.getRuleDescriptionFor('unknown', 'unknown');
 
                 // First check that we are passing the correct arguments to the cli
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
-                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
+                // Note: There are 2 calls - first is "sf code-analyzer run --help" from detectFixesAndSuggestionsSupport()
+                expect(cliCommandExecutor.execCallHistory).toHaveLength(2);
+                expect(cliCommandExecutor.execCallHistory[1].command).toEqual('sf');
+                expect(cliCommandExecutor.execCallHistory[1].args).toEqual([
                     "code-analyzer", "rules",
                     "-r", "all",
                     "-f", prePopulatedRuleDescriptionJsonFile

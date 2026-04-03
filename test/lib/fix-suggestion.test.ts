@@ -379,5 +379,127 @@ describe('Tests for the FixSuggestion class', () => {
                 `line2`
             );
         });
+
+        it('When document uses CRLF line endings (Windows), then fixed code preserves CRLF', () => {
+            const content: string =
+                `line0 content\r\n` +
+                `prefix REPLACE_ME suffix\r\n` +
+                `line2 content`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+            // Override EOL to CRLF
+            Object.defineProperty(document, 'eol', { value: vscode.EndOfLine.CRLF, writable: false });
+
+            const range: vscode.Range = new vscode.Range(1, 7, 1, 17);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: 'FIXED'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // Result should use \r\n line endings
+            expect(result).toEqual(
+                `line0 content\r\n` +
+                `prefix FIXED suffix\r\n` +
+                `line2 content`
+            );
+        });
+
+        it('When document uses tab indentation, then fixed code preserves tabs', () => {
+            const content: string =
+                `function example() {\n` +
+                `\tvar myVariable = "hello";\n` +
+                `\treturn myVariable;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'javascript');
+
+            // Range covers just "var" (line 1, chars 1 to 4, after tab)
+            const range: vscode.Range = new vscode.Range(1, 1, 1, 4);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: 'const'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // Result should preserve tab character
+            expect(result).toEqual(
+                `function example() {\n` +
+                `\tconst myVariable = "hello";\n` +
+                `\treturn myVariable;\n` +
+                `}`
+            );
+        });
+
+        it('When document contains multi-byte characters (emoji, unicode), then positions are calculated correctly', () => {
+            const content: string =
+                `function test() {\n` +
+                `    const message = "Hello 🚀 REPLACE_ME World 中文";\n` +
+                `    return message;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'javascript');
+
+            // Range covers "REPLACE_ME" which comes after emoji
+            // Note: Emoji 🚀 is a surrogate pair, taking 2 UTF-16 code units
+            // Character positions in line: "    const message = "Hello 🚀 REPLACE_ME..."
+            // REPLACE_ME starts at char 30 (after indentation, const, =, ", Hello, 🚀, space)
+            const range: vscode.Range = new vscode.Range(1, 30, 1, 40);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                fixedCode: 'FIXED'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // Multi-byte characters before and after the replacement should be preserved
+            expect(result).toEqual(
+                `function test() {\n` +
+                `    const message = "Hello 🚀 FIXED World 中文";\n` +
+                `    return message;\n` +
+                `}`
+            );
+        });
+
+        it('When multi-line fixedCode with tabs replaces full-line range, then tab indentation is normalized', () => {
+            const content: string =
+                `function example() {\n` +
+                `\tfor (Integer i = 0; i < 10; i++)\n` +
+                `\t\tSystem.debug(i);\n` +
+                `\treturn;\n` +
+                `}`;
+            const document: vscode.TextDocument = createTextDocument(sampleUri, content, 'apex');
+
+            // Range covers both lines fully (line 1 char 0 to line 2 end)
+            const range: vscode.Range = new vscode.Range(1, 0, 2, 19);
+            const codeFixData: CodeFixData = {
+                document: document,
+                diagnostic: {} as vscode.Diagnostic,
+                rangeToBeFixed: range,
+                // fixedCode has tabs (matching original indentation style)
+                fixedCode: '\tfor (Integer i = 0; i < 10; i++) {\n\t\tSystem.debug(i);\n\t}'
+            };
+
+            const fixSuggestion: FixSuggestion = new FixSuggestion(codeFixData);
+            const result: string = fixSuggestion.getFixedDocumentCode();
+
+            // Tabs should be preserved in both original and fixed code
+            expect(result).toEqual(
+                `function example() {\n` +
+                `\tfor (Integer i = 0; i < 10; i++) {\n` +
+                `\t\tSystem.debug(i);\n` +
+                `\t}\n` +
+                `\treturn;\n` +
+                `}`
+            );
+        });
     });
 });
