@@ -59,11 +59,11 @@ export class SettingsManagerImpl implements SettingsManager {
     }
 
     public getIncludeFixes(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeFixes', true);
+        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeFixes', false);
     }
 
     public getIncludeSuggestions(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeSuggestions', true);
+        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeSuggestions', false);
     }
 
     // =================================================================================================================

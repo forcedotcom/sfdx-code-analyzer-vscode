@@ -141,12 +141,12 @@
                     },
                     "codeAnalyzer.includeFixes": {
                         "type": "boolean",
-                        "default": true,
+                        "default": false,
                         "markdownDescription": "Enabling this option includes code fixes for applicable violations."
                     },
                     "codeAnalyzer.includeSuggestions": {
                         "type": "boolean",
-                        "default": true,
+                        "default": false,
                         "markdownDescription": "Enabling this option includes code suggestions for applicable violations."
                     }
                 }

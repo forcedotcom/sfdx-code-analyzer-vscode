@@ -6,7 +6,8 @@ import {CliCommandExecutor, CommandOutput} from "./cli-commands";
 import * as semver from 'semver';
 import {
     ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
-    RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
+    RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
+    MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION_FOR_FIXES_AND_SUGGESTIONS
 } from "./constants";
 import {FileHandler, FileHandlerImpl} from "./fs-utils";
 import {Workspace} from "./workspace";
@@ -47,8 +48,8 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
     private cliIsInstalled: boolean = false;
     private version?: semver.SemVer;
+    private supportsFixesAndSuggestions: boolean = false;
     private ruleDescriptionMap?: Map<string, string>;
-    private supportsFixesAndSuggestions?: boolean;
 
     constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
                 fileHandler: FileHandler = new FileHandlerImpl()) {
@@ -87,8 +88,11 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
         }
         this.version = installedVersion;
 
-        // Detect if CLI supports fixes/suggestions flags (once per session)
-        this.supportsFixesAndSuggestions = await this.detectFixesAndSuggestionsSupport();
+        // Check if CLI supports fixes and suggestions flags (available in 5.12.0+)
+        const fixesAndSuggestionsMinVersion: semver.SemVer = new semver.SemVer(MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION_FOR_FIXES_AND_SUGGESTIONS);
+        if (semver.gte(installedVersion, fixesAndSuggestionsMinVersion)) {
+            this.supportsFixesAndSuggestions = true;
+        }
     }
 
     public async getVersion(): Promise<string> {
@@ -135,7 +139,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             args.push('-c', configFile);
         }
 
-        // Add flags if CLI supports them (detected during validateEnvironment)
+        // Add flags only if CLI supports them (>= 5.12.0) and settings are enabled
         if (this.supportsFixesAndSuggestions) {
             if (this.settingsManager.getIncludeFixes()) {
                 args.push('--include-fixes');
@@ -187,37 +191,6 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
         }
     }
 
-    /**
-     * Detect if the CLI supports --include-fixes and --include-suggestions flags
-     * by checking the help output. This is called once per session and cached.
-     */
-    private async detectFixesAndSuggestionsSupport(): Promise<boolean> {
-        try {
-            const helpOutput: CommandOutput = await this.cliCommandExecutor.exec(
-                'sf',
-                ['code-analyzer', 'run', '--help'],
-                {logLevel: vscode.LogLevel.Off}
-            );
-
-            if (helpOutput.exitCode !== 0) {
-                return false;
-            }
-
-            // Extract the FLAGS section from help output for more robust matching
-            // This avoids false positives from deprecation notices or other text
-            const flagsSectionMatch = helpOutput.stdout.match(/FLAGS\s+([\s\S]*?)(?=\n\n[A-Z]|$)/);
-            const flagsSection = flagsSectionMatch ? flagsSectionMatch[1] : helpOutput.stdout;
-
-            // Check if flags are defined in the FLAGS section
-            const hasFixes = flagsSection.includes('--include-fixes');
-            const hasSuggestions = flagsSection.includes('--include-suggestions');
-
-            return hasFixes && hasSuggestions;
-        } catch (_err) {
-            // If help command fails, assume flags are not supported (safe default)
-            return false;
-        }
-    }
 
     private async createRuleDescriptionMap(): Promise<Map<string, string>> {
         const outputFile: string = await this.fileHandler.createTempFile('.json');

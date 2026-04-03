@@ -20,21 +20,6 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
         settingsManager = new stubs.StubSettingsManager();
         display = new stubs.SpyDisplay();
         fileHandler = new stubs.StubFileHandler();
-
-        // Mock exec to handle --help calls for feature detection
-        cliCommandExecutor.execReturnValueCallback = (_command: string, args: string[]) => {
-            if (args.includes('--help')) {
-                // By default, mock CLI as supporting fixes/suggestions
-                return {
-                    stdout: 'Usage: sf code-analyzer run [OPTIONS]\n--include-fixes\n--include-suggestions',
-                    stderr: '',
-                    exitCode: 0
-                };
-            }
-            // Default return for other calls
-            return { stdout: '', stderr: '', exitCode: 0 };
-        };
-
         codeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
     });
 
@@ -51,24 +36,24 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     messages.codeAnalyzer.codeAnalyzerMissing + '\n' + messages.codeAnalyzer.installLatestVersion);
             });
 
-            it('When the code-analyzer plugin is installed, but the version does not meat the minimum required, then error', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-alpha.1');
+            it('When the code-analyzer plugin is installed, but the version is below absolute minimum, then error', async () => {
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('4.0.0');
                 await expect(codeAnalyzer.validateEnvironment()).rejects.toThrow(
-                    messages.codeAnalyzer.doesNotMeetMinVersion('5.0.0-alpha.1', '5.0.0') + '\n'
+                    messages.codeAnalyzer.doesNotMeetMinVersion('4.0.0', '5.12.0') + '\n'
                     + messages.codeAnalyzer.installLatestVersion);
             });
 
-            it('When the code-analyzer plugin is installed, but the version is only partially supported, then warn', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.2');
+            it('When the code-analyzer plugin is installed with older version, then warning', async () => {
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
                 await codeAnalyzer.validateEnvironment();
                 expect(display.displayWarningCallHistory).toHaveLength(1);
-                expect(display.displayWarningCallHistory[0].msg).toEqual(
-                    messages.codeAnalyzer.usingOlderVersion('5.0.0-beta.2', '5.0.0') + '\n'
-                    + messages.codeAnalyzer.installLatestVersion);
+                expect(display.displayWarningCallHistory[0].msg).toContain(
+                    messages.codeAnalyzer.usingOlderVersion('5.0.0', '5.12.0')
+                );
             });
 
             it('When the code-analyzer plugin is installed with at least the minimum recommended version, then no error and no warning', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
                 await codeAnalyzer.validateEnvironment();
                 expect(display.displayErrorCallHistory).toHaveLength(0);
                 expect(display.displayWarningCallHistory).toHaveLength(0);
@@ -82,15 +67,15 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
             });
 
             it('When installed with at least the minimum recommended version, then no error and no warning', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
                 const version: string = await codeAnalyzer.getVersion();
-                expect(version).toEqual('5.0.0-beta.3');
+                expect(version).toEqual('5.12.0');
             });
 
             it('When installed with a version greater than the minimum recommended version, then no error and no warning', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.3.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.13.0');
                 const version: string = await codeAnalyzer.getVersion();
-                expect(version).toEqual('5.3.0');
+                expect(version).toEqual('5.13.0');
             });
         });
 
@@ -145,9 +130,9 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 await expect(codeAnalyzer.scan(workspace)).rejects.toThrow(messages.error.sfMissing);
             });
 
-            it('When running a scan with a beta version code-analyzer, then confirm we call the cli and process the results correctly using only --workspace', async () => {
+            it('When running a scan with minimum required version code-analyzer, then confirm we call the cli and process the results correctly using both --workspace and --target', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
 
                 // Set up the file handler to point to a prepopulated results json file instead of actually calling the cli:
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
@@ -158,17 +143,19 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 // Call scan
                 const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
-                // Check that we made the CLI calls (--help for feature detection + actual scan)
+                // Check that we made the CLI call
                 expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
-                // Find the actual scan command (not --help)
-                const scanCommand = cliCommandExecutor.execCallHistory.find(call => !call.args.includes('--help'));
-                expect(scanCommand).toBeDefined();
-                expect(scanCommand!.command).toEqual('sf');
-                expect(scanCommand!.args).toEqual([
+                const scanCommand = cliCommandExecutor.execCallHistory[0];
+                expect(scanCommand.command).toEqual('sf');
+                expect(scanCommand.args).toEqual([
                     "code-analyzer", "run",
-                    "-w", "/my/project/dummyFile1.cls",
+                    "-w", "/my/project", // Workspace folder
+                    "-w", "/my/project/dummyFile1.cls", // Files included in workspace as well
                     "-w", "/my/project/dummyFile2.cls",
                     "-w", "/my/project/subfolder", // Should not be expanded to files - should stay as raw folder
+                    "-t", "/my/project/dummyFile1.cls", // Target files
+                    "-t", "/my/project/dummyFile2.cls",
+                    "-t", "/my/project/subfolder",
                     "-r", "Recommended",
                     "--include-fixes",
                     "--include-suggestions",
@@ -178,9 +165,9 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 expect(violations).toEqual([expectedViolation1, expectedViolation2]);
             });
 
-            it('When running a scan with version 5.0.0, then confirm we call the cli and process the results correctly using both --workspace and --target', async () => {
+            it('When running a scan with version 5.12.0, then confirm we call the cli and process the results correctly using both --workspace and --target', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project', '/my/project2'];
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
 
                 // Set up the file handler to point to a prepopulated results json file instead of actually calling the cli:
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
@@ -190,13 +177,11 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls'], vscodeWorkspace, fileHandler);
                 const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
-                // Check that we made the CLI calls (--help for feature detection + actual scan)
+                // Check that we made the CLI call
                 expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
-                // Find the actual scan command (not --help)
-                const scanCommand = cliCommandExecutor.execCallHistory.find(call => !call.args.includes('--help'));
-                expect(scanCommand).toBeDefined();
-                expect(scanCommand!.command).toEqual('sf');
-                expect(scanCommand!.args).toEqual([
+                const scanCommand = cliCommandExecutor.execCallHistory[0];
+                expect(scanCommand.command).toEqual('sf');
+                expect(scanCommand.args).toEqual([
                     "code-analyzer", "run",
                     "-w", "/my/project", // Should always include the workspace folders
                     "-w", "/my/project2",
@@ -215,7 +200,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
 
             it('When no vscode workspace exist because the user probably just opened a single file, verify the files make up the workspace', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = [];
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.1.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
 
                 // Set up the file handler to point to a prepopulated results json file instead of actually calling the cli:
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
@@ -226,13 +211,11 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     vscodeWorkspace, fileHandler);
                 const violations: Violation[] = await codeAnalyzer.scan(workspace);
 
-                // Check that we made the CLI calls (--help for feature detection + actual scan)
+                // Check that we made the CLI call
                 expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
-                // Find the actual scan command (not --help)
-                const scanCommand = cliCommandExecutor.execCallHistory.find(call => !call.args.includes('--help'));
-                expect(scanCommand).toBeDefined();
-                expect(scanCommand!.command).toEqual('sf');
-                expect(scanCommand!.args).toEqual([
+                const scanCommand = cliCommandExecutor.execCallHistory[0];
+                expect(scanCommand.command).toEqual('sf');
+                expect(scanCommand.args).toEqual([
                     "code-analyzer", "run",
                     "-w", "/my/project/dummyFile1.cls",
                     "-w", "/my/project/dummyFile2.cls",
@@ -251,7 +234,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
 
             it('When scan results contain fixes and suggestions with relative paths, then their locations are made absolute', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
 
                 const prePopulatedResultsWithFixesJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output-with-fixes.json');
                 fileHandler.createTempFileReturnValue = prePopulatedResultsWithFixesJsonFile;
@@ -273,67 +256,58 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 expect(violations[1].suggestions).toBeUndefined();
             });
 
-            it('When CLI supports fixes/suggestions flags, then they are included in scan command', async () => {
+            it('When CLI supports fixes/suggestions flags and settings are enabled, then they are included in scan command', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
 
                 const prePopulatedResultsJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output.json');
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
-
-                // Mock exec to return different values based on args
-                cliCommandExecutor.execReturnValueCallback = (_command: string, args: string[]) => {
-                    if (args.includes('--help')) {
-                        // Help command - show support for fixes/suggestions
-                        return {
-                            stdout: 'Usage: sf code-analyzer run [OPTIONS]\n--include-fixes\n--include-suggestions',
-                            stderr: '',
-                            exitCode: 0
-                        };
-                    }
-                    // Actual scan command
-                    return { stdout: '', stderr: '', exitCode: 0 };
-                };
 
                 const workspace: Workspace = await Workspace.fromTargetPaths(
                     ['/my/project/test.js'], vscodeWorkspace, fileHandler);
 
                 await codeAnalyzer.scan(workspace);
 
-                // First call should be --help, second call should include the flags
-                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(2);
-                const scanCommand = cliCommandExecutor.execCallHistory[1];
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
+                const scanCommand = cliCommandExecutor.execCallHistory[0];
                 expect(scanCommand.args).toContain('--include-fixes');
                 expect(scanCommand.args).toContain('--include-suggestions');
             });
 
-            it('When CLI does not support fixes/suggestions flags, then they are not included in scan command', async () => {
+            it('When CLI does not support fixes/suggestions flags, then they are not included even if settings are enabled', async () => {
                 vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.11.0');
 
                 const prePopulatedResultsJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output.json');
                 fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
-
-                // Mock exec to return different values based on args
-                cliCommandExecutor.execReturnValueCallback = (_command: string, args: string[]) => {
-                    if (args.includes('--help')) {
-                        // Help command - show no support for fixes/suggestions (old CLI)
-                        return {
-                            stdout: 'Usage: sf code-analyzer run [OPTIONS]\n--workspace\n--target',
-                            stderr: '',
-                            exitCode: 0
-                        };
-                    }
-                    // Actual scan command
-                    return { stdout: '', stderr: '', exitCode: 0 };
-                };
 
                 const workspace: Workspace = await Workspace.fromTargetPaths(
                     ['/my/project/test.js'], vscodeWorkspace, fileHandler);
 
                 await codeAnalyzer.scan(workspace);
 
-                // Scan command should NOT include the flags
-                const scanCommand = cliCommandExecutor.execCallHistory[1];
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
+                const scanCommand = cliCommandExecutor.execCallHistory[0];
+                expect(scanCommand.args).not.toContain('--include-fixes');
+                expect(scanCommand.args).not.toContain('--include-suggestions');
+            });
+
+            it('When CLI supports flags but settings are disabled, then flags are not included', async () => {
+                vscodeWorkspace.getWorkspaceFoldersReturnValue = ['/my/project'];
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
+                settingsManager.getIncludeFixesReturnValue = false;
+                settingsManager.getIncludeSuggestionsReturnValue = false;
+
+                const prePopulatedResultsJsonFile: string = path.join(TEST_DATA_DIR, 'sample-code-analyzer-run-output.json');
+                fileHandler.createTempFileReturnValue = prePopulatedResultsJsonFile;
+
+                const workspace: Workspace = await Workspace.fromTargetPaths(
+                    ['/my/project/test.js'], vscodeWorkspace, fileHandler);
+
+                await codeAnalyzer.scan(workspace);
+
+                expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
+                const scanCommand = cliCommandExecutor.execCallHistory[0];
                 expect(scanCommand.args).not.toContain('--include-fixes');
                 expect(scanCommand.args).not.toContain('--include-suggestions');
             });
@@ -352,16 +326,16 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
             });
 
             it('When asking for a description from an known engine and rule, then its description is returned', async () => {
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
                 // Set up the file handler to point to a prepopulated rules json file instead of actually calling the cli:
                 fileHandler.createTempFileReturnValue = prePopulatedRuleDescriptionJsonFile;
 
                 const ruleDescription1: string = await codeAnalyzer.getRuleDescriptionFor('someEngine', 'someRule1');
 
                 // First check that we are passing the correct arguments to the cli
-                // Note: There are 2 calls - first is "sf code-analyzer run --help" from detectFixesAndSuggestionsSupport()
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(2);
-                expect(cliCommandExecutor.execCallHistory[1].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[1].args).toEqual([
+                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
+                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
+                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
                     "code-analyzer", "rules",
                     "-r", "all",
                     "-f", prePopulatedRuleDescriptionJsonFile
@@ -371,23 +345,23 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 expect(ruleDescription1).toEqual('some description for someRule1');
 
                 // Lastly, confirm that if we call getRuleDescriptionFor again that we do not call the CLI again
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(2); // Should still be 2
+                expect(cliCommandExecutor.execCallHistory).toHaveLength(1); // Should still be 1
                 const ruleDescription2: string = await codeAnalyzer.getRuleDescriptionFor('someEngine', 'someRule2');
                 expect(ruleDescription2).toEqual('some description for someRule2');
 
             });
 
             it('When asking for a description from an unknown engine or rule, then empty string is returned', async () => {
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
                 // Set up the file handler to point to a prepopulated rules json file instead of actually calling the cli:
                 fileHandler.createTempFileReturnValue = prePopulatedRuleDescriptionJsonFile;
 
                 const ruleDescription: string = await codeAnalyzer.getRuleDescriptionFor('unknown', 'unknown');
 
                 // First check that we are passing the correct arguments to the cli
-                // Note: There are 2 calls - first is "sf code-analyzer run --help" from detectFixesAndSuggestionsSupport()
-                expect(cliCommandExecutor.execCallHistory).toHaveLength(2);
-                expect(cliCommandExecutor.execCallHistory[1].command).toEqual('sf');
-                expect(cliCommandExecutor.execCallHistory[1].args).toEqual([
+                expect(cliCommandExecutor.execCallHistory).toHaveLength(1);
+                expect(cliCommandExecutor.execCallHistory[0].command).toEqual('sf');
+                expect(cliCommandExecutor.execCallHistory[0].args).toEqual([
                     "code-analyzer", "rules",
                     "-r", "all",
                     "-f", prePopulatedRuleDescriptionJsonFile
