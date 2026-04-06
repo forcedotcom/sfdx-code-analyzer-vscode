@@ -304,6 +304,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
 
     telemetryService.sendExtensionActivationEvent(highResStartTime);
+
+    // Send settings snapshot for telemetry
+    telemetryService.sendCommandEvent(Constants.TELEM_SETTINGS_SNAPSHOT, {
+        analyzeOnSave: settingsManager.getAnalyzeOnSave().toString(),
+        analyzeOnOpen: settingsManager.getAnalyzeOnOpen().toString(),
+        fileTypes: Array.from(settingsManager.getAnalyzeAutomaticallyFileExtensions()).join(','),
+        ruleSelectors: settingsManager.getCodeAnalyzerRuleSelectors(),
+        hasCustomConfig: (settingsManager.getCodeAnalyzerConfigFile() !== '').toString()
+    });
+
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
     logger.log('Extension sfdx-code-analyzer-vscode activated.');
     return {
