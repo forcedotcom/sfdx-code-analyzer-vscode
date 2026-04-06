@@ -29,9 +29,9 @@ export class ApexGuruRunAction {
      * Runs apex guru analysis against the specified file and displays the results.
      * @param commandName The command being run
      * @param fileUri The file to analyze
-     * @param trigger The trigger source: 'manual', 'onSave', 'onOpen'
+     * @param trigger The trigger source: TRIGGER_MANUAL, TRIGGER_ON_SAVE, TRIGGER_ON_OPEN
      */
-    run(commandName: string, fileUri: vscode.Uri, trigger: string = 'manual'): Promise<void> {
+    run(commandName: string, fileUri: vscode.Uri, trigger: string = Constants.TRIGGER_MANUAL): Promise<void> {
         return this.taskWithProgressRunner.runTask(async (progressReporter: ProgressReporter) => {
             const startTime: number = Date.now();
 

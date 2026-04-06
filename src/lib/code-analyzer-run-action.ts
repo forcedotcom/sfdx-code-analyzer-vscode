@@ -40,9 +40,9 @@ export class CodeAnalyzerRunAction {
      * Runs the scanner against the specified file and displays the results.
      * @param commandName The command being run
      * @param workspace The workspace to run against
-     * @param trigger The trigger source: 'manual', 'onSave', 'onOpen'
+     * @param trigger The trigger source: TRIGGER_MANUAL, TRIGGER_ON_SAVE, TRIGGER_ON_OPEN
      */
-    run(commandName: string, workspace: Workspace, trigger: string = 'manual'): Promise<void> {
+    run(commandName: string, workspace: Workspace, trigger: string = Constants.TRIGGER_MANUAL): Promise<void> {
         return this.taskWithProgressRunner.runTask(async (progressReporter: ProgressReporter) => {
             const startTime: number = Date.now();
 
