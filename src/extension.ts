@@ -145,7 +145,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
             const workspace: Workspace = await Workspace.fromTargetPaths([editor.document.fileName], vscodeWorkspace, fileHandler);
-            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace, 'onOpen');
         }
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
@@ -161,7 +161,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (settingsManager.getAnalyzeOnSave()) {
             scanManager.addFileToAlreadyScannedFiles(document.fileName);
             const workspace: Workspace = await Workspace.fromTargetPaths([document.fileName], vscodeWorkspace, fileHandler);
-            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace, 'onSave');
         }
     });
 
