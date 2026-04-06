@@ -39,21 +39,21 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
             it('When the code-analyzer plugin is installed, but the version is below absolute minimum, then error', async () => {
                 cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('4.0.0');
                 await expect(codeAnalyzer.validateEnvironment()).rejects.toThrow(
-                    messages.codeAnalyzer.doesNotMeetMinVersion('4.0.0', '5.12.0') + '\n'
+                    messages.codeAnalyzer.doesNotMeetMinVersion('4.0.0', '5.0.0') + '\n'
                     + messages.codeAnalyzer.installLatestVersion);
             });
 
             it('When the code-analyzer plugin is installed with older version, then warning', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0-beta.3');
                 await codeAnalyzer.validateEnvironment();
                 expect(display.displayWarningCallHistory).toHaveLength(1);
                 expect(display.displayWarningCallHistory[0].msg).toContain(
-                    messages.codeAnalyzer.usingOlderVersion('5.0.0', '5.12.0')
+                    messages.codeAnalyzer.usingOlderVersion('5.0.0-beta.3', '5.0.0')
                 );
             });
 
             it('When the code-analyzer plugin is installed with at least the minimum recommended version, then no error and no warning', async () => {
-                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.12.0');
+                cliCommandExecutor.getSfCliPluginVersionReturnValue = new semver.SemVer('5.0.0');
                 await codeAnalyzer.validateEnvironment();
                 expect(display.displayErrorCallHistory).toHaveLength(0);
                 expect(display.displayWarningCallHistory).toHaveLength(0);
