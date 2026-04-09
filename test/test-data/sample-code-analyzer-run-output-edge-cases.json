@@ -1,0 +1,226 @@
+{
+  "runDir": "/my/project/",
+  "violationCounts": {"total": 7, "sev1": 0, "sev2": 0, "sev3": 7, "sev4": 0, "sev5": 0},
+  "versions": {"code-analyzer": "0.26.0", "eslint": "0.21.0"},
+  "violations": [
+    {
+      "rule": "edge-case-1",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 5,
+          "startColumn": 1,
+          "endLine": 5,
+          "endColumn": 10
+        }
+      ],
+      "message": "Edge Case 1: Fixes without suggestions",
+      "resources": [],
+      "fixes": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 5,
+            "startColumn": 1,
+            "endLine": 5,
+            "endColumn": 10
+          },
+          "fixedCode": "fixedCode"
+        }
+      ]
+    },
+    {
+      "rule": "edge-case-2",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 10,
+          "startColumn": 1
+        }
+      ],
+      "message": "Edge Case 2: Suggestions without fixes",
+      "resources": [],
+      "suggestions": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 10,
+            "startColumn": 1
+          },
+          "message": "Consider refactoring this code"
+        }
+      ]
+    },
+    {
+      "rule": "edge-case-3",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 15,
+          "startColumn": 1,
+          "endLine": 20,
+          "endColumn": 5
+        }
+      ],
+      "message": "Edge Case 3: Multi-line replacement",
+      "resources": [],
+      "fixes": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 15,
+            "startColumn": 1,
+            "endLine": 20,
+            "endColumn": 5
+          },
+          "fixedCode": "function fixed() {\n  return 'multi-line fix';\n}"
+        }
+      ]
+    },
+    {
+      "rule": "edge-case-4",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 1,
+          "startColumn": 1,
+          "endLine": 1,
+          "endColumn": 10
+        }
+      ],
+      "message": "Edge Case 4: Fix at first line of file",
+      "resources": [],
+      "fixes": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 1,
+            "startColumn": 1,
+            "endLine": 1,
+            "endColumn": 10
+          },
+          "fixedCode": "'use strict';"
+        }
+      ]
+    },
+    {
+      "rule": "edge-case-5",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 100,
+          "startColumn": 1,
+          "endLine": 100,
+          "endColumn": 10
+        }
+      ],
+      "message": "Edge Case 5: Fix at last line of file",
+      "resources": [],
+      "fixes": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 100,
+            "startColumn": 1,
+            "endLine": 100,
+            "endColumn": 10
+          },
+          "fixedCode": "// End of file"
+        }
+      ]
+    },
+    {
+      "rule": "edge-case-6",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 25,
+          "startColumn": 1
+        }
+      ],
+      "message": "Edge Case 6: Empty fixes array",
+      "resources": [],
+      "fixes": []
+    },
+    {
+      "rule": "edge-case-7",
+      "engine": "eslint",
+      "severity": 3,
+      "tags": ["Test"],
+      "primaryLocationIndex": 0,
+      "locations": [
+        {
+          "file": "edge-cases.js",
+          "startLine": 30,
+          "startColumn": 1
+        }
+      ],
+      "message": "Edge Case 7: Multiple fixes and suggestions for same violation",
+      "resources": [],
+      "fixes": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 30,
+            "startColumn": 1,
+            "endLine": 30,
+            "endColumn": 5
+          },
+          "fixedCode": "fix1"
+        },
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 30,
+            "startColumn": 10,
+            "endLine": 30,
+            "endColumn": 15
+          },
+          "fixedCode": "fix2"
+        }
+      ],
+      "suggestions": [
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 30,
+            "startColumn": 1
+          },
+          "message": "First suggestion"
+        },
+        {
+          "location": {
+            "file": "edge-cases.js",
+            "startLine": 30,
+            "startColumn": 1
+          },
+          "message": "Second suggestion"
+        }
+      ]
+    }
+  ]
+}
