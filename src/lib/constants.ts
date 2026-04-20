@@ -61,6 +61,7 @@ export const TELEM_QF_FIX_REJECTED = 'sfdx__codeanalyzer_qf_fix_rejected';
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
 export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0';
 export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
+export const MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION_FOR_FIXES_AND_SUGGESTIONS = '5.12.0';
 
 // Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
 export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
