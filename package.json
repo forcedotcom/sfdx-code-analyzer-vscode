@@ -162,7 +162,7 @@
                     "codeAnalyzer.ruleSelectors": {
                         "type": "string",
                         "default": "Recommended",
-                        "markdownDescription": "Selection of rules used to scan your code with Code Analyzer.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
+                        "markdownDescription": "Specify rules to scan your code. Specify rules by rule name, engine name, severity level, tag, or a combination of these. To include multiple criteria, use space. For example, `security performance`. To narrow down results by intersection, use colon. For example, `pmd:Security`. This setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
                     }
                 }
             },
@@ -277,21 +277,6 @@
                     "when": "sfca.extensionActivated && sfca.shouldShowApexGuruButtons && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
-        },
-        "languages": [
-            {
-                "id": "apex",
-                "aliases": [
-                    "Apex",
-                    "apex"
-                ],
-                "extensions": [
-                    ".cls",
-                    ".trigger",
-                    ".soql",
-                    ".apex"
-                ]
-            }
-        ]
+        }
     }
 }
