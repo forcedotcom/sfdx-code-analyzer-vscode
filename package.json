@@ -142,12 +142,12 @@
                     "codeAnalyzer.includeFixes": {
                         "type": "boolean",
                         "default": false,
-                        "markdownDescription": "Include code fixes for applicable violations.\n\n**Note:** Salesforce CLI plugin version 5.12.0 or later is needed."
+                        "markdownDescription": "Include code fixes for applicable violations.\n\n**Note:** Salesforce code analyzer CLI plugin version 5.12.0 or later is needed."
                     },
                     "codeAnalyzer.includeSuggestions": {
                         "type": "boolean",
                         "default": false,
-                        "markdownDescription": "Include code suggestions for applicable violations.\n\n**Note:** Salesforce CLI plugin version 5.12.0 or later is needed."
+                        "markdownDescription": "Include code suggestions for applicable violations.\n\n**Note:** Salesforce code analyzer CLI plugin version 5.12.0 or later is needed."
                     }
                 }
             },
