@@ -277,21 +277,6 @@
                     "when": "sfca.extensionActivated && sfca.shouldShowApexGuruButtons && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
-        },
-        "languages": [
-            {
-                "id": "apex",
-                "aliases": [
-                    "Apex",
-                    "apex"
-                ],
-                "extensions": [
-                    ".cls",
-                    ".trigger",
-                    ".soql",
-                    ".apex"
-                ]
-            }
-        ]
+        }
     }
 }
