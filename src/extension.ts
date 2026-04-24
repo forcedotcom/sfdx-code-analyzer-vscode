@@ -145,7 +145,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (isValidFileThatHasNotBeenScannedYet) {
             scanManager.addFileToAlreadyScannedFiles(editor.document.fileName);
             const workspace: Workspace = await Workspace.fromTargetPaths([editor.document.fileName], vscodeWorkspace, fileHandler);
-            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace, Constants.TRIGGER_ON_OPEN);
         }
     });
     onDidSaveTextDocument(async (document: vscode.TextDocument) => {
@@ -161,7 +161,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
         if (settingsManager.getAnalyzeOnSave()) {
             scanManager.addFileToAlreadyScannedFiles(document.fileName);
             const workspace: Workspace = await Workspace.fromTargetPaths([document.fileName], vscodeWorkspace, fileHandler);
-            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace);
+            await codeAnalyzerRunAction.run(Constants.COMMAND_RUN_ON_ACTIVE_FILE, workspace, Constants.TRIGGER_ON_SAVE);
         }
     });
 
@@ -304,6 +304,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     // =================================================================================================================
 
     telemetryService.sendExtensionActivationEvent(highResStartTime);
+
+    // Send settings snapshot for telemetry
+    telemetryService.sendCommandEvent(Constants.TELEM_SETTINGS_SNAPSHOT, {
+        analyzeOnSave: settingsManager.getAnalyzeOnSave().toString(),
+        analyzeOnOpen: settingsManager.getAnalyzeOnOpen().toString(),
+        fileTypes: Array.from(settingsManager.getAnalyzeAutomaticallyFileExtensions()).join(','),
+        ruleSelectors: settingsManager.getCodeAnalyzerRuleSelectors(),
+        hasCustomConfig: (settingsManager.getCodeAnalyzerConfigFile() !== '').toString()
+    });
+
     await vscode.commands.executeCommand('setContext', Constants.CONTEXT_VAR_EXTENSION_ACTIVATED, true);
     logger.log('Extension sfdx-code-analyzer-vscode activated.');
     return {

@@ -16,11 +16,11 @@
         "color": "#ECECEC",
         "theme": "light"
     },
-    "version": "1.17.0",
+    "version": "1.18.0",
     "publisher": "salesforce",
     "license": "BSD-3-Clause",
     "engines": {
-        "vscode": "^1.110.0",
+        "vscode": "^1.116.0",
         "node": ">=20.9.0"
     },
     "categories": [
@@ -34,7 +34,7 @@
         "SFCA"
     ],
     "dependencies": {
-        "@salesforce/vscode-service-provider": "^1.5.1",
+        "@salesforce/vscode-service-provider": "^1.5.3",
         "@types/jest": "^30.0.0",
         "@types/semver": "^7.7.1",
         "@types/tmp": "^0.2.6",
@@ -46,20 +46,20 @@
     "devDependencies": {
         "@eslint/js": "^9.39.2",
         "@types/node": "^20.0.0",
-        "@types/vscode": "^1.110.0",
-        "@vscode/vsce": "^3.7.1",
+        "@types/vscode": "^1.116.0",
+        "@vscode/vsce": "^3.9.1",
         "esbuild": "^0.27.4",
         "eslint": "^9.39.2",
         "husky": "^9.1.7",
         "jest": "^30.3.0",
         "jest-mock-vscode": "~4.12.0",
-        "ovsx": "^0.10.9",
+        "ovsx": "^0.10.11",
         "proxyquire": "^2.1.3",
         "rimraf": "*",
-        "ts-jest": "^29.4.6",
+        "ts-jest": "^29.4.9",
         "ts-node": "^10.9.2",
         "typescript": "^5.9.3",
-        "typescript-eslint": "^8.57.1"
+        "typescript-eslint": "^8.59.0"
     },
     "extensionDependencies": [
         "salesforce.salesforcedx-vscode-core"
@@ -138,6 +138,16 @@
                         "pattern": "^[.][A-Za-z0-9]+(?:,[.][A-Za-z0-9]+)*$",
                         "patternErrorMessage": "Must be a comma-separated list of file extensions (e.g., '.cls,.js,.html'). Each extension must start with a dot and contain only alphanumeric characters, with no spaces.",
                         "markdownDescription": "Comma-separated list of file extensions to analyze automatically when opening or saving files.\n\nSpecify the file types that should be scanned by Code Analyzer when the 'Analyze On Save' or 'Analyze On Open' features are enabled. Include the dot (.) prefix for each extension (e.g., `.cls,.js,.html`).\n\n**Format:** `.ext1,.ext2,.ext3`"
+                    },
+                    "codeAnalyzer.includeFixes": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "Include code fixes for applicable violations.\n\n**Note:** Salesforce code analyzer CLI plugin version 5.12.0 or later is needed."
+                    },
+                    "codeAnalyzer.includeSuggestions": {
+                        "type": "boolean",
+                        "default": false,
+                        "markdownDescription": "Include code suggestions for applicable violations.\n\n**Note:** Salesforce code analyzer CLI plugin version 5.12.0 or later is needed."
                     }
                 }
             },
@@ -152,7 +162,7 @@
                     "codeAnalyzer.ruleSelectors": {
                         "type": "string",
                         "default": "Recommended",
-                        "markdownDescription": "Selection of rules used to scan your code with Code Analyzer.\n\nSelect rules using their name, engine name, severity level, tag, or a combination. Use commas for unions (such as \"Security,Performance\") and colons for intersections (such as \"pmd:Security\" or \"eslint:3\").\n\nThis setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
+                        "markdownDescription": "Specify rules to scan your code. Specify rules by rule name, engine name, severity level, tag, or a combination of these. To include multiple criteria, use space. For example, `security performance`. To narrow down results by intersection, use colon. For example, `pmd:Security`. This setting is equivalent to the `--rule-selector` flag of the CLI commands. See [examples](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference_code-analyzer_commands_unified.htm#cli_reference_code-analyzer_rules_unified)."
                     }
                 }
             },
@@ -267,21 +277,6 @@
                     "when": "sfca.extensionActivated && sfca.shouldShowApexGuruButtons && explorerResourceIsFolder == false && resourceExtname =~ /\\.cls|\\.trigger|\\.apex/"
                 }
             ]
-        },
-        "languages": [
-            {
-                "id": "apex",
-                "aliases": [
-                    "Apex",
-                    "apex"
-                ],
-                "extensions": [
-                    ".cls",
-                    ".trigger",
-                    ".soql",
-                    ".apex"
-                ]
-            }
-        ]
+        }
     }
 }

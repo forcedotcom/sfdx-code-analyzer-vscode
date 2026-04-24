@@ -5,13 +5,13 @@
     "devDependencies": {
         "@types/chai": "^5.2.3",
         "@types/mocha": "^10.0.10",
-        "@types/vscode": "^1.90.0",
+        "@types/vscode": "^1.116.0",
         "@vscode/test-cli": "^0.0.12",
         "@vscode/test-electron": "^2.5.2",
-        "chai": "^6.2.1"
+        "chai": "^6.2.2"
     },
     "engines": {
-        "vscode": "^1.90.0"
+        "vscode": "^1.116.0"
     },
     "scripts": {
         "pretest": "tsc -p .",

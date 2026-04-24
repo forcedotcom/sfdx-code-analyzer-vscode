@@ -1,4 +1,4 @@
-import {Violation} from "./diagnostics";
+import {CodeLocation, Violation} from "./diagnostics";
 import {SettingsManager} from "./settings";
 import {Display} from "./display";
 import {messages} from './messages';
@@ -6,7 +6,8 @@ import {CliCommandExecutor, CommandOutput} from "./cli-commands";
 import * as semver from 'semver';
 import {
     ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
-    RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION
+    RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION,
+    MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION_FOR_FIXES_AND_SUGGESTIONS
 } from "./constants";
 import {FileHandler, FileHandlerImpl} from "./fs-utils";
 import {Workspace} from "./workspace";
@@ -47,6 +48,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
     private cliIsInstalled: boolean = false;
     private version?: semver.SemVer;
+    private supportsFixesAndSuggestions: boolean = false;
     private ruleDescriptionMap?: Map<string, string>;
 
     constructor(cliCommandExecutor: CliCommandExecutor, settingsManager: SettingsManager, display: Display,
@@ -85,6 +87,12 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
                 + messages.codeAnalyzer.installLatestVersion);
         }
         this.version = installedVersion;
+
+        // Check if CLI supports fixes and suggestions flags (available in 5.12.0+)
+        const fixesAndSuggestionsMinVersion: semver.SemVer = new semver.SemVer(MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION_FOR_FIXES_AND_SUGGESTIONS);
+        if (semver.gte(installedVersion, fixesAndSuggestionsMinVersion)) {
+            this.supportsFixesAndSuggestions = true;
+        }
     }
 
     public async getVersion(): Promise<string> {
@@ -110,7 +118,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
     public async scan(workspace: Workspace): Promise<Violation[]> {
         await this.validateEnvironment();
-        
+
         const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
         const configFile: string = this.settingsManager.getCodeAnalyzerConfigFile();
 
@@ -131,6 +139,16 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
             args.push('-c', configFile);
         }
 
+        // Add flags only if CLI supports them (>= 5.12.0) and settings are enabled
+        if (this.supportsFixesAndSuggestions) {
+            if (this.settingsManager.getIncludeFixes()) {
+                args.push('--include-fixes');
+            }
+            if (this.settingsManager.getIncludeSuggestions()) {
+                args.push('--include-suggestions');
+            }
+        }
+
         const outputFile: string = await this.fileHandler.createTempFile('.json');
         args.push('-f', outputFile);
 
@@ -148,16 +166,31 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
         const processedViolations: Violation[] = [];
         for (const violation of resultsJson.violations) {
             for (const location of violation.locations) {
-                // If the path isn't already absolute, it needs to be made absolute.
-                if (location.file && path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
-                    // Relative paths are relative to the RunDir results property.
-                    location.file = path.join(resultsJson.runDir, location.file);
-                }
+                this.makeLocationFileAbsolute(location, resultsJson.runDir);
+            }
+            for (const fix of violation.fixes ?? []) {
+                this.makeLocationFileAbsolute(fix.location, resultsJson.runDir);
+            }
+            for (const suggestion of violation.suggestions ?? []) {
+                this.makeLocationFileAbsolute(suggestion.location, resultsJson.runDir);
             }
             processedViolations.push(violation);
         }
         return processedViolations;
     }
+
+    private makeLocationFileAbsolute(location: CodeLocation, runDir: string): void {
+        // Only process if we have both a file location and a valid runDir
+        if (!location.file || !runDir) {
+            return;
+        }
+
+        // Check if the file path is not already absolute (case-insensitive comparison for cross-platform)
+        if (path.resolve(location.file).toLowerCase() !== location.file.toLowerCase()) {
+            location.file = path.join(runDir, location.file);
+        }
+    }
+
 
     private async createRuleDescriptionMap(): Promise<Map<string, string>> {
         const outputFile: string = await this.fileHandler.createTempFile('.json');

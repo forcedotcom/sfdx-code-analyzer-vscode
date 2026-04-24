@@ -29,8 +29,9 @@ export class ApexGuruRunAction {
      * Runs apex guru analysis against the specified file and displays the results.
      * @param commandName The command being run
      * @param fileUri The file to analyze
+     * @param trigger The trigger source: TRIGGER_MANUAL, TRIGGER_ON_SAVE, TRIGGER_ON_OPEN
      */
-    run(commandName: string, fileUri: vscode.Uri): Promise<void> {
+    run(commandName: string, fileUri: vscode.Uri, trigger: string = Constants.TRIGGER_MANUAL): Promise<void> {
         return this.taskWithProgressRunner.runTask(async (progressReporter: ProgressReporter) => {
             const startTime: number = Date.now();
 
@@ -40,7 +41,8 @@ export class ApexGuruRunAction {
                     this.display.displayError(availability.message);
                     this.telemetryService.sendCommandEvent(Constants.TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED, {
                         executedCommand: commandName,
-                        access: availability.access
+                        access: availability.access,
+                        trigger: trigger
                     });
                     return;
                 }
@@ -69,7 +71,8 @@ export class ApexGuruRunAction {
                     duration: (Date.now() - startTime).toString(),
                     numViolations: violations.length.toString(),
                     numViolationsWithSuggestions: violations.filter(v => v.suggestions?.length > 0).length.toString(),
-                    numViolationsWithFixes: violations.filter(v => v.fixes?.length > 0).length.toString()
+                    numViolationsWithFixes: violations.filter(v => v.fixes?.length > 0).length.toString(),
+                    trigger: trigger
                 });
             } catch (err) {
                 this.display.displayError(messages.error.analysisFailedGenerator(getErrorMessage(err)));
@@ -77,7 +80,8 @@ export class ApexGuruRunAction {
                     getErrorMessageWithStack(err),
                     {
                         executedCommand: commandName,
-                        duration: (Date.now() - startTime).toString()
+                        duration: (Date.now() - startTime).toString(),
+                        trigger: trigger
                     }
                 );
             }

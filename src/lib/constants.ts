@@ -37,6 +37,12 @@ export const TELEM_SUCCESSFUL_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run
 export const TELEM_FAILED_APEX_GURU_FILE_ANALYSIS = 'sfdx__apexguru_file_run_failed';
 export const TELEM_APEX_GURU_FILE_ANALYSIS_NOT_ENABLED = 'sfdx__apexguru_file_run_not_enabled';
 export const TELEM_COPY_SUGGESTION_CLICKED = 'sfdx__codeanalyzer_copy_suggestion_clicked';
+export const TELEM_SETTINGS_SNAPSHOT = 'sfdx__codeanalyzer_settings_snapshot';
+
+// telemetry trigger sources
+export const TRIGGER_MANUAL = 'manual';
+export const TRIGGER_ON_SAVE = 'onSave';
+export const TRIGGER_ON_OPEN = 'onOpen';
 
 // telemetry keys used by eGPT (A4D)
 export const TELEM_A4D_SUGGESTION = 'sfdx__eGPT_suggest';
@@ -55,6 +61,7 @@ export const TELEM_QF_FIX_REJECTED = 'sfdx__codeanalyzer_qf_fix_rejected';
 export const MINIMUM_REQUIRED_VERSION_CORE_EXTENSION = '58.4.1';
 export const RECOMMENDED_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0';
 export const ABSOLUTE_MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION = '5.0.0-beta.0';
+export const MINIMUM_REQUIRED_CODE_ANALYZER_CLI_PLUGIN_VERSION_FOR_FIXES_AND_SUGGESTIONS = '5.12.0';
 
 // Context variables (dynamically set but consumed by the "when" conditions in the package.json "contributes" sections)
 export const CONTEXT_VAR_EXTENSION_ACTIVATED = 'sfca.extensionActivated';
