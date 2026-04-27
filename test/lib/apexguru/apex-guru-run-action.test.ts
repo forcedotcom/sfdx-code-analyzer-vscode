@@ -60,6 +60,7 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
         expect(telemetryService.sendExceptionCallHistory[0].name).toEqual('sfdx__apexguru_file_run_failed');
         expect(telemetryService.sendExceptionCallHistory[0].properties.executedCommand).toEqual('SomeCommandName');
+        expect(telemetryService.sendExceptionCallHistory[0].properties.trigger).toEqual('manual');
         expect(telemetryService.sendExceptionCallHistory[0].errorMessage).toContain('Error: Sample error message from scan method');
 
         // Also validate that we didn't modify the existing diagnostics at all
@@ -86,7 +87,8 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendCommandEventCallHistory[0].commandName).toEqual('sfdx__apexguru_file_run_not_enabled');
         expect(telemetryService.sendCommandEventCallHistory[0].properties).toEqual({
             access: 'eligible-but-not-enabled',
-            executedCommand: 'SomeCommandName'
+            executedCommand: 'SomeCommandName',
+            trigger: 'manual'
         });
 
         // Also validate that we didn't modify the existing diagnostics at all
@@ -121,6 +123,7 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolations).toEqual("0");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithSuggestions).toEqual("0");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithFixes).toEqual("0");
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.trigger).toEqual("manual");
 
         // Also validate that we removed the old apexguru diagnostic(s) but kept the old non-apexguru diagnostic(s)
         expect(diagnosticManager.getDiagnosticsForFile(sampleUri)).toEqual([samplePmdDiag]);
@@ -229,6 +232,7 @@ describe("Tests for ApexGuruRunAction", () => {
         expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolations).toEqual("3");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithSuggestions).toEqual("2");
         expect(telemetryService.sendCommandEventCallHistory[0].properties.numViolationsWithFixes).toEqual("1");
+        expect(telemetryService.sendCommandEventCallHistory[0].properties.trigger).toEqual("manual");
 
         // Also validate that we removed the old apexguru diagnostic(s) but kept the other(s)
         const actDiags: readonly CodeAnalyzerDiagnostic[] = diagnosticManager.getDiagnosticsForFile(sampleUri);

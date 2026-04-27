@@ -270,6 +270,18 @@ export class StubSettingsManager implements SettingsManager {
         return this.getCodeAnalyzerRuleSelectorsReturnValue;
     }
 
+    getIncludeFixesReturnValue: boolean = true;
+
+    getIncludeFixes(): boolean {
+        return this.getIncludeFixesReturnValue;
+    }
+
+    getIncludeSuggestionsReturnValue: boolean = true;
+
+    getIncludeSuggestions(): boolean {
+        return this.getIncludeSuggestionsReturnValue;
+    }
+
     getSeverityLevelReturnValue: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Warning;
 
     getSeverityLevel(_severity: number): vscode.DiagnosticSeverity {
@@ -328,8 +340,16 @@ export class StubSpyCliCommandExecutor implements CliCommandExecutor {
 
     execReturnValue: CommandOutput = {stdout: '', stderr: '', exitCode: 0};
     execCallHistory: {command: string, args: string[], options?: ExecOptions}[] = [];
+    execReturnValueCallback?: (command: string, args: string[]) => CommandOutput;
+
     exec(command: string, args: string[], options?: ExecOptions): Promise<CommandOutput> {
         this.execCallHistory.push({command, args, options});
+
+        // If callback is set, use it to determine return value based on arguments
+        if (this.execReturnValueCallback) {
+            return Promise.resolve(this.execReturnValueCallback(command, args));
+        }
+
         return Promise.resolve(this.execReturnValue);
     }
 }

@@ -202,6 +202,86 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(windowManager.showExternalUrlCallHistory[0].url).toEqual(Constants.DOCS_SETUP_LINK);
     });
 
+    describe('Trigger propagation to telemetry', () => {
+        it('When trigger is not provided (manual scan), then telemetry should receive TRIGGER_MANUAL', async () => {
+            codeAnalyzer.scanReturnValue = [
+                createSampleViolation('A', 2, [{file: 'someFile.cls'}])
+            ];
+            const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+
+            await codeAnalyzerRunAction.run('dummyCommandName', workspace);
+
+            expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+            expect(telemetryService.sendCommandEventCallHistory[0].commandName).toBe(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS);
+            expect(telemetryService.sendCommandEventCallHistory[0].properties.trigger).toBe(Constants.TRIGGER_MANUAL);
+        });
+
+        it('When trigger is TRIGGER_ON_SAVE, then telemetry should receive it', async () => {
+            codeAnalyzer.scanReturnValue = [
+                createSampleViolation('A', 2, [{file: 'someFile.cls'}])
+            ];
+            const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+
+            await codeAnalyzerRunAction.run('dummyCommandName', workspace, Constants.TRIGGER_ON_SAVE);
+
+            expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+            expect(telemetryService.sendCommandEventCallHistory[0].commandName).toBe(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS);
+            expect(telemetryService.sendCommandEventCallHistory[0].properties.trigger).toBe(Constants.TRIGGER_ON_SAVE);
+        });
+
+        it('When trigger is TRIGGER_ON_OPEN, then telemetry should receive it', async () => {
+            codeAnalyzer.scanReturnValue = [
+                createSampleViolation('A', 2, [{file: 'someFile.cls'}])
+            ];
+            const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+
+            await codeAnalyzerRunAction.run('dummyCommandName', workspace, Constants.TRIGGER_ON_OPEN);
+
+            expect(telemetryService.sendCommandEventCallHistory).toHaveLength(1);
+            expect(telemetryService.sendCommandEventCallHistory[0].commandName).toBe(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS);
+            expect(telemetryService.sendCommandEventCallHistory[0].properties.trigger).toBe(Constants.TRIGGER_ON_OPEN);
+        });
+
+        it('When scan fails with trigger TRIGGER_ON_SAVE, then exception telemetry should include trigger', async () => {
+            codeAnalyzer.scan = async () => {
+                throw new Error('Scan failed');
+            };
+            const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+
+            await codeAnalyzerRunAction.run('dummyCommandName', workspace, Constants.TRIGGER_ON_SAVE);
+
+            expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+            expect(telemetryService.sendExceptionCallHistory[0].name).toBe(Constants.TELEM_FAILED_STATIC_ANALYSIS);
+            expect(telemetryService.sendExceptionCallHistory[0].properties?.trigger).toBe(Constants.TRIGGER_ON_SAVE);
+        });
+
+        it('When scan fails with trigger TRIGGER_ON_OPEN, then exception telemetry should include trigger', async () => {
+            codeAnalyzer.scan = async () => {
+                throw new Error('Scan failed');
+            };
+            const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+
+            await codeAnalyzerRunAction.run('dummyCommandName', workspace, Constants.TRIGGER_ON_OPEN);
+
+            expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+            expect(telemetryService.sendExceptionCallHistory[0].name).toBe(Constants.TELEM_FAILED_STATIC_ANALYSIS);
+            expect(telemetryService.sendExceptionCallHistory[0].properties?.trigger).toBe(Constants.TRIGGER_ON_OPEN);
+        });
+
+        it('When scan fails without explicit trigger (manual), then exception telemetry should include TRIGGER_MANUAL', async () => {
+            codeAnalyzer.scan = async () => {
+                throw new Error('Scan failed');
+            };
+            const workspace: Workspace = await Workspace.fromTargetPaths(['someFile.cls'], new StubVscodeWorkspace(), new StubFileHandler());
+
+            await codeAnalyzerRunAction.run('dummyCommandName', workspace);
+
+            expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
+            expect(telemetryService.sendExceptionCallHistory[0].name).toBe(Constants.TELEM_FAILED_STATIC_ANALYSIS);
+            expect(telemetryService.sendExceptionCallHistory[0].properties?.trigger).toBe(Constants.TRIGGER_MANUAL);
+        });
+    });
+
     // TODO: Eventually, we want to add in the rest of the tests for all the other cases.
 });
 

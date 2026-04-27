@@ -15,6 +15,8 @@ export interface SettingsManager {
     // Configuration Settings
     getCodeAnalyzerConfigFile(): string;
     getCodeAnalyzerRuleSelectors(): string;
+    getIncludeFixes(): boolean;
+    getIncludeSuggestions(): boolean;
     getSeverityLevel(severity: number): vscode.DiagnosticSeverity;
 
     // Other Settings that we may depend on
@@ -54,6 +56,14 @@ export class SettingsManagerImpl implements SettingsManager {
 
     public getCodeAnalyzerRuleSelectors(): string {
         return vscode.workspace.getConfiguration('codeAnalyzer').get('ruleSelectors');
+    }
+
+    public getIncludeFixes(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeFixes', false);
+    }
+
+    public getIncludeSuggestions(): boolean {
+        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeSuggestions', false);
     }
 
     // =================================================================================================================
