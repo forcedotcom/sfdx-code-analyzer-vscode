@@ -85,6 +85,23 @@ export const messages = {
         sfMissing: "To use the Salesforce Code Analyzer extension, first install Salesforce CLI.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
     },
+    insights: {
+        apexGuruSkipped: {
+            noOrgConnection: (remediation: string) => `ApexGuru analysis was skipped because no org is connected. ${remediation}`,
+            apiUnavailable: (message: string) => `ApexGuru analysis was skipped because the service is currently unavailable. ${message}`,
+            unexpectedError: (message: string) => `ApexGuru analysis was skipped due to an unexpected error. ${message}`
+        },
+        buttons: {
+            connectOrg: 'Connect Org',
+            retryScan: 'Retry Scan',
+            details: 'Details',
+            viewDetails: 'View Details',
+            reportIssue: 'Report Issue'
+        },
+        fallback: {
+            connectOrgManual: (remediation: string) => `To connect an org manually, run the following in your terminal: ${remediation}`
+        }
+    },
     buttons: {
         learnMore: 'Learn more',
         showError: 'Show error',

@@ -16,6 +16,7 @@ import {ExternalServiceProvider} from "./lib/external-services/external-service-
 import {Logger, LoggerImpl} from "./lib/logger";
 import {TelemetryService} from "./lib/external-services/telemetry-service";
 import {CodeAnalyzerRunAction} from "./lib/code-analyzer-run-action";
+import {InsightsHandler} from "./lib/insights-handler";
 import {A4DFixActionProvider} from "./lib/agentforce/a4d-fix-action-provider";
 import {ScanManager} from './lib/scan-manager';
 import {A4DFixAction} from './lib/agentforce/a4d-fix-action';
@@ -113,7 +114,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<SFCAEx
     const codeAnalyzer: CodeAnalyzer = new CodeAnalyzerImpl(cliCommandExecutor, settingsManager, display, fileHandler);
 
     const diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
-    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, diagnosticFactory, telemetryService, logger, display, windowManager);
+    const insightsHandler: InsightsHandler = new InsightsHandler(display, logger, externalServiceProvider, windowManager);
+    const codeAnalyzerRunAction: CodeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager, diagnosticFactory, telemetryService, logger, display, windowManager, insightsHandler);
 
     // For performance reasons, it's best to kick this off in the background instead of await the promise.
     void performValidationAndCaching(codeAnalyzer, display);

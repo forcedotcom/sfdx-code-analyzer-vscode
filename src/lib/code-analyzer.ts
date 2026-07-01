@@ -18,6 +18,21 @@ import * as path from 'node:path';
 type ResultsJson = {
     runDir: string;
     violations: Violation[];
+    insights?: Record<string, EngineInsight>;
+};
+
+export type EngineInsight = {
+    status: 'completed' | 'skipped';
+    error?: {
+        code: string;
+        message: string;
+        remediation: string;
+    };
+};
+
+export type ScanResults = {
+    violations: Violation[];
+    insights?: Record<string, EngineInsight>;
 };
 
 type RulesJson = {
@@ -35,7 +50,7 @@ type RuleDescription = {
 
 export interface CodeAnalyzer {
     validateEnvironment(): Promise<void>;
-    scan(workspace: Workspace): Promise<Violation[]>;
+    scan(workspace: Workspace): Promise<ScanResults>;
     getVersion(): Promise<string>;
     getRuleDescriptionFor(engineName: string, ruleName: string): Promise<string>;
 }
@@ -116,7 +131,7 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
         return this.ruleDescriptionMap;
     }
 
-    public async scan(workspace: Workspace): Promise<Violation[]> {
+    public async scan(workspace: Workspace): Promise<ScanResults> {
         await this.validateEnvironment();
 
         const ruleSelector: string = this.settingsManager.getCodeAnalyzerRuleSelectors();
@@ -159,7 +174,10 @@ export class CodeAnalyzerImpl implements CodeAnalyzer {
 
         const resultsJsonStr: string = await fs.promises.readFile(outputFile, 'utf-8');
         const resultsJson: ResultsJson = JSON.parse(resultsJsonStr) as ResultsJson;
-        return this.processResults(resultsJson);
+        return {
+            violations: this.processResults(resultsJson),
+            insights: resultsJson.insights
+        };
     }
 
     private processResults(resultsJson: ResultsJson): Violation[] {

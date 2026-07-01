@@ -5,6 +5,7 @@ import {Logger} from "../src/lib/logger";
 import {LLMService, LLMServiceProvider} from "../src/lib/external-services/llm-service";
 import {Violation} from "../src/lib/diagnostics";
 import {Display, DisplayButton} from "../src/lib/display";
+import {ScanResults, EngineInsight} from "../src/lib/code-analyzer";
 import {UnifiedDiffService} from "../src/lib/unified-diff-service";
 import {TextDocument} from "vscode";
 import {SettingsManager} from "../src/lib/settings";
@@ -77,10 +78,10 @@ export class SpyLogger implements Logger {
 }
 
 export class SpyDisplay implements Display {
-    displayInfoCallHistory: { msg: string }[] = [];
+    displayInfoCallHistory: { msg: string, buttons: DisplayButton[] }[] = [];
 
-    displayInfo(msg: string): void {
-        this.displayInfoCallHistory.push({msg});
+    displayInfo(msg: string, ...buttons: DisplayButton[]): void {
+        this.displayInfoCallHistory.push({msg, buttons});
     }
 
     displayWarningCallHistory: { msg: string, buttons: DisplayButton[] }[] = [];
@@ -147,9 +148,13 @@ export class StubCodeAnalyzer implements CodeAnalyzer {
     }
 
     scanReturnValue: Violation[] = [];
+    scanInsightsReturnValue: Record<string, EngineInsight> | undefined = undefined;
 
-    scan(_workspace: Workspace): Promise<Violation[]> {
-        return Promise.resolve(this.scanReturnValue);
+    scan(_workspace: Workspace): Promise<ScanResults> {
+        return Promise.resolve({
+            violations: this.scanReturnValue,
+            insights: this.scanInsightsReturnValue
+        });
     }
 
     getScannerNameReturnValue: string = 'dummyScannerName';
@@ -170,7 +175,7 @@ export class ThrowingCodeAnalyzer implements CodeAnalyzer {
         throw new Error("Error from validateEnvironment");
     }
 
-    scan(_workspace: Workspace): Promise<Violation[]> {
+    scan(_workspace: Workspace): Promise<ScanResults> {
         throw new Error("Error from scan");
     }
 

@@ -7,7 +7,7 @@ export type DisplayButton = {
 }
 
 export interface Display {
-    displayInfo(infoMsg: string): void;
+    displayInfo(infoMsg: string, ...buttons: DisplayButton[]): void;
     displayWarning(warnMsg: string, ...buttons: DisplayButton[]): void;
     displayError(errorMsg: string, ...buttons: DisplayButton[]): void;
 }
@@ -19,9 +19,17 @@ export class VSCodeDisplay implements Display {
         this.logger = logger;
     }
 
-    displayInfo(infoMsg: string): void {
-        // Not waiting for promise because we didn't add buttons and don't care if user ignores the message.
-        void vscode.window.showInformationMessage(infoMsg);
+    displayInfo(infoMsg: string, ...buttons: DisplayButton[]): void {
+        if (buttons.length > 0) {
+            void vscode.window.showInformationMessage(infoMsg, ...buttons.map(b => b.text)).then(selectedText => {
+                const selectedButton: DisplayButton = buttons.find(b => b.text === selectedText);
+                if (selectedButton) {
+                    selectedButton.callback();
+                }
+            });
+        } else {
+            void vscode.window.showInformationMessage(infoMsg);
+        }
         this.logger.log(infoMsg);
     }
 
