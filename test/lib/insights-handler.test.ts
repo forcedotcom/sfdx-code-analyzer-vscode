@@ -4,6 +4,8 @@ import {EngineInsight} from "../../src/lib/code-analyzer";
 import {SpyDisplay, SpyLogger, SpyWindowManager} from "../stubs";
 import {messages} from "../../src/lib/messages";
 import {ExternalServiceProvider} from "../../src/lib/external-services/external-service-provider";
+import {CliCommandExecutor, CommandOutput} from "../../src/lib/cli-commands";
+import * as semver from "semver";
 
 class StubExternalServiceProvider {
     isOrgConnectionServiceAvailableReturnValue: boolean = true;
@@ -13,11 +15,30 @@ class StubExternalServiceProvider {
     }
 }
 
+class StubCliCommandExecutor implements CliCommandExecutor {
+    execHistory: {command: string; args: string[]}[] = [];
+    execReturnValue: CommandOutput = {stdout: '', stderr: '', exitCode: 0};
+
+    async isSfInstalled(): Promise<boolean> {
+        return true;
+    }
+
+    async getSfCliPluginVersion(_pluginName: string): Promise<semver.SemVer | undefined> {
+        return undefined;
+    }
+
+    async exec(command: string, args: string[]): Promise<CommandOutput> {
+        this.execHistory.push({command, args});
+        return this.execReturnValue;
+    }
+}
+
 describe('Tests for InsightsHandler', () => {
     let display: SpyDisplay;
     let logger: SpyLogger;
     let externalServiceProvider: StubExternalServiceProvider;
     let windowManager: SpyWindowManager;
+    let cliCommandExecutor: StubCliCommandExecutor;
     let insightsHandler: InsightsHandler;
     let retriggerScanCallCount: number;
     let retriggerScan: () => void;
@@ -27,10 +48,12 @@ describe('Tests for InsightsHandler', () => {
         logger = new SpyLogger();
         externalServiceProvider = new StubExternalServiceProvider();
         windowManager = new SpyWindowManager();
+        cliCommandExecutor = new StubCliCommandExecutor();
         insightsHandler = new InsightsHandler(
             display, logger,
             externalServiceProvider as unknown as ExternalServiceProvider,
-            windowManager
+            windowManager,
+            cliCommandExecutor
         );
         retriggerScanCallCount = 0;
         retriggerScan = () => { retriggerScanCallCount++; };
@@ -119,7 +142,7 @@ describe('Tests for InsightsHandler', () => {
         expect(display.displayInfoCallHistory[0].buttons[1].text).toEqual(messages.insights.buttons.reportIssue);
     });
 
-    it('After a banner is shown for an error code, the same code does not produce a banner again (session suppression)', () => {
+    it('NO_ORG_CONNECTION is shown once per session (non-intrusive)', () => {
         const insights: Record<string, EngineInsight> = {
             apexguru: {
                 status: 'skipped',
@@ -138,7 +161,51 @@ describe('Tests for InsightsHandler', () => {
         expect(display.displayInfoCallHistory).toHaveLength(1); // Still 1, suppressed
     });
 
-    it('Different error codes are suppressed independently', () => {
+    it('API_UNAVAILABLE is shown every time (transient error)', () => {
+        const apiInsights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'API_UNAVAILABLE',
+                    message: 'Service down',
+                    remediation: 'Retry later'
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(apiInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+
+        // API_UNAVAILABLE shows again (not suppressed)
+        insightsHandler.handleInsights(apiInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(2);
+
+        // And again
+        insightsHandler.handleInsights(apiInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(3);
+    });
+
+    it('UNEXPECTED_ERROR is shown every time', () => {
+        const unexpectedInsights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'UNEXPECTED_ERROR',
+                    message: 'Something went wrong',
+                    remediation: 'Check logs'
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(unexpectedInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+
+        // UNEXPECTED_ERROR shows again (not suppressed)
+        insightsHandler.handleInsights(unexpectedInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(2);
+    });
+
+    it('NO_ORG_CONNECTION suppression does not affect other error codes', () => {
         const noOrgInsights: Record<string, EngineInsight> = {
             apexguru: {
                 status: 'skipped',
@@ -160,20 +227,33 @@ describe('Tests for InsightsHandler', () => {
             }
         };
 
+        // Show NO_ORG_CONNECTION once
         insightsHandler.handleInsights(noOrgInsights, retriggerScan);
         expect(display.displayInfoCallHistory).toHaveLength(1);
 
-        // Same code suppressed
+        // NO_ORG_CONNECTION suppressed
         insightsHandler.handleInsights(noOrgInsights, retriggerScan);
         expect(display.displayInfoCallHistory).toHaveLength(1);
 
-        // Different code still shows
+        // API_UNAVAILABLE still shows
         insightsHandler.handleInsights(apiInsights, retriggerScan);
         expect(display.displayInfoCallHistory).toHaveLength(2);
+
+        // API_UNAVAILABLE shows again
+        insightsHandler.handleInsights(apiInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(3);
     });
 
-    it('Connect Org button triggers vscode.commands.executeCommand when Core Extension is available', async () => {
-        externalServiceProvider.isOrgConnectionServiceAvailableReturnValue = true;
+    it('Connect Org button opens terminal with sf org login web when no orgs are authenticated', async () => {
+        // sf org list returns no orgs
+        cliCommandExecutor.execReturnValue = {
+            stdout: JSON.stringify({result: {nonScratchOrgs: [], scratchOrgs: []}}),
+            stderr: '',
+            exitCode: 0
+        };
+
+        const mockTerminal = {show: jest.fn(), sendText: jest.fn()};
+        (vscode.window.createTerminal as jest.Mock).mockReturnValue(mockTerminal);
 
         const insights: Record<string, EngineInsight> = {
             apexguru: {
@@ -192,11 +272,25 @@ describe('Tests for InsightsHandler', () => {
         // Allow the async promise to resolve
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(vscode.commands.executeCommand).toHaveBeenCalledWith('sfdx.authorize.org');
+        expect(vscode.window.createTerminal).toHaveBeenCalledWith('Salesforce Org Login');
+        expect(mockTerminal.show).toHaveBeenCalled();
+        expect(mockTerminal.sendText).toHaveBeenCalledWith('sf org login web');
     });
 
-    it('Connect Org button shows fallback message when Core Extension is NOT available', async () => {
-        externalServiceProvider.isOrgConnectionServiceAvailableReturnValue = false;
+    it('Connect Org button shows QuickPick when orgs are already authenticated', async () => {
+        // sf org list returns some orgs
+        cliCommandExecutor.execReturnValue = {
+            stdout: JSON.stringify({
+                result: {
+                    nonScratchOrgs: [
+                        {alias: 'myOrg', username: 'user@example.com', isDefaultUsername: false}
+                    ],
+                    scratchOrgs: []
+                }
+            }),
+            stderr: '',
+            exitCode: 0
+        };
 
         const insights: Record<string, EngineInsight> = {
             apexguru: {
@@ -215,8 +309,54 @@ describe('Tests for InsightsHandler', () => {
         // Allow the async promise to resolve
         await new Promise(resolve => setTimeout(resolve, 0));
 
-        expect(display.displayInfoCallHistory).toHaveLength(2);
-        expect(display.displayInfoCallHistory[1].msg).toContain('sf org login web');
+        expect(vscode.window.showQuickPick).toHaveBeenCalled();
+    });
+
+    it('Connect Org button sets target-org when user selects an org from QuickPick', async () => {
+        // sf org list returns some orgs
+        cliCommandExecutor.execReturnValue = {
+            stdout: JSON.stringify({
+                result: {
+                    nonScratchOrgs: [
+                        {alias: 'myOrg', username: 'user@example.com', isDefaultUsername: false}
+                    ],
+                    scratchOrgs: []
+                }
+            }),
+            stderr: '',
+            exitCode: 0
+        };
+
+        // Mock showQuickPick to simulate user selection
+        (vscode.window.showQuickPick as jest.Mock).mockResolvedValueOnce({
+            label: 'myOrg',
+            description: 'user@example.com',
+            orgAlias: 'myOrg'
+        });
+
+        const insights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'NO_ORG_CONNECTION',
+                    message: 'No org',
+                    remediation: 'sf org login web'
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+        display.displayInfoCallHistory[0].buttons[0].callback();
+
+        // Allow the async promises to resolve
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Verify sf config set was called
+        const configSetCall = cliCommandExecutor.execHistory.find(
+            call => call.args.includes('config') && call.args.includes('set')
+        );
+        expect(configSetCall).toBeDefined();
+        expect(configSetCall.args).toContain('target-org=myOrg');
     });
 
     it('Retry Scan button re-triggers the scan', () => {
@@ -253,6 +393,16 @@ describe('Tests for InsightsHandler', () => {
         display.displayInfoCallHistory[0].buttons[0].callback();
 
         expect(windowManager.showLogOutputWindowCallCount).toEqual(1);
+    });
+
+    it('When apexguru insight has analysisMode without a skip error, then handler shows no banner (analysis mode is embedded in scan-complete message elsewhere)', () => {
+        const insights: Record<string, EngineInsight> = {
+            apexguru: {status: 'completed', analysisMode: 'full'}
+        };
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+
+        expect(display.displayInfoCallHistory).toHaveLength(0);
     });
 
     it('Report Issue button opens issues URL', () => {

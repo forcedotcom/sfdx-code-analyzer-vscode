@@ -18,6 +18,8 @@ import {FakeDiagnosticCollection} from "../vscode-stubs";
 import {ExternalServiceProvider} from "../../src/lib/external-services/external-service-provider";
 import {Workspace} from "../../src/lib/workspace";
 import {messages} from "../../src/lib/messages";
+import {CliCommandExecutor, CommandOutput} from "../../src/lib/cli-commands";
+import * as semver from "semver";
 
 class StubExternalServiceProvider {
     isOrgConnectionServiceAvailableReturnValue: boolean = true;
@@ -25,6 +27,14 @@ class StubExternalServiceProvider {
     async isOrgConnectionServiceAvailable(): Promise<boolean> {
         return this.isOrgConnectionServiceAvailableReturnValue;
     }
+}
+
+class StubCliCommandExecutor implements CliCommandExecutor {
+    execReturnValue: CommandOutput = {stdout: JSON.stringify({result: {nonScratchOrgs: [], scratchOrgs: []}}), stderr: '', exitCode: 0};
+
+    async isSfInstalled(): Promise<boolean> { return true; }
+    async getSfCliPluginVersion(_pluginName: string): Promise<semver.SemVer | undefined> { return undefined; }
+    async exec(_command: string, _args: string[]): Promise<CommandOutput> { return this.execReturnValue; }
 }
 
 describe('InsightsHandler integration tests - full skip-banner lifecycle', () => {
@@ -50,10 +60,12 @@ describe('InsightsHandler integration tests - full skip-banner lifecycle', () =>
         const diagnosticFactory = (diagnosticManager as DiagnosticManagerImpl).diagnosticFactory;
         const telemetryService = new SpyTelemetryService();
 
+        const cliCommandExecutor = new StubCliCommandExecutor();
         const insightsHandler = new InsightsHandler(
             display, logger,
             externalServiceProvider as unknown as ExternalServiceProvider,
-            windowManager
+            windowManager,
+            cliCommandExecutor
         );
 
         codeAnalyzerRunAction = new CodeAnalyzerRunAction(
@@ -80,7 +92,7 @@ describe('InsightsHandler integration tests - full skip-banner lifecycle', () =>
         expect(infoBanners[0].buttons[0].text).toEqual(messages.insights.buttons.connectOrg);
     });
 
-    it('User dismisses banner -> same error code suppressed on next scan', async () => {
+    it('NO_ORG_CONNECTION: User dismisses banner -> suppressed on next scan (non-intrusive)', async () => {
         codeAnalyzer.scanInsightsReturnValue = {
             apexguru: {
                 status: 'skipped',
@@ -92,13 +104,36 @@ describe('InsightsHandler integration tests - full skip-banner lifecycle', () =>
         const firstBannerCount = display.displayInfoCallHistory.filter(h => h.buttons.length > 0).length;
         expect(firstBannerCount).toEqual(1);
 
-        // Run scan again - should be suppressed
+        // Run scan again - NO_ORG_CONNECTION should be suppressed
         await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
         const secondBannerCount = display.displayInfoCallHistory.filter(h => h.buttons.length > 0).length;
         expect(secondBannerCount).toEqual(1); // Still 1, suppressed
     });
 
-    it('Different error code API_UNAVAILABLE still shows banner after NO_ORG_CONNECTION suppressed', async () => {
+    it('API_UNAVAILABLE: Shows banner every time (transient error, not suppressed)', async () => {
+        codeAnalyzer.scanInsightsReturnValue = {
+            apexguru: {
+                status: 'skipped',
+                error: {code: 'API_UNAVAILABLE', message: 'Service down', remediation: 'Retry'}
+            }
+        };
+
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+        let bannerCount = display.displayInfoCallHistory.filter(h => h.buttons.length > 0).length;
+        expect(bannerCount).toEqual(1);
+
+        // Run scan again - API_UNAVAILABLE should show again
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+        bannerCount = display.displayInfoCallHistory.filter(h => h.buttons.length > 0).length;
+        expect(bannerCount).toEqual(2); // Shows again!
+
+        // And again
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+        bannerCount = display.displayInfoCallHistory.filter(h => h.buttons.length > 0).length;
+        expect(bannerCount).toEqual(3); // Shows every time
+    });
+
+    it('NO_ORG_CONNECTION suppressed but API_UNAVAILABLE still shows', async () => {
         codeAnalyzer.scanInsightsReturnValue = {
             apexguru: {
                 status: 'skipped',
@@ -120,6 +155,10 @@ describe('InsightsHandler integration tests - full skip-banner lifecycle', () =>
         expect(banners).toHaveLength(2); // Both shown
         expect(banners[0].buttons[0].text).toEqual(messages.insights.buttons.connectOrg);
         expect(banners[1].buttons[0].text).toEqual(messages.insights.buttons.retryScan);
+
+        // API_UNAVAILABLE shows again on next scan
+        await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+        expect(display.displayInfoCallHistory.filter(h => h.buttons.length > 0)).toHaveLength(3); // API_UNAVAILABLE not suppressed
     });
 
     it('CLI returns without insights field (older CLI version) -> no crash, no banner, scan completes normally', async () => {

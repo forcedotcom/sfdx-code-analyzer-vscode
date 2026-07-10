@@ -110,7 +110,7 @@ export class CodeAnalyzerRunAction {
                 }
 
                 this.diagnosticManager.addDiagnostics(diagnostics);
-                void this.displayResults(targetedFiles.length, violationsWithFileLocation);
+                void this.displayResults(targetedFiles.length, violationsWithFileLocation, scanResults.insights?.apexguru?.analysisMode);
 
                 this.insightsHandler.handleInsights(scanResults.insights, () => { void this.run(commandName, workspace, trigger); });
 
@@ -146,12 +146,12 @@ export class CodeAnalyzerRunAction {
         }
     }
 
-    private displayResults(numFilesScanned: number, violations: Violation[]): void {
+    private displayResults(numFilesScanned: number, violations: Violation[], apexGuruAnalysisMode?: string): void {
         const filesWithViolations: Set<string> = new Set();
         for (const violation of violations) {
             filesWithViolations.add(violation.locations[violation.primaryLocationIndex].file);
         }
-        this.display.displayInfo(messages.info.finishedScan(numFilesScanned, filesWithViolations.size, violations.length));
+        this.display.displayInfo(messages.info.finishedScan(numFilesScanned, filesWithViolations.size, violations.length, apexGuruAnalysisMode));
     }
 
     /**

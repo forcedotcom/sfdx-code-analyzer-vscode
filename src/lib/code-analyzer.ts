@@ -23,6 +23,7 @@ type ResultsJson = {
 
 export type EngineInsight = {
     status: 'completed' | 'skipped';
+    analysisMode?: string;
     error?: {
         code: string;
         message: string;
