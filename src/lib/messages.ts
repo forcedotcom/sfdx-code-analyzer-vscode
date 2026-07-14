@@ -46,7 +46,10 @@ export const messages = {
     },
     info: {
         scanningWith: (version: string) => `Scanning with code-analyzer@${version} via CLI`,
-        finishedScan: (scannedCount: number, badFileCount: number, violationCount: number) => `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`
+        finishedScan: (scannedCount: number, badFileCount: number, violationCount: number, apexGuruAnalysisMode?: string) => {
+            const base = `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`;
+            return apexGuruAnalysisMode ? `${base} ApexGuru analysis mode: '${apexGuruAnalysisMode}'.` : base;
+        }
     },
     suggestions: {
         suggestionFor: "Suggestion for",
@@ -84,6 +87,27 @@ export const messages = {
         pmdConfigNotFoundGenerator: (file: string) => `PMD custom config file couldn't be located. [${file}]. Check Salesforce Code Analyzer > PMD > Custom Config settings`,
         sfMissing: "To use the Salesforce Code Analyzer extension, first install Salesforce CLI.",
         coreExtensionServiceUninitialized: "CoreExtensionService.ts didn't initialize. Log a new issue on Salesforce Code Analyzer VS Code extension repo: https://github.com/forcedotcom/sfdx-code-analyzer-vscode/issues"
+    },
+    insights: {
+        apexGuruSkipped: {
+            noOrgConnection: (remediation: string) => `ApexGuru analysis was skipped because no org is connected. ${remediation}`,
+            apiUnavailable: (message: string) => `ApexGuru analysis was skipped because the service is currently unavailable. ${message}`,
+            unexpectedError: (message: string) => `ApexGuru analysis was skipped due to an unexpected error. ${message}`
+        },
+        buttons: {
+            connectOrg: 'Connect Org',
+            retryScan: 'Retry Scan',
+            details: 'Details',
+            viewDetails: 'View Details',
+            reportIssue: 'Report Issue'
+        },
+        selectOrgPlaceholder: 'Select an org to set as the default target-org',
+        selectOrgTitle: 'Connect Salesforce Org',
+        orgSetSuccess: (orgAlias: string) => `Default target-org set to '${orgAlias}'. Re-run the scan to use ApexGuru.`,
+        orgSetFailure: (orgAlias: string, error: string) => `Failed to set target-org to '${orgAlias}': ${error}`,
+        fallback: {
+            connectOrgManual: (remediation: string) => `To connect an org manually, run the following in your terminal: ${remediation}`
+        }
     },
     buttons: {
         learnMore: 'Learn more',
