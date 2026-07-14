@@ -1,4 +1,4 @@
-import {CodeAnalyzer, CodeAnalyzerImpl} from "../../src/lib/code-analyzer";
+import {CodeAnalyzer, CodeAnalyzerImpl, ScanResults} from "../../src/lib/code-analyzer";
 import * as semver from "semver";
 import * as stubs from "../stubs";
 import {messages} from "../../src/lib/messages";
@@ -141,7 +141,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls', '/my/project/subfolder'], vscodeWorkspace, fileHandler);
 
                 // Call scan
-                const violations: Violation[] = await codeAnalyzer.scan(workspace);
+                const scanResults: ScanResults = await codeAnalyzer.scan(workspace);
 
                 // Check that we made the CLI call
                 expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
@@ -162,7 +162,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "-f", prePopulatedResultsJsonFile
                 ]);
 
-                expect(violations).toEqual([expectedViolation1, expectedViolation2]);
+                expect(scanResults.violations).toEqual([expectedViolation1, expectedViolation2]);
             });
 
             it('When running a scan with version 5.12.0, then confirm we call the cli and process the results correctly using both --workspace and --target', async () => {
@@ -175,7 +175,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 // Call scan
                 const workspace: Workspace = await Workspace.fromTargetPaths(
                     ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls'], vscodeWorkspace, fileHandler);
-                const violations: Violation[] = await codeAnalyzer.scan(workspace);
+                const scanResults: ScanResults = await codeAnalyzer.scan(workspace);
 
                 // Check that we made the CLI call
                 expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
@@ -195,7 +195,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "-f", prePopulatedResultsJsonFile
                 ]);
 
-                expect(violations).toEqual([expectedViolation1, expectedViolation2]);
+                expect(scanResults.violations).toEqual([expectedViolation1, expectedViolation2]);
             });
 
             it('When no vscode workspace exist because the user probably just opened a single file, verify the files make up the workspace', async () => {
@@ -209,7 +209,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 const workspace: Workspace = await Workspace.fromTargetPaths(
                     ['/my/project/dummyFile1.cls', '/my/project/dummyFile2.cls', '/my/project/subfolder'],
                     vscodeWorkspace, fileHandler);
-                const violations: Violation[] = await codeAnalyzer.scan(workspace);
+                const scanResults: ScanResults = await codeAnalyzer.scan(workspace);
 
                 // Check that we made the CLI call
                 expect(cliCommandExecutor.execCallHistory.length).toBeGreaterThanOrEqual(1);
@@ -229,7 +229,7 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                     "-f", prePopulatedResultsJsonFile
                 ]);
 
-                expect(violations).toEqual([expectedViolation1, expectedViolation2]);
+                expect(scanResults.violations).toEqual([expectedViolation1, expectedViolation2]);
             });
 
             it('When scan results contain fixes and suggestions with relative paths, then their locations are made absolute', async () => {
@@ -242,18 +242,18 @@ describe('Tests for the CodeAnalyzerImpl class', () => {
                 const workspace: Workspace = await Workspace.fromTargetPaths(
                     ['/my/project/dummyFile1.js'], vscodeWorkspace, fileHandler);
 
-                const violations: Violation[] = await codeAnalyzer.scan(workspace);
+                const scanResults: ScanResults = await codeAnalyzer.scan(workspace);
 
                 // The first violation should have fixes and suggestions with absolute paths
-                expect(violations[0].fixes).toHaveLength(1);
-                expect(violations[0].fixes[0].location.file).toEqual(path.normalize("/my/project/dummyFile1.js"));
+                expect(scanResults.violations[0].fixes).toHaveLength(1);
+                expect(scanResults.violations[0].fixes[0].location.file).toEqual(path.normalize("/my/project/dummyFile1.js"));
 
-                expect(violations[0].suggestions).toHaveLength(1);
-                expect(violations[0].suggestions[0].location.file).toEqual(path.normalize("/my/project/dummyFile1.js"));
+                expect(scanResults.violations[0].suggestions).toHaveLength(1);
+                expect(scanResults.violations[0].suggestions[0].location.file).toEqual(path.normalize("/my/project/dummyFile1.js"));
 
                 // The second violation should have no fixes or suggestions
-                expect(violations[1].fixes).toBeUndefined();
-                expect(violations[1].suggestions).toBeUndefined();
+                expect(scanResults.violations[1].fixes).toBeUndefined();
+                expect(scanResults.violations[1].suggestions).toBeUndefined();
             });
 
             it('When CLI supports fixes/suggestions flags and settings are enabled, then they are included in scan command', async () => {

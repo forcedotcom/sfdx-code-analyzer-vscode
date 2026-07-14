@@ -4,8 +4,9 @@ import {CodeAnalyzerDiagnostic, DiagnosticFactory, DiagnosticManager, normalizeV
 import {messages} from "./messages";
 import {TelemetryService} from "./external-services/telemetry-service";
 import * as Constants from './constants';
-import {CodeAnalyzer} from "./code-analyzer";
+import {CodeAnalyzer, ScanResults} from "./code-analyzer";
 import {Display} from "./display";
+import {InsightsHandler} from "./insights-handler";
 import {getErrorMessage, getErrorMessageWithStack} from "./utils";
 import {ProgressReporter, TaskWithProgressRunner} from "./progress";
 import {WindowManager} from "./vscode-api";
@@ -23,9 +24,10 @@ export class CodeAnalyzerRunAction {
     private readonly logger: Logger;
     private readonly display: Display;
     private readonly windowManager: WindowManager;
+    private readonly insightsHandler: InsightsHandler;
     private suppressedErrors: Set<string> = new Set();
 
-    constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, diagnosticFactory: DiagnosticFactory, telemetryService: TelemetryService, logger: Logger, display: Display, windowManager: WindowManager) {
+    constructor(taskWithProgressRunner: TaskWithProgressRunner, codeAnalyzer: CodeAnalyzer, diagnosticManager: DiagnosticManager, diagnosticFactory: DiagnosticFactory, telemetryService: TelemetryService, logger: Logger, display: Display, windowManager: WindowManager, insightsHandler: InsightsHandler) {
         this.taskWithProgressRunner = taskWithProgressRunner;
         this.codeAnalyzer = codeAnalyzer;
         this.diagnosticManager = diagnosticManager;
@@ -34,6 +36,7 @@ export class CodeAnalyzerRunAction {
         this.logger = logger;
         this.display = display;
         this.windowManager = windowManager;
+        this.insightsHandler = insightsHandler;
     }
 
     /**
@@ -64,7 +67,8 @@ export class CodeAnalyzerRunAction {
                     increment: 20
                 });
                 this.logger.log(messages.info.scanningWith(await this.codeAnalyzer.getVersion()));
-                const violations: Violation[] = await this.codeAnalyzer.scan(workspace);
+                const scanResults: ScanResults = await this.codeAnalyzer.scan(workspace);
+                const violations: Violation[] = scanResults.violations;
 
                 progressReporter.reportProgress({
                     message: messages.scanProgressReport.processingResults,
@@ -106,7 +110,9 @@ export class CodeAnalyzerRunAction {
                 }
 
                 this.diagnosticManager.addDiagnostics(diagnostics);
-                void this.displayResults(targetedFiles.length, violationsWithFileLocation);
+                void this.displayResults(targetedFiles.length, violationsWithFileLocation, scanResults.insights?.apexguru?.analysisMode);
+
+                this.insightsHandler.handleInsights(scanResults.insights, () => { void this.run(commandName, workspace, trigger); });
 
                 this.telemetryService.sendCommandEvent(Constants.TELEM_SUCCESSFUL_STATIC_ANALYSIS, {
                     commandName: commandName,
@@ -140,12 +146,12 @@ export class CodeAnalyzerRunAction {
         }
     }
 
-    private displayResults(numFilesScanned: number, violations: Violation[]): void {
+    private displayResults(numFilesScanned: number, violations: Violation[], apexGuruAnalysisMode?: string): void {
         const filesWithViolations: Set<string> = new Set();
         for (const violation of violations) {
             filesWithViolations.add(violation.locations[violation.primaryLocationIndex].file);
         }
-        this.display.displayInfo(messages.info.finishedScan(numFilesScanned, filesWithViolations.size, violations.length));
+        this.display.displayInfo(messages.info.finishedScan(numFilesScanned, filesWithViolations.size, violations.length, apexGuruAnalysisMode));
     }
 
     /**
