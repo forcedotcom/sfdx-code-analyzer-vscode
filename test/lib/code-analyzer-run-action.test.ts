@@ -15,6 +15,16 @@ import {messages} from "../../src/lib/messages";
 import * as Constants from '../../src/lib/constants';
 import {Workspace} from "../../src/lib/workspace";
 import { APEX_GURU_ENGINE_NAME } from "../../src/lib/apexguru/apex-guru-service";
+import {InsightsHandler} from "../../src/lib/insights-handler";
+import {EngineInsight} from "../../src/lib/code-analyzer";
+
+class SpyInsightsHandler {
+    handleInsightsCallHistory: { insights: Record<string, EngineInsight> | undefined, retriggerScan: () => void }[] = [];
+
+    handleInsights(insights: Record<string, EngineInsight> | undefined, retriggerScan: () => void): void {
+        this.handleInsightsCallHistory.push({insights, retriggerScan});
+    }
+}
 
 describe('Tests for CodeAnalyzerRunAction', () => {
     let sampleWorkspace: Workspace;
@@ -26,6 +36,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
     let logger: SpyLogger;
     let display: SpyDisplay;
     let windowManager: SpyWindowManager;
+    let insightsHandler: SpyInsightsHandler;
     let codeAnalyzerRunAction: CodeAnalyzerRunAction;
 
     beforeEach(async () => {
@@ -41,8 +52,9 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         logger = new SpyLogger();
         display = new SpyDisplay();
         windowManager = new SpyWindowManager();
+        insightsHandler = new SpyInsightsHandler();
         codeAnalyzerRunAction = new CodeAnalyzerRunAction(taskWithProgressRunner, codeAnalyzer, diagnosticManager,
-            diagnosticFactory, telemetryService, logger, display, windowManager);
+            diagnosticFactory, telemetryService, logger, display, windowManager, insightsHandler as unknown as InsightsHandler);
     });
 
     it('When scan results in violations that are not associated with a file location, then show violation as display messages', async () => {
@@ -67,8 +79,8 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             {msg: '[engineE:ruleE] messageE', buttons: []},
         ]);
         expect(display.displayInfoCallHistory).toEqual([
-            {msg: '[engineF:ruleF] messageF'},
-            {msg: 'Scan complete. Analyzed 1 files. 1 violations found in 1 files.'}
+            {msg: '[engineF:ruleF] messageF', buttons: []},
+            {msg: 'Scan complete. Analyzed 1 files. 1 violations found in 1 files.', buttons: []}
         ]);
 
         // Sanity check, good violations still make it
@@ -87,7 +99,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
         expect(display.displayWarningCallHistory).toEqual([]);
         expect(display.displayInfoCallHistory).toEqual([
-            {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.'}
+            {msg: 'Scan complete. Analyzed 1 files. 0 violations found in 0 files.', buttons: []}
         ]);
     });
 
@@ -279,6 +291,60 @@ describe('Tests for CodeAnalyzerRunAction', () => {
             expect(telemetryService.sendExceptionCallHistory).toHaveLength(1);
             expect(telemetryService.sendExceptionCallHistory[0].name).toBe(Constants.TELEM_FAILED_STATIC_ANALYSIS);
             expect(telemetryService.sendExceptionCallHistory[0].properties?.trigger).toBe(Constants.TRIGGER_MANUAL);
+        });
+    });
+
+    describe('Insights handling integration', () => {
+        it('When scan returns insights with apexguru skipped, InsightsHandler is invoked', async () => {
+            codeAnalyzer.scanInsightsReturnValue = {
+                apexguru: {
+                    status: 'skipped',
+                    error: {code: 'NO_ORG_CONNECTION', message: 'No org', remediation: 'sf org login web'}
+                }
+            };
+
+            await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+
+            expect(insightsHandler.handleInsightsCallHistory).toHaveLength(1);
+            expect(insightsHandler.handleInsightsCallHistory[0].insights).toEqual(codeAnalyzer.scanInsightsReturnValue);
+        });
+
+        it('When scan returns insights with apexguru completed, InsightsHandler is still invoked (handler decides)', async () => {
+            codeAnalyzer.scanInsightsReturnValue = {
+                apexguru: {status: 'completed'}
+            };
+
+            await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+
+            expect(insightsHandler.handleInsightsCallHistory).toHaveLength(1);
+            expect(insightsHandler.handleInsightsCallHistory[0].insights).toEqual(codeAnalyzer.scanInsightsReturnValue);
+        });
+
+        it('When scan returns no insights field (old CLI), InsightsHandler is invoked with undefined', async () => {
+            codeAnalyzer.scanInsightsReturnValue = undefined;
+
+            await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+
+            expect(insightsHandler.handleInsightsCallHistory).toHaveLength(1);
+            expect(insightsHandler.handleInsightsCallHistory[0].insights).toBeUndefined();
+        });
+
+        it('When apexguru key not present in insights, InsightsHandler is invoked (handler decides)', async () => {
+            codeAnalyzer.scanInsightsReturnValue = {
+                pmd: {status: 'completed'}
+            };
+
+            await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+
+            expect(insightsHandler.handleInsightsCallHistory).toHaveLength(1);
+            expect(insightsHandler.handleInsightsCallHistory[0].insights).toEqual({pmd: {status: 'completed'}});
+        });
+
+        it('retriggerScan callback is a function that re-invokes the run action', async () => {
+            await codeAnalyzerRunAction.run('dummyCommandName', sampleWorkspace);
+
+            expect(insightsHandler.handleInsightsCallHistory).toHaveLength(1);
+            expect(typeof insightsHandler.handleInsightsCallHistory[0].retriggerScan).toBe('function');
         });
     });
 
