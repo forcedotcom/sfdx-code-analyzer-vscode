@@ -100,6 +100,45 @@ describe('Tests for InsightsHandler', () => {
         expect(display.displayInfoCallHistory[0].buttons[0].text).toEqual(messages.insights.buttons.connectOrg);
     });
 
+    it('When apexguru status is skipped with INVALID_SESSION, then info banner is shown with Connect Org button', () => {
+        const insights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'INVALID_SESSION',
+                    message: 'ApexGuru skipped the scan because your org session is invalid or expired.',
+                    remediation: ''
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+        expect(display.displayInfoCallHistory[0].msg).toContain('Invalid Session ID');
+        expect(display.displayInfoCallHistory[0].buttons).toHaveLength(1);
+        expect(display.displayInfoCallHistory[0].buttons[0].text).toEqual(messages.insights.buttons.connectOrg);
+    });
+
+    it('INVALID_SESSION is shown once per session (non-intrusive)', () => {
+        const insights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'INVALID_SESSION',
+                    message: 'Session invalid',
+                    remediation: ''
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(1); // Still 1, suppressed
+    });
+
     it('When apexguru status is skipped with API_UNAVAILABLE, then info banner is shown with Retry Scan and Details buttons', () => {
         const insights: Record<string, EngineInsight> = {
             apexguru: {
@@ -115,10 +154,69 @@ describe('Tests for InsightsHandler', () => {
         insightsHandler.handleInsights(insights, retriggerScan);
 
         expect(display.displayInfoCallHistory).toHaveLength(1);
-        expect(display.displayInfoCallHistory[0].msg).toContain('service is currently unavailable');
+        expect(display.displayInfoCallHistory[0].msg).toContain('service is temporarily unavailable');
         expect(display.displayInfoCallHistory[0].buttons).toHaveLength(2);
         expect(display.displayInfoCallHistory[0].buttons[0].text).toEqual(messages.insights.buttons.retryScan);
         expect(display.displayInfoCallHistory[0].buttons[1].text).toEqual(messages.insights.buttons.details);
+    });
+
+    it('When apexguru status is skipped with SCAN_TIMEOUT, then info banner is shown with Retry Scan and Details buttons', () => {
+        const insights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'SCAN_TIMEOUT',
+                    message: 'Code Analyzer skipped ApexGuru scan because the workspace scan timed out after 10000 ms.',
+                    remediation: ''
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+        expect(display.displayInfoCallHistory[0].msg).toContain('workspace scan timed out');
+        expect(display.displayInfoCallHistory[0].msg).toContain('Increase the timeout setting');
+        expect(display.displayInfoCallHistory[0].buttons).toHaveLength(2);
+        expect(display.displayInfoCallHistory[0].buttons[0].text).toEqual(messages.insights.buttons.retryScan);
+        expect(display.displayInfoCallHistory[0].buttons[1].text).toEqual(messages.insights.buttons.details);
+    });
+
+    it('SCAN_TIMEOUT is shown every time (transient error)', () => {
+        const timeoutInsights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'SCAN_TIMEOUT',
+                    message: 'Workspace scan timed out',
+                    remediation: ''
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(timeoutInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(1);
+
+        insightsHandler.handleInsights(timeoutInsights, retriggerScan);
+        expect(display.displayInfoCallHistory).toHaveLength(2);
+    });
+
+    it('SCAN_TIMEOUT Retry Scan button re-triggers the scan', () => {
+        const insights: Record<string, EngineInsight> = {
+            apexguru: {
+                status: 'skipped',
+                error: {
+                    code: 'SCAN_TIMEOUT',
+                    message: 'Workspace scan timed out',
+                    remediation: ''
+                }
+            }
+        };
+
+        insightsHandler.handleInsights(insights, retriggerScan);
+        display.displayInfoCallHistory[0].buttons[0].callback();
+
+        expect(retriggerScanCallCount).toEqual(1);
     });
 
     it('When apexguru status is skipped with UNEXPECTED_ERROR, then info banner is shown with View Details and Report Issue buttons', () => {

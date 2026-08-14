@@ -169,7 +169,7 @@ describe('InsightsHandler integration tests - full skip-banner lifecycle', () =>
         const banners = display.displayInfoCallHistory.filter(h => h.buttons.length > 0);
         expect(banners).toHaveLength(0);
         // Scan completed normally - displayed results info
-        expect(display.displayInfoCallHistory.some(h => h.msg.includes('Scan complete'))).toBe(true);
+        expect(display.displayInfoCallHistory.some(h => h.msg.includes('Scan Complete'))).toBe(true);
     });
 
     it('CLI returns with insights.apexguru.status=completed -> no banner', async () => {
@@ -204,7 +204,7 @@ describe('InsightsHandler integration tests - full skip-banner lifecycle', () =>
         await new Promise(resolve => setTimeout(resolve, 0));
 
         // Verify scan ran again (displayed results again)
-        const scanCompleteMsgs = display.displayInfoCallHistory.filter(h => h.msg.includes('Scan complete'));
+        const scanCompleteMsgs = display.displayInfoCallHistory.filter(h => h.msg.includes('Scan Complete'));
         expect(scanCompleteMsgs.length).toBeGreaterThanOrEqual(2);
     });
 });

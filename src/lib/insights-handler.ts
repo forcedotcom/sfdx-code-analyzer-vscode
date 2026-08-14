@@ -23,6 +23,7 @@ export class InsightsHandler {
     private readonly windowManager: WindowManager;
     private readonly cliCommandExecutor: CliCommandExecutor;
     private noOrgConnectionShown: boolean = false;
+    private invalidSessionShown: boolean = false;
 
     constructor(display: Display, logger: Logger, externalServiceProvider: ExternalServiceProvider, windowManager: WindowManager, cliCommandExecutor: CliCommandExecutor) {
         this.display = display;
@@ -55,9 +56,20 @@ export class InsightsHandler {
                     this.handleNoOrgConnection(error.message, error.remediation);
                 }
                 break;
+            case 'INVALID_SESSION':
+                // Only show once per session (non-intrusive)
+                if (!this.invalidSessionShown) {
+                    this.invalidSessionShown = true;
+                    this.handleInvalidSession(error.message, error.remediation);
+                }
+                break;
             case 'API_UNAVAILABLE':
                 // Always show (transient error, might work on retry)
                 this.handleApiUnavailable(error.message, error.remediation, retriggerScan);
+                break;
+            case 'SCAN_TIMEOUT':
+                // Always show (transient error, might work on retry or after raising the timeout)
+                this.handleScanTimeout(error.message, error.remediation, retriggerScan);
                 break;
             case 'UNEXPECTED_ERROR':
                 // Always show (could be different errors)
@@ -75,7 +87,20 @@ export class InsightsHandler {
         };
 
         this.display.displayInfo(
-            messages.insights.apexGuruSkipped.noOrgConnection(remediation),
+            messages.insights.apexGuruSkipped.noOrgConnection,
+            connectOrgButton
+        );
+        this.logger.log(message);
+    }
+
+    private handleInvalidSession(message: string, remediation: string): void {
+        const connectOrgButton: DisplayButton = {
+            text: messages.insights.buttons.connectOrg,
+            callback: () => this.triggerConnectOrg(remediation)
+        };
+
+        this.display.displayInfo(
+            messages.insights.apexGuruSkipped.invalidSession,
             connectOrgButton
         );
         this.logger.log(message);
@@ -95,7 +120,28 @@ export class InsightsHandler {
         };
 
         this.display.displayInfo(
-            messages.insights.apexGuruSkipped.apiUnavailable(message),
+            messages.insights.apexGuruSkipped.apiUnavailable,
+            retryScanButton,
+            detailsButton
+        );
+        this.logger.log(message);
+    }
+
+    private handleScanTimeout(message: string, remediation: string, retriggerScan: () => void): void {
+        const retryScanButton: DisplayButton = {
+            text: messages.insights.buttons.retryScan,
+            callback: retriggerScan
+        };
+        const detailsButton: DisplayButton = {
+            text: messages.insights.buttons.details,
+            callback: () => {
+                this.logger.log(remediation);
+                this.windowManager.showLogOutputWindow();
+            }
+        };
+
+        this.display.displayInfo(
+            messages.insights.apexGuruSkipped.scanTimeout,
             retryScanButton,
             detailsButton
         );
@@ -153,7 +199,6 @@ export class InsightsHandler {
         if (selected?.orgAlias) {
             const result: CommandOutput = await this.cliCommandExecutor.exec('sf', ['config', 'set', `target-org=${selected.orgAlias}`]);
             if (result.exitCode === 0) {
-                this.display.displayInfo(messages.insights.orgSetSuccess(selected.orgAlias));
                 this.logger.log(`Default target-org set to: ${selected.orgAlias}`);
             } else {
                 this.display.displayError(messages.insights.orgSetFailure(selected.orgAlias, result.stderr));
