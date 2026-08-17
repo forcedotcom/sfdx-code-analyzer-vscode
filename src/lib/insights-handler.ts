@@ -199,6 +199,7 @@ export class InsightsHandler {
         if (selected?.orgAlias) {
             const result: CommandOutput = await this.cliCommandExecutor.exec('sf', ['config', 'set', `target-org=${selected.orgAlias}`]);
             if (result.exitCode === 0) {
+                this.display.displayInfo(messages.insights.orgSetSuccess(selected.orgAlias));
                 this.logger.log(`Default target-org set to: ${selected.orgAlias}`);
             } else {
                 this.display.displayError(messages.insights.orgSetFailure(selected.orgAlias, result.stderr));

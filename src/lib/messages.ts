@@ -47,7 +47,7 @@ export const messages = {
     info: {
         scanningWith: (version: string) => `Scanning with code-analyzer@${version} via CLI`,
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number, apexGuruAnalysisMode?: string) => {
-            const base = `Scan Complete. Code Analyzer scanned ${scannedCount} files and found ${violationCount} violations in ${badFileCount} files`;
+            const base = `Scan complete. Code Analyzer scanned ${scannedCount} files and found ${violationCount} violations in ${badFileCount} files`;
             if (!apexGuruAnalysisMode) {
                 return `${base}.`;
             }
@@ -109,6 +109,7 @@ export const messages = {
         },
         selectOrgPlaceholder: 'Select an org to set as the default target-org',
         selectOrgTitle: 'Connect Salesforce Org',
+        orgSetSuccess: (orgAlias: string) => `Default target-org set to '${orgAlias}'. Re-run the scan to use ApexGuru.`,
         orgSetFailure: (orgAlias: string, error: string) => `Failed to set target-org to '${orgAlias}': ${error}`,
         fallback: {
             connectOrgManual: (remediation: string) => `To connect an org manually, run the following in your terminal: ${remediation}`

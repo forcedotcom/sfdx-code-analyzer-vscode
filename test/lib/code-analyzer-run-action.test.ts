@@ -80,7 +80,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         ]);
         expect(display.displayInfoCallHistory).toEqual([
             {msg: '[engineF:ruleF] messageF', buttons: []},
-            {msg: 'Scan Complete. Code Analyzer scanned 1 files and found 1 violations in 1 files.', buttons: []}
+            {msg: 'Scan complete. Code Analyzer scanned 1 files and found 1 violations in 1 files.', buttons: []}
         ]);
 
         // Sanity check, good violations still make it
@@ -99,7 +99,7 @@ describe('Tests for CodeAnalyzerRunAction', () => {
         expect(display.displayErrorCallHistory[0].msg).toEqual(messages.error.engineUninstantiable(engine));
         expect(display.displayWarningCallHistory).toEqual([]);
         expect(display.displayInfoCallHistory).toEqual([
-            {msg: 'Scan Complete. Code Analyzer scanned 1 files and found 0 violations in 0 files.', buttons: []}
+            {msg: 'Scan complete. Code Analyzer scanned 1 files and found 0 violations in 0 files.', buttons: []}
         ]);
     });
 

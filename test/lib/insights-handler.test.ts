@@ -455,6 +455,9 @@ describe('Tests for InsightsHandler', () => {
         );
         expect(configSetCall).toBeDefined();
         expect(configSetCall.args).toContain('target-org=myOrg');
+
+        // Verify the user sees confirmation that the target-org was set
+        expect(display.displayInfoCallHistory[1].msg).toEqual(messages.insights.orgSetSuccess('myOrg'));
     });
 
     it('Retry Scan button re-triggers the scan', () => {
