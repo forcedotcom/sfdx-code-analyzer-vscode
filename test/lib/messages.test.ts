@@ -3,15 +3,21 @@ import {messages} from "../../src/lib/messages";
 describe('Tests for messages', () => {
     describe('insights messages', () => {
         it('apexGuruSkipped.noOrgConnection produces expected output', () => {
-            const result = messages.insights.apexGuruSkipped.noOrgConnection('Run sf org login web');
+            const result = messages.insights.apexGuruSkipped.noOrgConnection;
             expect(result).toContain('no org is connected');
-            expect(result).toContain('Run sf org login web');
+            expect(result).toContain('Connect Org button');
         });
 
         it('apexGuruSkipped.apiUnavailable produces expected output', () => {
-            const result = messages.insights.apexGuruSkipped.apiUnavailable('Service is down');
-            expect(result).toContain('service is currently unavailable');
-            expect(result).toContain('Service is down');
+            const result = messages.insights.apexGuruSkipped.apiUnavailable;
+            expect(result).toContain('service is temporarily unavailable');
+            expect(result).toContain('Try again later');
+        });
+
+        it('apexGuruSkipped.scanTimeout produces expected output', () => {
+            const result = messages.insights.apexGuruSkipped.scanTimeout;
+            expect(result).toContain('workspace scan timed out');
+            expect(result).toContain('Increase the timeout setting');
         });
 
         it('apexGuruSkipped.unexpectedError produces expected output', () => {
