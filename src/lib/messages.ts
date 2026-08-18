@@ -47,8 +47,12 @@ export const messages = {
     info: {
         scanningWith: (version: string) => `Scanning with code-analyzer@${version} via CLI`,
         finishedScan: (scannedCount: number, badFileCount: number, violationCount: number, apexGuruAnalysisMode?: string) => {
-            const base = `Scan complete. Analyzed ${scannedCount} files. ${violationCount} violations found in ${badFileCount} files.`;
-            return apexGuruAnalysisMode ? `${base} ApexGuru analysis mode: '${apexGuruAnalysisMode}'.` : base;
+            const base = `Scan complete. Code Analyzer scanned ${scannedCount} files and found ${violationCount} violations in ${badFileCount} files`;
+            if (!apexGuruAnalysisMode) {
+                return `${base}.`;
+            }
+            const displayMode = apexGuruAnalysisMode.toLowerCase() === 'full' ? 'Advanced' : 'Basic';
+            return `${base} (ApexGuru analysis mode: ${displayMode}).`;
         }
     },
     suggestions: {
@@ -90,8 +94,10 @@ export const messages = {
     },
     insights: {
         apexGuruSkipped: {
-            noOrgConnection: (remediation: string) => `ApexGuru analysis was skipped because no org is connected. ${remediation}`,
-            apiUnavailable: (message: string) => `ApexGuru analysis was skipped because the service is currently unavailable. ${message}`,
+            noOrgConnection: `ApexGuru analysis was skipped because no org is connected. To authenticate, use the Connect Org button.`,
+            invalidSession: `Error: Invalid Session ID. We couldn't refresh your access token because the session expired or is invalid.`,
+            apiUnavailable: `Code Analyzer skipped ApexGuru scan because the service is temporarily unavailable. Try again later.`,
+            scanTimeout: `Code Analyzer skipped ApexGuru scan because the workspace scan timed out. Increase the timeout setting in the Code Analyzer configuration file.`,
             unexpectedError: (message: string) => `ApexGuru analysis was skipped due to an unexpected error. ${message}`
         },
         buttons: {
