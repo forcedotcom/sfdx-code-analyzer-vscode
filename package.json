@@ -146,7 +146,7 @@
                     },
                     "codeAnalyzer.includeSuggestions": {
                         "type": "boolean",
-                        "default": false,
+                        "default": true,
                         "markdownDescription": "Include code suggestions for applicable violations.\n\n**Note:** Salesforce code analyzer CLI plugin version 5.12.0 or later is needed."
                     }
                 }
