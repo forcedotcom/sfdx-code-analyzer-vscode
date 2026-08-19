@@ -63,7 +63,7 @@ export class SettingsManagerImpl implements SettingsManager {
     }
 
     public getIncludeSuggestions(): boolean {
-        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeSuggestions', false);
+        return vscode.workspace.getConfiguration('codeAnalyzer').get<boolean>('includeSuggestions', true);
     }
 
     // =================================================================================================================
