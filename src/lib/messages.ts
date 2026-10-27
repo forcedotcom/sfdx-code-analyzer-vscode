@@ -83,7 +83,7 @@ export const messages = {
         codeAnalyzerMissing: "To use this extension, first install the `code-analyzer` Salesforce CLI plugin.",
         doesNotMeetMinVersion: (currentVer: string, recommendedVer: string) => `The currently installed version '${currentVer}' of the \`code-analyzer\` Salesforce CLI plugin is unsupported by this extension. Please use version '${recommendedVer}' or greater.`,
         usingOlderVersion: (currentVer: string, recommendedVer: string) => `The currently installed version '${currentVer}' of the \`code-analyzer\` Salesforce CLI plugin is only partially supported by this extension. To take advantage of the latest features of this extension, we recommended using version '${recommendedVer}' or greater.`,
-        installLatestVersion: 'Install the latest `code-analyzer` Salesforce CLI plugin by running `sf plugins install code-analyzer` in the VS Code integrated terminal.',
+        installLatestVersion: 'Install the latest `code-analyzer` Salesforce CLI plugin by running `sf plugins install @salesforce/plugin-code-analyzer` in the VS Code integrated terminal.',
     },
     error: {
         analysisFailedGenerator: (reason: string) => `Analysis failed: ${reason}`,  // Shared with ApexGuru and CodeAnalyzer
